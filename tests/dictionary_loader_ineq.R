@@ -1,7 +1,7 @@
 tic("loading dictionary")
   #use function to load sheets 
   remind_dictionary(
-    file_path = file.path(common.fold.pf, "data/dictionary.xlsx"),
+    file_path = file.path("data/dictionary.xlsx"),
     sheet_names = c("Sources", "data_type", "source_type")
   )
   #filter sources and clean 

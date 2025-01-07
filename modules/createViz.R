@@ -8,7 +8,7 @@ createViz <- function(data.file, x_var, y_var,
                       download.button = F, hide.legend = F,
                       hide.selectors = F, listen = F,
                       value_scale = "normal", 
-                      data.wrangler = NULL, common.fold.pf = NULL,
+                      data.wrangler = NULL, 
                       gopts = "line", num.conversion = NULL) {
   
   tic("load packages for createViz")
