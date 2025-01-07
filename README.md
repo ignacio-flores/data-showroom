@@ -1,10 +1,10 @@
 # Data Showroom 
 
-Build interactive visualization to explore data in the GC Wealth Warehouse (see https://github.com/gcwealthproject/warehouse) on your own computer or upload them to a server to embed on a website. 
+Build interactive visualizations to explore data in the GC Wealth Warehouse (see https://github.com/gcwealthproject/warehouse) on your own computer or upload them to a server to embed on a website. 
 
 ## Interactive examples
 
-A published interactive version, exploring estimates of wealth concentration in the United States from many source is published in the following [link](https://ign-flores.shinyapps.io/rshiny_inht_1/). 
+A published interactive version, exploring estimates of wealth concentration in the United States from many sources, is published in the following [link](https://ign-flores.shinyapps.io/rshiny_inht_1/). 
 
 <div align="center">
 <img src="screenshots/screenshot1.png" width="450" />
@@ -49,7 +49,7 @@ reactive_sel:
 
 ```
 
-For a fuller configuration, see the [test configuration](test/config.yaml) file.
+For a fuller configuration, see the [test configuration](tests/config.yaml) file.
 
 
 
