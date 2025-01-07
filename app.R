@@ -1,30 +1,20 @@
-#Load preliminaries
-require(tictoc)
-tic("loading packages")
-  source("libraries.R", local = T)
-toc()
+#Load libraries and modules 
+source("libraries.R", local = T)
 
 # Load configuration file
-tic("loading YAML configuration")
-  config <- yaml::read_yaml("tests/config_ineq_tseries.yaml")
-  selectors <- config$selectors
-  reactive_sel <- config$reactive_sel
-  dt_cols <- config$dt_cols
-  tt <- config$tt
-  col_combiner <- config$col_combiner
-toc()
+load_config("tests/config.yaml")
 
 #create visualization nº1
 createViz(
   data.file = file.path("data/ineq_warehouse_meta_v1_2.csv"),
-  new.cols = col_combiner,
+  new.cols = combine_col,
   data.wrangler = "tests/dictionary_loader_ineq.R",
   x_var = "year",
   y_var = "value",
   color_var = "viz_color_var",
-  selector_info = selectors,
+  selector_info = fixed_sel,
   loose_selectors = reactive_sel,
-  tooltip_vars = tt,
+  tooltip_vars = tooltip,
   table.display = T,
   dt.cols = dt_cols,
   download.button = T,
@@ -32,4 +22,3 @@ createViz(
   #hide.selectors = T,
   #listen = T,
 )
-

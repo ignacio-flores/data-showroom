@@ -1,5 +1,5 @@
 #Define fixed selectors 
-selectors:
+fixed_sel:
   GEO_long:
     label: "Country"
     selected:
@@ -16,7 +16,7 @@ selectors:
       - "Tax Units"
     multiple: true
 
-#Define reactive selectors (will react to a change in fixed selectors)
+#Define reactive selectors (react to changes in fixed selectors)
 reactive_sel:
   Data_Type:
     label: "Data type"
@@ -40,7 +40,7 @@ dt_cols:
   Data_Type: "Data type"
 
 #define the information shown in the tooltip 
-tt:
+tooltip:
   GEO_long: "Country:"
   year: "Year:"
   value: "Value:"
@@ -49,7 +49,7 @@ tt:
   data_description: "Data type:"
 
 #combine columns from the warehouse (sometimes necessary)
-col_combiner:
+combine_col:
   viz_color_var:
     - "legend"
     - "d5_dboard_specific_lab"
