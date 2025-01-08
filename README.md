@@ -1,6 +1,6 @@
 # Data Showroom 
 
-Build interactive visualizations to explore data in the GC Wealth Warehouse (see https://github.com/gcwealthproject/warehouse) on your own computer or upload them to a server to embed on a website. 
+Build interactive visualizations to explore data on your own computer or upload them to a server to embed on a website. The tool is tailored, but not exclusive, to the GC Wealth Data Warehouse (see https://github.com/gcwealthproject/warehouse) 
 
 ## Interactive examples
 
