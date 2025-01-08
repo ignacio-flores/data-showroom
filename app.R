@@ -1,24 +1,24 @@
-#Load libraries and modules 
+# Load libraries and modules 
 source("libraries.R", local = T)
 
 # Load configuration file
-load_config("tests/config.yaml")
+load_config("tests/config.yaml", func = createViz)
 
-#create visualization nº1
+# Run app
 createViz(
   data.file = data.file,
   data.wrangler = data.wrangler,
   new.cols = new.cols,
   gopts = gopts, 
-  x_var = mainvars$x.var,
-  y_var = mainvars$y.var,
-  color_var = mainvars$color.var,
-  selector_info = fixed_sel,
-  loose_selectors = reactive_sel,
-  tooltip_vars = tooltip,
+  x_var = x_var,
+  y_var = y_var,
+  color_var = color_var,
+  selector_info = selector_info,
+  loose_selectors = loose_selectors,
+  tooltip_vars = tooltip_vars,
   table.display = T,
-  dt.cols = dt_cols,
-  download.button = T
-  #hide.selectors = T,
-  #listen = T,
+  dt.cols = dt.cols,
+  download.button = download.button,
+  hide.selectors = hide.selectors,
+  listen = listen,
 )

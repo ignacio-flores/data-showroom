@@ -17,13 +17,12 @@ gopts:
  - "point"
  
 #define main plot variables 
-mainvars: 
- x.var: "year"
- y.var: "value"
- color.var: "viz_color_var"
+x_var: "year"
+y_var: "value"
+color_var: "viz_color_var"
 
-#Define fixed selectors 
-fixed_sel:
+#Define main selectors 
+selector_info:
   GEO_long:
     label: "Country"
     selected:
@@ -38,10 +37,10 @@ fixed_sel:
       - "Individuals - Adults (equal split)"
       - "Households"
       - "Tax Units"
-    multiple: true
+    multiple: true #necessary if you have more than one 
 
-#Define reactive selectors (react to changes in fixed selectors)
-reactive_sel:
+#Define reactive or 'loose' selectors (react to changes in main selectors)
+loose_selectors:
   Data_Type:
     label: "Data type"
     type: "checkbox"
@@ -50,7 +49,7 @@ reactive_sel:
     type: "checkbox"
 
 #define the columns of the data table widget 
-dt_cols:
+dt.cols:
   GEO: "Country code"
   year: "Year"
   GEO_long: "Country"
@@ -63,11 +62,16 @@ dt_cols:
   data_description: "Metadata"
   Data_Type: "Data type"
 
-#define the information shown in the tooltip 
-tooltip:
+#define the information shown in the tooltip
+tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
   value: "Value:"
   legend: "Source:"
   metadata: "Explanation:"
   data_description: "Data type:"
+
+#other options 
+download.button: True
+hide.selectors: False
+listen: False

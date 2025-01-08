@@ -122,18 +122,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, y_var, color_var, to
                  "hoverClosestPie", "toggleHover", "resetViews",
                  "resetViewMapbox", "select2d", "zoom"
                )
-         ) #%>%
-        # htmlwidgets::onRender("
-        #     function(el, x) {
-        #       // Change cursor style on hover
-        #       el.querySelector('.plotly').style.cursor = 'default';
-        # 
-        #       // Reset cursor to default on unhover
-        #       el.on('mouseleave', function() {
-        #         el.querySelector('.plotly').style.cursor = 'default';
-        #       });
-        #     }
-        #   ")
+         ) 
     })
   })
 }
