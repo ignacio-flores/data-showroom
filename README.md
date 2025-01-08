@@ -51,7 +51,7 @@ y_var: "value"
 color_var: "viz_color_var"
 ```
 
-you can also modify selector variables, the display of a data table widget, and the information shown in the tooltip 
+you can also modify selector variables adding labels and pre-selected values, as well as the display of a data table widget, and the information shown in the tooltip.
 
 ```yaml
 #Define main selectors 
