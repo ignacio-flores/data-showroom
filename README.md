@@ -20,7 +20,7 @@ shiny::runApp('GitHub/data-shoroom')
 
 ## Menu configuration
 
-The application’s menu is fully customizable and defined in a YAML file. This makes it easy to update or modify the menu structure without changing the application code. Simply write a yaml file or edit the `config.yaml` file located in the `config` directory to make adjustments.
+The application’s menu is fully customizable and defined in a YAML file. This makes it easy to update or modify the menu structure without changing the application code. Simply write a yaml file or edit the [config.yaml](tests/config.yaml).
 
 Below is a simple example for a basic visualization:
 
