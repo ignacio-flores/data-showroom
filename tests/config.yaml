@@ -1,3 +1,27 @@
+#define data source
+data.file: "data/ineq_warehouse_meta_v1_2.csv"
+data.wrangler: "tests/dictionary_loader_ineq.R" #add code to transform the data before plotting if needed 
+
+#combe columns into a string variable if needed 
+new.cols: 
+  viz_color_var:
+    - "legend"
+    - "d5_dboard_specific_lab"
+  var_per:
+    - "d3_vartype_lab"
+    - "percentile"
+
+#define plot type 
+gopts: 
+ - "line"
+ - "point"
+ 
+#define main plot variables 
+mainvars: 
+ x.var: "year"
+ y.var: "value"
+ color.var: "viz_color_var"
+
 #Define fixed selectors 
 fixed_sel:
   GEO_long:
@@ -47,12 +71,3 @@ tooltip:
   legend: "Source:"
   metadata: "Explanation:"
   data_description: "Data type:"
-
-#combine columns from the warehouse (sometimes necessary)
-combine_col:
-  viz_color_var:
-    - "legend"
-    - "d5_dboard_specific_lab"
-  var_per:
-    - "d3_vartype_lab"
-    - "percentile"
