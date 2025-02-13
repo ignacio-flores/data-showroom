@@ -2,7 +2,9 @@
 source("libraries.R", local = T)
 
 # Load configuration file
-load_config("tests/config.yaml", func = createViz)
+#load_config("tests/config_ineq_single.yaml", func = createViz)
+#load_config("tests/config_ineq_multi.yaml", func = createViz)
+load_config("tests/config_eigt.yaml", func = createViz)
 
 # Run app
 createViz(
@@ -22,3 +24,4 @@ createViz(
   hide.selectors = hide.selectors,
   listen = listen,
 )
+

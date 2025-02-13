@@ -2,11 +2,8 @@
 data.file: "data/ineq_warehouse_meta_v1_2.csv"
 data.wrangler: "tests/dictionary_loader_ineq.R" #add code to transform the data before plotting if needed 
 
-#combe columns into a string variable if needed 
+#combine columns into a string variable if needed 
 new.cols: 
-  viz_color_var:
-    - "legend"
-    - "d5_dboard_specific_lab"
   var_per:
     - "d3_vartype_lab"
     - "percentile"
@@ -19,7 +16,7 @@ gopts:
 #define main plot variables 
 x_var: "year"
 y_var: "value"
-color_var: "viz_color_var"
+color_var: "legend"
 
 #Define main selectors 
 selector_info:
@@ -56,7 +53,7 @@ dt.cols:
   var_per: "Variable"
   d5_dboard_specific_lab: "Unit of Analysis"
   value: "Value"
-  viz_color_var: "Source and Unit"
+  #viz_color_var: "Source and Unit"
   legend: "Source"
   metadata: "Description"
   data_description: "Metadata"

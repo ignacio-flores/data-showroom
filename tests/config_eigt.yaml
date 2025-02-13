@@ -1,0 +1,56 @@
+#define data source
+data.file: "data/eigt_wide_viz.csv"
+data.wrangler: "tests/data_prep_eigt.R" #add code to transform the data before plotting if needed 
+
+#define plot type 
+gopts: 
+ - "step"
+ 
+#define main plot variables 
+x_var: "adjlbo"
+y_var: "adjmrt"
+color_var: "year"
+
+#Define main selectors 
+selector_info:
+  GEO:
+    label: "Country"
+    selected:
+      - "US"
+  year:
+    label: "Years"
+    selected:
+      - 1930
+      - 1935
+      - 1978
+      - 2001
+      - 2021
+    multiple: True
+  tax:
+    label: "Tax type"
+    selected:
+      - "Estate Tax"
+
+#define the columns of the data table widget 
+dt.cols: 
+  GEO: "Country code"
+  year: "Year"
+  tax: "Tax type"
+  bracket: "Bracket"
+  currency: "Currency"
+  adjmrt: "Marginal tax rate"
+  adjlbo: "Lower bound in adjusted USD"
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO: "Country:"
+  year: "Year:"
+  tax: "Tax type:"
+  currency: "Currency"
+  adjmrt: "Marginal tax rate"
+  adjlbo: "Lower bound in adjusted USD"
+
+#other options 
+download.button: True
+hide.selectors: False
+listen: False

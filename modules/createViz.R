@@ -145,8 +145,7 @@ createViz <- function(data.file, x_var, y_var,
         selector_vars = names(selector_info),
         dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal")
     
-    # create reactive list to track current filters for loose selectors
-    loose_filters <- reactiveValues() 
+    loose_filters <- reactiveValues()
     
     # update loose selectors individually
     if (!is.null(loose_selectors)) {
@@ -158,15 +157,18 @@ createViz <- function(data.file, x_var, y_var,
           unique(filtered_data()[[var]])
         })
         
-        # Observer: Update the selector input choices dynamically
-        observeEvent(filtered_values(), {
-          updateSelectInput(
+        observe({
+          req(filtered_data())
+          choices <- unique(filtered_data()[[var]])
+          if (length(choices) == 0) choices <- character(0)
+          updatePickerInput(
             session,
-            inputId = var,                   
-            choices = filtered_values(),     
-            selected = filtered_values()  # Reset to all values
+            inputId = var,
+            choices = choices,
+            selected = choices  # Reset to all values
           )
         })
+
         
         # Observer: Update filter for this specific selector when input changes
         observeEvent(input[[var]], {

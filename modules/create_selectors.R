@@ -1,4 +1,3 @@
-
 require(shiny)
 require(shinyWidgets)
 
@@ -14,7 +13,7 @@ createSelectors <- function(data, selector_info, num.conversion) {
     info <- selector_info[[var]]
     inputType <- ifelse("type" %in% names(info), info$type, "select") # Default to dropdown
 
-    # Prepare arguments for the input control
+    # Define choices as all unique values in the column by default. 
     choices <- sort(unique(data[[var]]))
     
     # Default to select all if type is "checkbox" 
@@ -24,7 +23,7 @@ createSelectors <- function(data, selector_info, num.conversion) {
       if ("selected" %in% names(info)) info$selected else NULL
     }
     label <- if ("label" %in% names(info)) info$label else var
-
+    
     # Create input control based on type
     inputControl <- if (inputType == "checkbox") {
       pickerInput(
