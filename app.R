@@ -13,8 +13,11 @@ createViz(
   new.cols = new.cols,
   gopts = gopts, 
   x_var = x_var,
+  x_var_lab = x_var_lab,
   y_var = y_var,
+  y_var_lab = y_var_lab,
   color_var = color_var,
+  color_var_lab = color_var_lab,
   selector_info = selector_info,
   loose_selectors = loose_selectors,
   tooltip_vars = tooltip_vars,
@@ -24,4 +27,3 @@ createViz(
   hide.selectors = hide.selectors,
   listen = listen,
 )
-

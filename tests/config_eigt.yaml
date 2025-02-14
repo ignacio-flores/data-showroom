@@ -3,33 +3,32 @@ data.file: "data/eigt_wide_viz.csv"
 data.wrangler: "tests/data_prep_eigt.R" #add code to transform the data before plotting if needed 
 
 #define plot type 
-gopts: 
- - "step"
+gopts: "step"
  
 #define main plot variables 
 x_var: "adjlbo"
+x_var_lab: "Bracket's Lower bound (USD Million, inflation adjusted)"
 y_var: "adjmrt"
+y_var_lab: "Marginal tax rate"
 color_var: "year"
+color_var_lab: "Year"
 
-#Define main selectors 
+#Define main selector 
 selector_info:
-  GEO:
+  Country:
     label: "Country"
     selected:
-      - "US"
-  year:
+      - "United States"
+      
+loose_selectors: 
+   year:
     label: "Years"
-    selected:
-      - 1930
-      - 1935
-      - 1978
-      - 2001
-      - 2021
-    multiple: True
-  tax:
+    type: "checkbox"
+    select: "spaced"
+   tax:
     label: "Tax type"
-    selected:
-      - "Estate Tax"
+    selected: "Estate Tax"
+    type: "checkbox"
 
 #define the columns of the data table widget 
 dt.cols: 
@@ -39,7 +38,7 @@ dt.cols:
   bracket: "Bracket"
   currency: "Currency"
   adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD"
+  adjlbo: "Lower bound in adjusted USD Millions"
 
 #define the information shown in the tooltip
 tooltip_vars:
@@ -48,7 +47,7 @@ tooltip_vars:
   tax: "Tax type:"
   currency: "Currency"
   adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD"
+  adjlbo: "Lower bound in adjusted USD Millions"
 
 #other options 
 download.button: True

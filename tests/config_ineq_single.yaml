@@ -17,6 +17,7 @@ gopts:
 x_var: "year"
 y_var: "value"
 color_var: "legend"
+color_var_lab: "Source"
 
 #Define main selectors 
 selector_info:

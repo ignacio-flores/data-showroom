@@ -11,7 +11,7 @@ plotOutputUI <- function(id) {
 }
 
 # Server logic for the plot module
-plotModuleServer <- function(id, filtered_data_func, x_var, y_var, color_var, tooltip_vars, hide.legend, gopts) {
+plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts) {
   moduleServer(id, function(input, output, session) {
 
     #display message if data not available
@@ -52,10 +52,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, y_var, color_var, to
       p <- ggplot(df, aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]],
             color = .data[[color_var]], text = tooltip_text)) +
         scale_color_viridis(discrete = TRUE, option = "viridis", direction = 1, end = 0.9, alpha = 0.9) +
-        labs(title = "", x = x_var, y = "", color = 'Source') +
+        labs(title = "", x = "", y = "", color = color_var_lab) +
         theme(panel.background = element_blank(), panel.grid.major = element_blank(),
-              axis.title.x = element_blank(), axis.title.y = element_text(size = 13),
-              axis.text.x = element_text(size = 10, angle = 40, hjust = 1),
+              axis.title.x = element_text(size = 12), 
+              axis.title.y = element_text(size = 12),
+              axis.text.x = element_text(size = 12, angle = 40, hjust = 1),
               axis.text.y = element_text(size = 12),
               legend.title = element_text(size = 12, face = "bold"),
               legend.text = element_text(size = 12),
@@ -78,6 +79,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, y_var, color_var, to
                      aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
                      color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 0.9)
       }
+      if ("step" %in% gopts) {
+        p <- p + geom_step(data = df,
+                    aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
+                    color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 0.9, direction = "hv")
+      }
       
       #ADD INTERACTIVE LAYERS 
 
@@ -94,6 +100,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, y_var, color_var, to
       # Conditional addition of geom_point
       if ("step" %in% gopts) {
         p <- p + geom_step(size = 1, direction = "hv")
+      }
+      
+      #add y title if y_var_label not empty 
+      if (!is.null(y_var_lab)) {
+        p <- p + ylab(y_var_lab)
+      }
+      
+      #add x title if x_var_label not empty
+      if (!is.null(x_var_lab)) {
+        p <- p + xlab(x_var_lab)
       }
 
       #MAKE INTERACTIVE GRAPH 
@@ -122,7 +138,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, y_var, color_var, to
                  "hoverClosestPie", "toggleHover", "resetViews",
                  "resetViewMapbox", "select2d", "zoom"
                )
-         ) 
+         )
     })
   })
 }

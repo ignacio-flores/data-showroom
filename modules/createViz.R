@@ -1,7 +1,8 @@
-createViz <- function(data.file, x_var, y_var,
+createViz <- function(data.file, 
+                      x_var, x_var_lab = NULL, y_var, y_var_lab = NULL,
                       new.cols = NULL,
                       tooltip_vars = NULL,
-                      color_var, 
+                      color_var, color_var_lab = NULL,
                       selector_info, 
                       loose_selectors = NULL,
                       table.display = F, dt.cols = NULL,
@@ -44,7 +45,7 @@ createViz <- function(data.file, x_var, y_var,
       names(tooltip_vars),
       "source"
     )
-    all_vars <- setdiff(unique(unlist(all_varlists)), new_col_names)
+  all_vars <- setdiff(unique(unlist(all_varlists)), new_col_names)
   } else {
     if (!is.null(tooltip_vars)) {
       all_varlists <- list(
@@ -81,7 +82,7 @@ createViz <- function(data.file, x_var, y_var,
   }
   toc()
   
-  # Run ad-hoc R script 
+  # Run ad-hoc R script if necessary 
   if (!is.null(data.wrangler)) {
     source(data.wrangler, local = TRUE)  
   }
@@ -118,6 +119,7 @@ createViz <- function(data.file, x_var, y_var,
           HTML("#selectorRow { display: block; }")
       )
     ),
+    
     # Place selectors in a row with a specific ID
     fluidRow(id = "selectorRow", createSelectors(data, all_selectors, num.conversion)),
     
@@ -160,15 +162,25 @@ createViz <- function(data.file, x_var, y_var,
         observe({
           req(filtered_data())
           choices <- unique(filtered_data()[[var]])
-          if (length(choices) == 0) choices <- character(0)
+          
+        # check if the selector is random and has more than 5 choices
+        if (loose_selectors[[var]]$select == "random" & length(choices) > 5) {
+            selchoices <- sample(choices, 5)
+        }
+        # check if the selector is equally "spaced" and has more than 5 choices
+        else if (loose_selectors[[var]]$select == "spaced" & length(choices) > 5) {
+            selchoices <- choices[seq(1, length(choices), length.out = 5)]
+        }  else {
+            selchoices <- choices
+        }
+        if (length(choices) == 0) choices <- character(0)
           updatePickerInput(
             session,
             inputId = var,
             choices = choices,
-            selected = choices  # Reset to all values
+            selected = selchoices 
           )
         })
-
         
         # Observer: Update filter for this specific selector when input changes
         observeEvent(input[[var]], {
@@ -188,7 +200,8 @@ createViz <- function(data.file, x_var, y_var,
       if (!is.null(loose_selectors)) {
         for (var in names(loose_selectors)) {
           if (!is.null(loose_filters[[var]]) && length(loose_filters[[var]]) > 0) {
-            result <- result %>% filter(.[[var]] %in% loose_filters[[var]])
+            result <- result %>% filter(get(var) %in% loose_filters[[var]])
+            
           }
         }
       }
@@ -196,7 +209,7 @@ createViz <- function(data.file, x_var, y_var,
     })
     
     # Generate plot
-    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, y_var, color_var, tooltip_vars, hide.legend, gopts)
+    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts)
     
     # Render table
     output$tableOrMessageUI <- renderUI({

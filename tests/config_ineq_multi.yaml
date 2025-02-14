@@ -10,6 +10,7 @@ gopts:
 x_var: "year"
 y_var: "value"
 color_var: "GEO_long"
+color_var_lab: "Country"
 
 #Define main selectors 
 selector_info:
