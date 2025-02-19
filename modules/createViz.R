@@ -164,13 +164,15 @@ createViz <- function(data.file,
           choices <- unique(filtered_data()[[var]])
           
         # check if the selector is random and has more than 5 choices
-        if (loose_selectors[[var]]$select == "random" & length(choices) > 5) {
+        if (!is.null(loose_selectors[[var]]$select)) {
+          if (loose_selectors[[var]]$select == "random" & length(choices) > 5) {
             selchoices <- sample(choices, 5)
-        }
-        # check if the selector is equally "spaced" and has more than 5 choices
-        else if (loose_selectors[[var]]$select == "spaced" & length(choices) > 5) {
+          }
+          # check if the selector is equally "spaced" and has more than 5 choices
+          else if (loose_selectors[[var]]$select == "spaced" & length(choices) > 5) {
             selchoices <- choices[seq(1, length(choices), length.out = 5)]
-        }  else {
+          } 
+        } else {
             selchoices <- choices
         }
         if (length(choices) == 0) choices <- character(0)
