@@ -1,5 +1,6 @@
 #define data source
 data.file: "data/ineq_warehouse_meta_v1_2.csv"
+meta.file: "data/methodological_table.xlsx"
 data.wrangler: "tests/dictionary_loader_ineq.R" #add code to transform the data before plotting if needed 
 
 #combine columns into a string variable if needed 
@@ -15,6 +16,7 @@ gopts:
  
 #define main plot variables 
 x_var: "year"
+xnum_breaks: 10
 y_var: "value"
 color_var: "legend"
 color_var_lab: "Source"

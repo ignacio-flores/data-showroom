@@ -10,8 +10,8 @@ dataTableServer <- function(id, filtered_data, dt.cols) {
         
       req(filtered_data())  
 
-        dt <- filtered_data() %>% mutate(across(where(is.numeric), ~ sprintf("%.2f", .))) %>% # mutate(value = sprintf("%.2f", value))
-          select(names(dt.cols))
+        dt <- filtered_data() %>% mutate(across(where(is.numeric), ~ sprintf("%.2f", .))) %>% 
+            select(names(dt.cols))
         if ("data_description" %in% names(dt)) {
           dt$data_description <- gsub("<br>", "", dt$data_description)
         }

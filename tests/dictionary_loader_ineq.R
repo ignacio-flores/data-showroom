@@ -26,27 +26,4 @@ tic("merging metadata")
   data <- merge(data, sce, by = "source")
 toc()   
 
-tic("generating metadata_table")
-
-  #define variables for metadata
-  meta_tab <- unique(data[ c("source_legend", "GEO_long", "metadata", "data_description", "source_type_description", "d5_dboard_specific_lab", "link")])
-  
-  #filter metadata to variable and country 
-  meta_tab <- meta_tab[
-    meta_tab$metadata == "Share of total net wealth held by the richest 1% (p99p100)." & 
-    meta_tab$GEO_long == "United States",]
-  
-  #transpose metadata 
-  t_col <- t(meta_tab[, 1])
-  t_df <- as.data.frame(t(meta_tab[, -1]))
-  colnames(t_df) <- t_col
-  t_df <- cbind(row = rownames(t_df), t_df)
-  rownames(t_df) <- NULL
-  for (x in 1:length(t_df)) {
-    if (x > 1) {
-      t_df[[x]] <- paste(t_df[[1]], t_df[[x]], sep = ": <br>")
-    }
-  }
-
-toc()
 

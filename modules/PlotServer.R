@@ -11,7 +11,7 @@ plotOutputUI <- function(id) {
 }
 
 # Server logic for the plot module
-plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts) {
+plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks) {
   moduleServer(id, function(input, output, session) {
 
     #display message if data not available
@@ -28,7 +28,14 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()  
       req(df)  
-      breaks_x <- NULL
+      
+      # Define x-axis breaks dynamically
+      if (!is.null(xnum_breaks)) {
+        x_range <- range(df[[x_var]], na.rm = TRUE)
+        breaks_x <- pretty(x_range, n = xnum_breaks)
+      } else {
+        breaks_x <- NULL
+      }
 
       #define tooltip
       if (!is.null(tooltip_vars)) {

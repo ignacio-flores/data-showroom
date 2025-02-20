@@ -19,5 +19,5 @@ tic("loading packages")
   source("modules/combine_multiple_columns.R")
   source("modules/createViz.R")
   source("modules/load_config.R")
-
+  source("modules/metaTableServer.R")
 toc()

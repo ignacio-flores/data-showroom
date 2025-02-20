@@ -1,5 +1,6 @@
-createViz <- function(data.file, 
-                      x_var, x_var_lab = NULL, y_var, y_var_lab = NULL,
+createViz <- function(data.file, meta.file = NULL,
+                      x_var, x_var_lab = NULL, xnum_breaks = NULL,
+                      y_var, y_var_lab = NULL,
                       new.cols = NULL,
                       tooltip_vars = NULL,
                       color_var, color_var_lab = NULL,
@@ -87,6 +88,18 @@ createViz <- function(data.file,
     source(data.wrangler, local = TRUE)  
   }
   
+  # Load metadata if necessary
+  if (!is.null(meta.file)) {
+    #load methodological tables
+    tic("loading methodological table") 
+    meth <- read_excel(meta.file) %>% 
+      rename(Country = `country`) %>% 
+      select(-c("area", "GEO3", "Source"))
+    toc()
+  } else {
+    meth <- NULL 
+  }
+  
   ### Define UI
   ui <- fluidPage(
     
@@ -110,6 +123,15 @@ createViz <- function(data.file,
       )
     },
     
+    #prevent overflow of selectors
+    tags$head(
+      tags$style(HTML("
+      #selectorRow {
+          max-width: 100% !important;
+          align-items: center; 
+      }
+    "))),
+    
     # Conditionally add CSS to hide selectors
     tags$head(
       tags$style(
@@ -126,12 +148,17 @@ createViz <- function(data.file,
     # Placeholder for conditional download button
     uiOutput("downloadButtonUI"),
     
-    # Display graph and table
-    if (table.display) {
+    # Display graph and tables
+    if (table.display && is.null(meta.file)) {
+      fluidRow(column(width = 12, tabsetPanel(
+        tabPanel("Visualization", plotOutputUI("plotModule")),
+        tabPanel("Data", uiOutput("tableOrMessageUI"))
+      )))
+    } else if (table.display && !is.null(meta.file)) {
       fluidRow(column(width = 12, tabsetPanel(
         tabPanel("Visualization", plotOutputUI("plotModule")),
         tabPanel("Data", uiOutput("tableOrMessageUI")),
-        tabPanel("Metadata", uiOutput("tableMeta"))
+        tabPanel("Metadata", metaTableUI("metaModule"))
       )))
     } else {
       fluidRow(column(width = 12, plotOutputUI("plotModule")))
@@ -176,6 +203,7 @@ createViz <- function(data.file,
             selchoices <- choices
         }
         if (length(choices) == 0) choices <- character(0)
+          selchoices <- NULL
           updatePickerInput(
             session,
             inputId = var,
@@ -211,7 +239,7 @@ createViz <- function(data.file,
     })
     
     # Generate plot
-    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts)
+    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks)
     
     # Render table
     output$tableOrMessageUI <- renderUI({
@@ -223,9 +251,13 @@ createViz <- function(data.file,
         dataTableUI("tableModule")
       }
     })
-    
     if (table.display && !is.null(dt.cols)) {
       dataTableServer("tableModule", reactive(final_filtered_data()), dt.cols)
+    }
+    
+    # Render metadata table
+    if (!is.null(meta.file)) {
+      metaTableServer("metaModule", reactive(final_filtered_data()), meta = meth)
     }
     
     # Download button conditionally rendered
