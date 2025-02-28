@@ -189,6 +189,7 @@ createViz <- function(data.file, meta.file = NULL,
         observe({
           req(filtered_data())
           choices <- unique(filtered_data()[[var]])
+          selchoices <- choices
           
         # check if the selector is random and has more than 5 choices
         if (!is.null(loose_selectors[[var]]$select)) {
@@ -199,11 +200,11 @@ createViz <- function(data.file, meta.file = NULL,
           else if (loose_selectors[[var]]$select == "spaced" & length(choices) > 5) {
             selchoices <- choices[seq(1, length(choices), length.out = 5)]
           } 
-        } else {
-            selchoices <- choices
-        }
-        if (length(choices) == 0) choices <- character(0)
+        } 
+        if (length(choices) == 0) {
+          choices <- character(0) 
           selchoices <- NULL
+        }
           updatePickerInput(
             session,
             inputId = var,

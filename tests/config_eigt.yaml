@@ -8,6 +8,7 @@ gopts: "step"
 #define main plot variables 
 x_var: "adjlbo"
 x_var_lab: "Bracket's Lower bound (USD Million, inflation adjusted)"
+xnum_breaks: 10  
 y_var: "adjmrt"
 y_var_lab: "Marginal tax rate"
 color_var: "year"

@@ -28,6 +28,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()  
       req(df)  
+    
       
       # Define x-axis breaks dynamically
       if (!is.null(xnum_breaks)) {
@@ -106,7 +107,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
       # Conditional addition of geom_point
       if ("step" %in% gopts) {
-        p <- p + geom_step(size = 1, direction = "hv")
+         p <- p + geom_step(size = 1, direction = "hv")
       }
       
       #add y title if y_var_label not empty 
