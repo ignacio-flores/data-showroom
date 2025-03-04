@@ -28,8 +28,8 @@ selector_info:
     selected:
       - "United States"
   var_per:
-    label: "Variable"
-    selected: "Share of Total Net Wealth, p99p100"
+     label: "Variable"
+     selected: "Share of Total Net Wealth, p99p100"
   d5_dboard_specific_lab:
     label: "Unit of analysis"
     selected:
@@ -56,7 +56,6 @@ dt.cols:
   var_per: "Variable"
   d5_dboard_specific_lab: "Unit of Analysis"
   value: "Value"
-  #viz_color_var: "Source and Unit"
   legend: "Source"
   metadata: "Description"
   data_description: "Metadata"

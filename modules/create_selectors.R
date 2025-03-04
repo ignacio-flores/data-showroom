@@ -40,8 +40,14 @@ createSelectors <- function(data, selector_info, num.conversion) {
           `count-selected-text` =  "{0} selected" # Show "All" if all selected
         )
       )
+    } else if (inputType == "selector" ) {
+      pickerInput(
+        inputId = var,
+        label = label,
+        choices = choices,
+        selected = selected
+      )
     } else {
-      # Use standard selectInput for regular dropdowns
       selectInput(
         inputId = var,
         label = label,

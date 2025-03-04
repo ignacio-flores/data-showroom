@@ -28,7 +28,29 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()  
       req(df)  
+
+       # Extend last point in step plot
+       if ("step" %in% gopts) {
+      
+         max_x <- max(df[[x_var]], na.rm = TRUE)  # Find max x value
+         extension_x <- max_x * 1.1  # Extend by 5%
+      
+         # Identify the last x-value for each group in color_var
+         last_points <- do.call(rbind, lapply(split(df, df[[color_var]]), function(sub_df) {
+           last_row <- sub_df[sub_df[[x_var]] == max(sub_df[[x_var]], na.rm = TRUE), , drop = FALSE]
+           last_row[[x_var]] <- extension_x  # Extend x-axis
+          
+         return(last_row)
     
+         }))
+      
+         # Combine original data with the extended points
+         df <- rbind(df, last_points)
+         
+         # delete missing color_var 
+         df <- df[!is.na(df[[color_var]]),]
+       }
+      
       
       # Define x-axis breaks dynamically
       if (!is.null(xnum_breaks)) {
