@@ -11,7 +11,7 @@ plotOutputUI <- function(id) {
 }
 
 # Server logic for the plot module
-plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks) {
+plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks) {
   moduleServer(id, function(input, output, session) {
 
     #display message if data not available
@@ -50,7 +50,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
          # delete missing color_var 
          df <- df[!is.na(df[[color_var]]),]
        }
-      
       
       # Define x-axis breaks dynamically
       if (!is.null(xnum_breaks)) {
@@ -91,6 +90,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               legend.title = element_text(size = 12, face = "bold"),
               legend.text = element_text(size = 12),
               legend.position = if (hide.legend) "none" else "center")
+      
+      # Apply facet if facet_var is not NULL
+      if (!is.null(facet_var) && facet_var != "null") {
+        p <- p + facet_wrap(as.formula(paste("~", facet_var)), scales = "fixed")
+      }
 
       #modify scale if necessary
       if (!is.null(breaks_x)) {
@@ -98,6 +102,12 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
       
       # ADD GRAY BACKGROUND LAYERS 
+      if ("area" %in% gopts) {
+        p <- p + geom_area(data = df, 
+                           aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]], fill = .data[[color_var]]),
+                           color = NA,  # Remove outline
+                           alpha = 0.3, inherit.aes = FALSE)
+      }
       if ("line" %in% gopts) {
         p <- p + geom_line(data = df,
                     aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
@@ -116,6 +126,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
       
       #ADD INTERACTIVE LAYERS 
+      if ("area" %in% gopts) {
+        p <- p + geom_area(alpha = 0.5, color = NA)  # Remove outline
+      }
 
       # Conditional addition of geom_line
       if ("line" %in% gopts) {

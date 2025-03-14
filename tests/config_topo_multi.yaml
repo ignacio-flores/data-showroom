@@ -1,35 +1,48 @@
 #define data source
 data.file: "data/topo_warehouse_meta_v1_2.csv"
-#data.wrangler: "tests/dictionary_loader_ineq.R" 
+data.wrangler: "tests/data_prep_topo.R" 
 
 #define plot type 
 gopts: 
- - "line"
+ - "area"
  
 #define main plot variables 
 x_var: "year"
 y_var: "value"
-color_var: "GEO_long"
-color_var_lab: "Country"
+color_var: "d4_concept_lab"
+color_var_lab: "Concept"
 
 #Define main selectors 
 selector_info:
   GEO_long:
     label: "Country"
-    selected:
-      - "United States" 
-      - "Germany" 
+    selected: 
+      - "United States"
       - "Italy"
-    multiple: true   
-  d4_concept_lab:
-    label: "Asset or Debt type"
-    selected: "Debt"
+      - "United Kingdom"
+    multiple: true
   legend:
     label: "Source"
     selected: "World Inequality Database - Balance Sheet"  
+  xrate_lab: 
+    label: "Currency"
+    selected: "xlcusx"
+  pop_lab: 
+    label: "Unit"
   d2_sector_lab:
     label: "Sector"
-    selected: "Households & NPISH"  
+    selected: "Households & NPISH"
+  d4_concept_lab:
+    label: "Asset or Debt type"
+    type: "checkbox"
+    selected: 
+      - "Financial Assets & Fixed Capital of Personal Businesses"
+      - "Housing & Land"
+      - "Debt"  
+      
+#facets 
+facet_var: "GEO_long"
+facet_var_lab: "Country"
 
 #define the columns of the data table widget 
 dt.cols:

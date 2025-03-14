@@ -6,6 +6,7 @@ createViz <- function(data.file, meta.file = NULL,
                       color_var, color_var_lab = NULL,
                       selector_info, 
                       loose_selectors = NULL,
+                      facet_var = NULL, facet_var_lab = NULL,
                       table.display = F, dt.cols = NULL,
                       download.button = F, hide.legend = F,
                       hide.selectors = F, listen = F,
@@ -240,7 +241,7 @@ createViz <- function(data.file, meta.file = NULL,
     })
     
     # Generate plot
-    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks)
+    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks)
     
     # Render table
     output$tableOrMessageUI <- renderUI({
