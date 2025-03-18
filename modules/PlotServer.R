@@ -1,6 +1,7 @@
 require(ggplot2)
 require(plotly)
 require(viridis)
+require(scales)
 
 plotOutputUI <- function(id) {
   ns <- NS(id)
@@ -11,7 +12,7 @@ plotOutputUI <- function(id) {
 }
 
 # Server logic for the plot module
-plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks) {
+plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks, extra_layer) {
   moduleServer(id, function(input, output, session) {
 
     #display message if data not available
@@ -78,10 +79,17 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
 
       # Define plot
-      p <- ggplot(df, aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]],
-            color = .data[[color_var]], text = tooltip_text)) +
+      p <- ggplot(df, aes(
+            x = .data[[x_var]], 
+            y = .data[[y_var]], 
+            group = .data[[color_var]], 
+            color = .data[[color_var]], 
+            fill = .data[[color_var]], 
+            text = tooltip_text)) +
         scale_color_viridis(discrete = TRUE, option = "viridis", direction = 1, end = 0.9, alpha = 0.9) +
+        scale_fill_viridis(discrete = TRUE, option = "viridis", direction = 1, end = 0.9, alpha = 0.9) +
         labs(title = "", x = "", y = "", color = color_var_lab) +
+        guides(color = guide_legend(override.aes = list(alpha = 1))) + 
         theme(panel.background = element_blank(), panel.grid.major = element_blank(),
               axis.title.x = element_text(size = 12), 
               axis.title.y = element_text(size = 12),
@@ -101,19 +109,20 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         p <- p + scale_x_continuous(breaks = breaks_x)
       }
       
-      # ADD GRAY BACKGROUND LAYERS 
+      # ADD GRAY BACKGROUND LAYERS
       if ("area" %in% gopts) {
-        p <- p + geom_area(data = df, 
-                           aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]], fill = .data[[color_var]]),
-                           color = NA,  # Remove outline
-                           alpha = 0.3, inherit.aes = FALSE)
+        # p <- p + geom_area(data = df,
+        #                    aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]], fill = "lightgrey"),
+        #                    alpha = 1,
+        #                    inherit.aes = FALSE
+        #                    )
       }
       if ("line" %in% gopts) {
         p <- p + geom_line(data = df,
                     aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
                     color = "lightgray", alpha = 1, inherit.aes = FALSE,
                     linewidth = 0.6, linetype = 1)
-      } 
+      }
       if ("point" %in% gopts) {
         p <- p + geom_point(data = df,
                      aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
@@ -127,7 +136,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       
       #ADD INTERACTIVE LAYERS 
       if ("area" %in% gopts) {
-        p <- p + geom_area(alpha = 0.5, color = NA)  # Remove outline
+        p <- p + geom_area(alpha = 1,
+                           color = "black"
+                           )
+        p <- p + scale_y_continuous(labels = comma)
       }
 
       # Conditional addition of geom_line
@@ -154,8 +166,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       if (!is.null(x_var_lab)) {
         p <- p + xlab(x_var_lab)
       }
+      
+      #TESTING EXTRA LAYER 
+      # p <- p + geom_line(data = df,
+      #                    aes(x = .data[[x_var]], y = .data[[extra_layer$var]], group = .data[[color_var]]),
+      #                    color = "lightgray", alpha = 1, inherit.aes = FALSE,
+      #                    linewidth = 0.6, linetype = 1)
 
-      #MAKE INTERACTIVE GRAPH 
+      
+      
+      #MAKE INTERACTIVE GRAPH
       ggplotly(p, tooltip = "tooltip_text", height = 700) %>%
         layout(
           dragmode = "zoom",
@@ -165,6 +185,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           yaxis = list(zeroline = FALSE),
           legend = list(
             title = list(text = ''),
+            #traceorder = "grouped",
             orientation = "h",
             x = 0.5,
             itemclick = "toggleothers",

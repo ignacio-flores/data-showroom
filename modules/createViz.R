@@ -12,7 +12,8 @@ createViz <- function(data.file, meta.file = NULL,
                       hide.selectors = F, listen = F,
                       value_scale = "normal", 
                       data.wrangler = NULL, 
-                      gopts = "line", num.conversion = NULL) {
+                      gopts = "line", num.conversion = NULL,
+                      extra_layer = NULL) {
   
   tic("load packages for createViz")
     require(data.table)
@@ -241,7 +242,7 @@ createViz <- function(data.file, meta.file = NULL,
     })
     
     # Generate plot
-    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks)
+    plotModuleServer("plotModule", reactive(final_filtered_data()), x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks, extra_layer)
     
     # Render table
     output$tableOrMessageUI <- renderUI({

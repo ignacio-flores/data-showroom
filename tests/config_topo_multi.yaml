@@ -44,6 +44,13 @@ selector_info:
 facet_var: "GEO_long"
 facet_var_lab: "Country"
 
+# Additional Variable Layer options
+# extra_layer:
+#   enabled: true
+#   var: "netwea" #add to data table too           
+#   var_label: "Net Wealth"    
+#   geom_type: "line"          
+
 #define the columns of the data table widget 
 dt.cols:
   GEO: "Country code"
@@ -54,6 +61,7 @@ dt.cols:
   value: "Value"
   legend: "Source"
   metadata: "Description"
+  netwea: "Net wealth"
 
 #define the information shown in the tooltip
 tooltip_vars:
