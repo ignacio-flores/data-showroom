@@ -110,13 +110,30 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
       
       # ADD GRAY BACKGROUND LAYERS
-      if ("area" %in% gopts) {
-        # p <- p + geom_area(data = df,
-        #                    aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]], fill = "lightgrey"),
-        #                    alpha = 1,
-        #                    inherit.aes = FALSE
-        #                    )
+      grouping_aes <- if (!is.null(facet_var) && facet_var != "null") {
+        interaction(df[[color_var]], df[[facet_var]])
+      } else {
+        df[[color_var]]
       }
+      
+      # ADD GREY BACKGROUND LAYERS
+      if ("area" %in% gopts) {
+        p <- p + geom_area(
+          data = df,
+          aes(
+            x = .data[[x_var]],
+            y = .data[[y_var]],
+            group = grouping_aes,
+            text = NULL
+          ),
+          fill = "lightgrey",
+          color = NA,
+          alpha = 0.6,
+          inherit.aes = FALSE,
+          show.legend = FALSE
+        )
+      }
+     
       if ("line" %in% gopts) {
         p <- p + geom_line(data = df,
                     aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
@@ -137,7 +154,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       #ADD INTERACTIVE LAYERS 
       if ("area" %in% gopts) {
         p <- p + geom_area(alpha = 1,
-                           color = "black"
+                           color = NA,  #"black", 
                            )
         p <- p + scale_y_continuous(labels = comma)
       }
@@ -176,7 +193,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       
       
       #MAKE INTERACTIVE GRAPH
-      ggplotly(p, tooltip = "tooltip_text", height = 700) %>%
+      pp <- ggplotly(p, tooltip = "tooltip_text", height = 700) %>%
         layout(
           dragmode = "zoom",
           font = list(family = "Arial", size = 12, color = "#000"),
@@ -203,6 +220,46 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                  "resetViewMapbox", "select2d", "zoom"
                )
          )
+      
+      # fix legend duplication if faceted plot 
+      if (!is.null(facet_var) && facet_var != "null") {
+        
+        for (i in seq_along(pp$x$data)) {
+          if (!is.null(pp$x$data[[i]]$name)) {
+            
+            # Extract clean name without parentheses and facet number
+            clean_name <- gsub("^\\(|,.*$", "", pp$x$data[[i]]$name)
+            
+            # Assign cleaned name to legendgroup (common across facets)
+            pp$x$data[[i]]$legendgroup <- clean_name
+            
+            # Keep unique trace name internally (maintain original interactivity)
+            pp$x$data[[i]]$name <- clean_name
+            
+            # Display legend only once per legendgroup
+            # first occurrence of each legendgroup gets showlegend = TRUE, others FALSE
+            if (!exists("legend_shown")) legend_shown <- character(0)
+            
+            if (!(clean_name %in% legend_shown)) {
+              pp$x$data[[i]]$showlegend <- TRUE
+              legend_shown <- c(legend_shown, clean_name)
+            } else {
+              pp$x$data[[i]]$showlegend <- FALSE
+            }
+          }
+        }
+      }
+      
+      # REMOVE ANY UNINTENDED "trace 0" LEGEND ENTRIES (from grey background)
+      for (i in seq_along(pp$x$data)) {
+        if (!is.null(pp$x$data[[i]]$name) && pp$x$data[[i]]$name %in% c("trace 0", "")) {
+          pp$x$data[[i]]$showlegend <- FALSE
+          pp$x$data[[i]]$hoverinfo <- "skip"  # Optional: removes hover info from grey background
+        }
+      }
+      
+      pp
+  
     })
   })
 }
