@@ -86,18 +86,18 @@ data <- rbind(data, data_mac) %>%
   arrange(GEO, xrate, pop, year)
 rm(data_mac, dictionary)
 
-#pivot wider to separate d4_concept_lab == "Net Wealth" as a separate variable  
-netwea <- filter(data, d4_concept_lab == "Net Wealth") %>% 
-  select("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab", "d4_concept_lab", "value") %>%
-  pivot_wider(
-    id_cols = c("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab"), 
-    names_from = d4_concept_lab, 
-    values_from = value) %>%
-  filter(!is.na(`Net Wealth`)) %>%
-  rename(netwea = `Net Wealth`)
-
-#merge back to data
-data <- filter(data, d4_concept_lab != "Net Wealth") %>% 
-  left_join(netwea, by = c("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab")) %>%
-  arrange(GEO, xrate, pop, year)
-rm(netwea)
+# #pivot wider to separate d4_concept_lab == "Net Wealth" as a separate variable  
+# netwea <- filter(data, d4_concept_lab == "Net Wealth") %>% 
+#   select("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab", "d4_concept_lab", "value") %>%
+#   pivot_wider(
+#     id_cols = c("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab"), 
+#     names_from = d4_concept_lab, 
+#     values_from = value) %>%
+#   filter(!is.na(`Net Wealth`)) %>%
+#   rename(netwea = `Net Wealth`)
+# 
+# #merge back to data
+# data <- filter(data, d4_concept_lab != "Net Wealth") %>% 
+#   left_join(netwea, by = c("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab")) %>%
+#   arrange(GEO, xrate, pop, year)
+#rm(netwea)

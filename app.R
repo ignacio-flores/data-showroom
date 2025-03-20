@@ -30,4 +30,5 @@ createViz(
   download.button = download.button,
   hide.selectors = hide.selectors,
   listen = listen,
+  extra_layer = extra_layer
 )

@@ -174,7 +174,8 @@ createViz <- function(data.file, meta.file = NULL,
     filtered_data <- dataFilter(input, output, session, 
         data, x_var, y_var, color_var, 
         selector_vars = names(selector_info),
-        dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal")
+        dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal",
+        extra_layer = extra_layer)
     
     loose_filters <- reactiveValues()
     
