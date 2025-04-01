@@ -48,9 +48,9 @@ facet_var: "GEO_long"
 facet_var_lab: "Country"
 
 #Additional Variable Layer options
-# extra_layer:
-#   values: "Net Wealth"
-#   type: "line" # can be area, line, point, step
+extra_layer:
+   values: "Net Wealth"
+   type: "line" 
 
 #define the columns of the data table widget 
 dt.cols:

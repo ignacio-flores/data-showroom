@@ -32,3 +32,7 @@ createViz(
   listen = listen,
   extra_layer = extra_layer
 )
+
+#Comments: extra_layers work with faceted plots only (can be made independent)
+#area plots (non-faceted) have stuck tooltips (solution is to make them directly
+#with plotly, like faceted plots)
