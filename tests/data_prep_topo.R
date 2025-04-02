@@ -13,6 +13,12 @@ data_nom_lcu <- data %>%
 data_nom_lcu <- data_nom_lcu %>% 
   mutate(value = ifelse(d4_concept_lab == "Debt", -value, value))
 
+#load national income 
+# ni <- read.csv("data/supplementary_var_long.csv") %>% 
+#   filter(variable == "mnninc") %>% select(-c("GEO_WB", "GEO3", "variable")) %>% 
+#   rename(`ni` = value, GEO = country) %>% 
+#   mutate(pop_lab = "Percentage of National Income") 
+
 #Adjust using market xrates
 xrates_mer <- read.csv("data/supplementary_var_long.csv") %>% 
   filter(variable %in% c("xlceux", "xlcusx", "xlcyux")) %>% 
@@ -24,6 +30,7 @@ data_nom <- select(data_nom_lcu, -xrate_lab) %>%
   left_join(xrates_mer, by = c("GEO", "year"), multiple = "all") %>% 
   mutate(value = value / xrate) 
 rm(xrates_mer)
+
 #Create nominal data 
 data_nom_lcu <- data_nom_lcu %>% mutate(xrate = 1)
 data_nom <- rbind(data_nom, data_nom_lcu) %>%  
@@ -77,7 +84,7 @@ pops <- read.csv("data/supplementary_var_long.csv") %>%
 pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "npopul", "Per capita", pop_lab))
 pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "npopul_adu", "Per adult", pop_lab))
 pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "npopem", "Per employed population", pop_lab))
-pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "ntaxma", "per tax unit", pop_lab))
+pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "ntaxma", "Per tax unit", pop_lab))
 
 data <- left_join(data, pops, by = c("GEO", "year"), multiple = "all") 
 rm(pops)
@@ -86,18 +93,3 @@ data <- rbind(data, data_mac) %>%
   arrange(GEO, xrate, pop, year)
 rm(data_mac, dictionary)
 
-# #pivot wider to separate d4_concept_lab == "Net Wealth" as a separate variable  
-# netwea <- filter(data, d4_concept_lab == "Net Wealth") %>% 
-#   select("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab", "d4_concept_lab", "value") %>%
-#   pivot_wider(
-#     id_cols = c("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab"), 
-#     names_from = d4_concept_lab, 
-#     values_from = value) %>%
-#   filter(!is.na(`Net Wealth`)) %>%
-#   rename(netwea = `Net Wealth`)
-# 
-# #merge back to data
-# data <- filter(data, d4_concept_lab != "Net Wealth") %>% 
-#   left_join(netwea, by = c("GEO", "year", "source", "d2_sector_lab", "xrate_lab", "pop_lab")) %>%
-#   arrange(GEO, xrate, pop, year)
-#rm(netwea)

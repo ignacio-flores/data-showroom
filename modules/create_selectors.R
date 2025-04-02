@@ -1,7 +1,7 @@
 require(shiny)
 require(shinyWidgets)
 
-createSelectors <- function(data, selector_info, num.conversion) {
+createSelectors <- function(data, selector_info, num.conversion, extra_layer) {
   
   # Determine the number of selectors
   numSelectors <- length(selector_info)
@@ -14,7 +14,16 @@ createSelectors <- function(data, selector_info, num.conversion) {
     inputType <- ifelse("type" %in% names(info), info$type, "select") # Default to dropdown
 
     # Define choices as all unique values in the column by default. 
-    choices <- sort(unique(data[[var]]))
+    #choices <- sort(unique(data[[var]]))
+    # Define choices explicitly removing extra_layer values if necessary
+    if (exists("extra_layer") && !is.null(extra_layer$values) && var == color_var) {
+      extra_layer_values <- unlist(extra_layer$values)
+      # Explicitly remove extra_layer values from selector
+      choices <- sort(setdiff(unique(data[[var]]), extra_layer_values))
+    } else {
+      choices <- sort(unique(data[[var]]))
+    }
+    
     
     # Default to select all if type is "checkbox" 
     selected <- if (inputType == "checkbox") {

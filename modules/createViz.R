@@ -145,7 +145,7 @@ createViz <- function(data.file, meta.file = NULL,
     ),
     
     # Place selectors in a row with a specific ID
-    fluidRow(id = "selectorRow", createSelectors(data, all_selectors, num.conversion)),
+    fluidRow(id = "selectorRow", createSelectors(data, all_selectors, num.conversion, extra_layer)),
     
     # Placeholder for conditional download button
     uiOutput("downloadButtonUI"),
