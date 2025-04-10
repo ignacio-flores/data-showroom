@@ -1,3 +1,5 @@
+
 *.dcf
 *.Rhistory
 data/
+auth/

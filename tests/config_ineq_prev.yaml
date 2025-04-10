@@ -1,6 +1,5 @@
 #define data source
 data.file: "data/ineq_warehouse_meta_v1_2.csv"
-meta.file: "data/methodological_table.xlsx"
 data.wrangler: "tests/dictionary_loader_ineq.R" #add code to transform the data before plotting if needed 
 
 #combine columns into a string variable if needed 
@@ -30,7 +29,7 @@ selector_info:
       - "United States"
   var_per:
      label: "Variable"
-     selected: "Share of Total Net Wealth, p99p100"
+     selected: "Share of Total Net Wealth, p90p100"
   d5_dboard_specific_lab:
     label: "Unit of analysis"
     selected:
@@ -38,7 +37,7 @@ selector_info:
       - "Individuals - Adults (equal split)"
       - "Households"
       - "Tax Units"
-    multiple: true #necessary if you have more than one 
+    multiple: true 
 
 #Define reactive or 'loose' selectors (react to changes in main selectors)
 loose_selectors:
@@ -51,15 +50,6 @@ loose_selectors:
 
 #define the columns of the data table widget 
 dt.cols:
-  GEO: "Country code"
-  year: "Year"
-  GEO_long: "Country"
-  var_per: "Variable"
-  d5_dboard_specific_lab: "Unit of Analysis"
-  value: "Value"
-  legend: "Source"
-  metadata: "Description"
-  data_description: "Metadata"
   Data_Type: "Data type"
 
 #define the information shown in the tooltip
@@ -68,13 +58,13 @@ tooltip_vars:
   year: "Year:"
   value: "Value:"
   legend: "Source:"
-  metadata: "Explanation:"
+  #metadata: "Explanation:"
   data_description: "Data type:"
 
 #other options 
-download.button: True
-hide.selectors: False
+download.button: False
+hide.selectors: True
 listen: False
-table.display: True
-hide.legend: False
-plot_height: 700
+table.display: False
+hide.legend: True
+plot_height: 480

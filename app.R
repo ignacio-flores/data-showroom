@@ -3,7 +3,9 @@ source("libraries.R", local = T)
 
 # Load configuration file
 #load_config("tests/config_ineq_single.yaml", func = createViz)
-load_config("tests/config_topo_multi.yaml", func = createViz)
+#load_config("tests/config_ineq_multi.yaml", func = createViz)
+load_config("tests/config_ineq_prev.yaml", func = createViz)
+#load_config("tests/config_topo_multi.yaml", func = createViz)
 #load_config("tests/config_eigt.yaml", func = createViz)
 
 # Run app
@@ -25,12 +27,15 @@ createViz(
   selector_info = selector_info,
   loose_selectors = loose_selectors,
   tooltip_vars = tooltip_vars,
-  table.display = T,
+  table.display = table.display,
   dt.cols = dt.cols,
   download.button = download.button,
   hide.selectors = hide.selectors,
   listen = listen,
-  extra_layer = extra_layer
+  extra_layer = extra_layer, 
+  color_style = color_style,
+  hide.legend = hide.legend,
+  plot_height = plot_height
 )
 
 #Comments: extra_layers work with faceted plots only (can be made independent)

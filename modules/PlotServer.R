@@ -12,7 +12,10 @@ plotOutputUI <- function(id) {
 }
 
 # Server logic for the plot module
-plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, hide.legend, gopts, xnum_breaks, extra_layer) {
+plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, 
+                             color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
+                             hide.legend, gopts, xnum_breaks, extra_layer, color_style,
+                             plot_height) {
   moduleServer(id, function(input, output, session) {
 
     #display message if data not available
@@ -115,7 +118,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             x = ~get(x_var),
             y = ~get(y_var),
             color = ~get(color_var),
-            colors = viridis_pal(option = "viridis")(length(unique(df[[color_var]]))),
+            colors = viridis_pal(option = color_style)(length(unique(df[[color_var]]))),
             text = ~tooltip_text,
             hoverinfo = 'text',
             type = 'scatter',
@@ -123,7 +126,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             fill = ifelse("area" %in% gopts, 'tozeroy', 'none'),
             line = list(shape = ifelse("step" %in% gopts, 'hv', 'linear')),
             #stackgroup = ifelse("area" %in% gopts, "one", NULL),
-            height = 700,
+            height = plot_height,
             opacity = 1,
             legendgroup = ~get(color_var),
             showlegend = (facet_level == facet_levels[1])
@@ -243,8 +246,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           color = .data[[color_var]],
           fill = .data[[color_var]],
           text = tooltip_text)) +
-          scale_color_viridis(discrete = TRUE, option = "viridis", direction = 1, end = 0.9, alpha = 0.9) +
-          scale_fill_viridis(discrete = TRUE, option = "viridis", direction = 1, end = 0.9, alpha = 0.9) +
+          scale_color_viridis(discrete = TRUE, option = color_style, direction = 1, end = 0.9, alpha = 0.9) +
+          scale_fill_viridis(discrete = TRUE, option = color_style, direction = 1, end = 0.9, alpha = 0.9) +
           labs(title = "", x = "", y = "", color = color_var_lab) +
           guides(color = guide_legend(override.aes = list(alpha = 1))) +
           theme(panel.background = element_blank(), panel.grid.major = element_blank(),
@@ -343,7 +346,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         }
 
         #MAKE INTERACTIVE GRAPH
-        pp <- ggplotly(p, tooltip = "text", height = 700) %>%
+        pp <- ggplotly(p, tooltip = "text", height = plot_height) %>%
           style(hoverinfo = "text") %>%
           layout(
             dragmode = "zoom",
