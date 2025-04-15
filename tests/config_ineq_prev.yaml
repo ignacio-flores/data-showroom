@@ -64,7 +64,7 @@ tooltip_vars:
 #other options 
 download.button: False
 hide.selectors: True
-listen: False
+listen: True
 table.display: False
 hide.legend: True
 plot_height: 480

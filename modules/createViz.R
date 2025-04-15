@@ -108,7 +108,7 @@ createViz <- function(data.file, meta.file = NULL,
   ui <- fluidPage(
     
     # Option: listening to messages when hiding selectors
-    if (hide.selectors && listen) {
+    if (listen) {
       tags$head(
         tags$script(HTML("
         $(document).ready(function() {
@@ -171,6 +171,12 @@ createViz <- function(data.file, meta.file = NULL,
   
   ## Define Server
   server <- function(input, output, session) {
+    
+    observeEvent(input$externalGEO_long, {
+      if ("GEO_long" %in% names(selector_info)) {
+        updatePickerInput(session, "GEO_long", selected = input$externalGEO_long)
+      }
+    })
     
     # filter data with main selectors 
     filtered_data <- dataFilter(input, output, session, 
