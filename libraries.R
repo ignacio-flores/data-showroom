@@ -6,6 +6,8 @@ tic("loading packages")
   library(shiny)
   library(magrittr)
   library(DT)
+  #library(shinyBS)
+  library(bslib)
   #load modules 
   source("modules/create_selectors.R")
   source("modules/ensureListStructure.R")

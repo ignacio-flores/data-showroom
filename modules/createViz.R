@@ -15,7 +15,8 @@ createViz <- function(data.file, meta.file = NULL,
                       gopts = "line", num.conversion = NULL,
                       extra_layer = NULL, 
                       color_style = "viridis", 
-                      plot_height = 700) {
+                      plot_height = 700,
+                      meta.loc = NULL) {
   
   tic("load packages for createViz")
     require(data.table)
@@ -105,8 +106,28 @@ createViz <- function(data.file, meta.file = NULL,
   }
   
   ### Define UI
-  ui <- fluidPage(
+  ui <- page_fluid(
     
+    # Add Bootstrap theme and prevent padding 
+    theme = bs_theme(version = 5),
+    tags$style(HTML("
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow-y: auto;
+      }
+      .container-fluid {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-bottom: 0 !important;
+      }
+      .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+  ")),
+      
     # Option: listening to messages when hiding selectors
     if (listen) {
       tags$head(
@@ -153,19 +174,61 @@ createViz <- function(data.file, meta.file = NULL,
     uiOutput("downloadButtonUI"),
     
     # Display graph and tables
-    if (table.display && is.null(meta.file)) {
-      fluidRow(column(width = 12, tabsetPanel(
-        tabPanel("Visualization", plotOutputUI("plotModule")),
-        tabPanel("Data", uiOutput("tableOrMessageUI"))
-      )))
-    } else if (table.display && !is.null(meta.file)) {
-      fluidRow(column(width = 12, tabsetPanel(
-        tabPanel("Visualization", plotOutputUI("plotModule")),
-        tabPanel("Data", uiOutput("tableOrMessageUI")),
-        tabPanel("Metadata", metaTableUI("metaModule"))
-      )))
+    if (table.display) {
+      if (is.null(meta.file)) {
+        # Case 1: Show only Visualization and Data tabs (no metadata)
+        fluidRow(column(width = 12, tabsetPanel(
+          tabPanel("Visualization", plotOutputUI("plotModule")),
+          tabPanel("Data", uiOutput("tableOrMessageUI"))
+        )))
+        
+      } else if (meta.loc == "tab") {
+        # Case 2: Metadata shown as a separate tab
+        fluidRow(column(width = 12, tabsetPanel(
+          tabPanel("Visualization", plotOutputUI("plotModule")),
+          tabPanel("Data", uiOutput("tableOrMessageUI")),
+          tabPanel("Methodological table", metaTableUI("metaModule"))
+        )))
+        
+      } else if (meta.loc == "below") {
+        tagList(
+          fluidRow(
+            column(width = 12, plotOutputUI("plotModule"))
+          ),
+          fluidRow(
+            column(width = 12,
+                   tags$div(style = "margin-top: 300px; "),
+                   accordion(
+                     open = FALSE,
+                     accordion_panel(
+                       title = tagList(
+                         tags$h4("Read the detailed Methodological Table:"),
+                         tags$p(
+                           "The Methodological Table below summarizes, for each source: the type of data used, where the work sources its data, the unit of analysis, the methods of estimation, how different assets are valued, how specific types of assets are treated, any adjustments made to the data, important underlying assumptions, and more."
+                         )
+                       ),
+                       value = "metadata",
+                       metaTableUI("metaModule")
+                     )
+                   )
+            )
+          )
+        )
+      } else {
+        # Fallback if meta.loc is something unexpected
+        fluidRow(column(width = 12, plotOutputUI("plotModule")))
+      }
+      
     } else {
-      fluidRow(column(width = 12, plotOutputUI("plotModule")))
+      # Case 4: No table.display, just the plot (and maybe metadata below)
+      if (!is.null(meta.file) && meta.loc == "below") {
+        fluidRow(column(width = 12,
+                        plotOutputUI("plotModule"),
+                        tags$div(style = "margin-top: 100px;", metaTableUI("metaModule"))
+        ))
+      } else {
+        fluidRow(column(width = 12, plotOutputUI("plotModule")))
+      }
     }
   )
   

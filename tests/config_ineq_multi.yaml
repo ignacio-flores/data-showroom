@@ -1,6 +1,7 @@
 #define data source
 data.file: "data/ineq_warehouse_meta_v1_2.csv"
 meta.file: "data/methodological_table.xlsx"
+meta.loc: "below"
 data.wrangler: "tests/dictionary_loader_ineq.R" #add code to transform the data before plotting if needed 
 
 #combine columns into a string variable if needed 
