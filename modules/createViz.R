@@ -95,11 +95,16 @@ createViz <- function(data.file, meta.file = NULL,
   
   # Load metadata if necessary
   if (!is.null(meta.file)) {
+     
     #load methodological tables
     tic("loading methodological table") 
     meth <- read_excel(meta.file) %>% 
       rename(Country = `country`) %>% 
-      select(-c("area", "GEO3", "Source"))
+      select(-c("area", "GEO3", "Source")) 
+    # %>% mutate(
+    #     Description_inc = sapply(`Period covered and data points`, make_expandable),
+    #     Description_wea = sapply(`Data sources used in the research`, make_expandable)
+    #     )
     toc()
   } else {
     meth <- NULL 
