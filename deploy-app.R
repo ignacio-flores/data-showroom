@@ -5,7 +5,9 @@ rsconnect::setAccountInfo(name='gcwealth',
                           secret=shiny_secret)
 
 # Define the paths
-
 #deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-country-view")
-deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-country-comp")
+#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-country-comp")
 #deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-prev")
+deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-country-comp")
+#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-country-view")
+#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-prev")

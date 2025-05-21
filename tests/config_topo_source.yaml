@@ -19,15 +19,16 @@ color_style: "viridis"
 selector_info:
   GEO_long:
     label: "Country"
-    selected: 
-      - "France"
-      - "United States"
-      - "Italy"
-      - "United Kingdom"
-    multiple: true
+    selected: "United States"
   legend:
     label: "Source"
-    selected: "World Inequality Database - Balance Sheet"  
+    type: "checkbox"
+    selected: 
+      - "World Inequality Database - Balance Sheet"  
+      - "Credit Suisse Global wealth report"
+      - "Luxembourg Wealth Study Database - Balance Sheet"
+      - "Federal Reserve Board B.101.H - Balance Sheet"
+    multiple: true
   xrate_lab: 
     label: "Currency"
     selected: "Euro (2023 prices)"
@@ -46,8 +47,8 @@ selector_info:
       - "Debt"  
       
 #facets 
-facet_var: "GEO_long"
-facet_var_lab: "Country"
+facet_var: "legend"
+facet_var_lab: "Source"
 
 #Additional Variable Layer options
 extra_layer:

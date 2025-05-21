@@ -3,9 +3,12 @@ source("libraries.R", local = T)
 
 # Load configuration file
 #load_config("tests/config_ineq_single.yaml", func = createViz)
-load_config("tests/config_ineq_multi.yaml", func = createViz)
+#load_config("tests/config_ineq_multi.yaml", func = createViz)
 #load_config("tests/config_ineq_prev.yaml", func = createViz)
 #load_config("tests/config_topo_multi.yaml", func = createViz)
+#load_config("tests/config_topo_single.yaml", func = createViz)
+load_config("tests/config_topo_source.yaml", func = createViz)
+#load_config("tests/config_topo_prev.yaml", func = createViz)
 #load_config("tests/config_eigt.yaml", func = createViz)
 
 # Run app

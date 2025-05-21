@@ -129,7 +129,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             height = plot_height,
             opacity = 1,
             legendgroup = ~get(color_var),
-            showlegend = (facet_level == facet_levels[1])
+            #showlegend = (facet_level == facet_levels[1])
+            showlegend = !hide.legend && (facet_level == facet_levels[1])
           ) %>% layout(
             dragmode = "zoom",
             xaxis = list(title = x_var_lab), #fixedrange = TRUE
@@ -155,7 +156,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                   text = ~tooltip_text,
                   hoverinfo = 'text',
                   color = I("black"), 
-                  showlegend = (facet_level == facet_levels[1]),
+                  #showlegend = (facet_level == facet_levels[1]),
+                  showlegend = !hide.legend && (facet_level == facet_levels[1]),
                   legendgroup = "extra_layer"
                 ) %>% 
                 layout(
@@ -174,7 +176,15 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Generate subplot
         # Compute global axis limits
         x_range <- range(df[[x_var]], na.rm = TRUE)
-        y_range <- range(df[[y_var]], na.rm = TRUE)
+        
+        if (!is.null(extra_layer)) {
+          combined_y <- c(df[[y_var]], extra_df[[y_var]])
+          y_range <- range(combined_y, na.rm = TRUE)
+        } else {
+          y_range <- range(df[[y_var]], na.rm = TRUE)
+        }
+        
+        #y_range <- range(df[[y_var]], na.rm = TRUE)
         
         # Generate subplot with fixed axis ranges
         pp <- subplot(plots, nrows = nrows, shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>%
@@ -212,7 +222,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               zeroline = FALSE 
               #fixedrange = T
             ), 
-            legend = list(
+            legend = if (!hide.legend) list(
               orientation = "h",
               x = 0.5,
               xanchor = "center",
@@ -220,7 +230,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               yanchor = "top",
               itemclick = "toggleothers",
               itemdoubleclick = "exclusive"
-            ),
+            ) else list(),
             opacity = 1
           ) %>%
           config(displaylogo = FALSE,

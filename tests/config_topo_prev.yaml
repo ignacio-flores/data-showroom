@@ -19,12 +19,7 @@ color_style: "viridis"
 selector_info:
   GEO_long:
     label: "Country"
-    selected: 
-      - "France"
-      - "United States"
-      - "Italy"
-      - "United Kingdom"
-    multiple: true
+    selected: "United States"
   legend:
     label: "Source"
     selected: "World Inequality Database - Balance Sheet"  
@@ -73,9 +68,9 @@ tooltip_vars:
   legend: "Source:"
  
 #other options 
-download.button: True
-hide.selectors: False
-listen: False
-table.display: True
-hide.legend: False
-plot_height: 700
+download.button: False
+hide.selectors: True
+listen: True
+table.display: False
+hide.legend: True
+plot_height: 480
