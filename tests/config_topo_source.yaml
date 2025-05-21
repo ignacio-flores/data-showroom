@@ -37,7 +37,7 @@ selector_info:
     selected: "Per capita"
   d2_sector_lab:
     label: "Sector"
-    selected: "Households & NPISH"
+    selected: "Households"
   d4_concept_lab:
     label: "Asset or Debt type"
     type: "checkbox"
