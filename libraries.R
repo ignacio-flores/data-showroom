@@ -6,6 +6,7 @@ tic("loading packages")
   library(shiny)
   library(magrittr)
   library(DT)
+  library(htmltools)
   #library(shinyBS)
   library(bslib)
   #load modules 

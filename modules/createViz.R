@@ -101,10 +101,6 @@ createViz <- function(data.file, meta.file = NULL,
     meth <- read_excel(meta.file) %>% 
       rename(Country = `country`) %>% 
       select(-c("area", "GEO3", "Source")) 
-    # %>% mutate(
-    #     Description_inc = sapply(`Period covered and data points`, make_expandable),
-    #     Description_wea = sapply(`Data sources used in the research`, make_expandable)
-    #     )
     toc()
   } else {
     meth <- NULL 
@@ -170,6 +166,19 @@ createViz <- function(data.file, meta.file = NULL,
         else 
           HTML("#selectorRow { display: block; }")
       )
+    ),
+    
+    # Add custom JavaScript for expandable text
+    tags$head(
+      tags$script(HTML("
+        $(document).on('click', '.toggle-link', function(e) {
+          e.preventDefault();
+          var container = $(this).closest('.expandable-text');
+          container.find('.short-text').toggle();
+          container.find('.full-text').toggle();
+          $(this).text($(this).text() === 'Show more' ? 'Show less' : 'Show more');
+        });
+      "))
     ),
     
     # Place selectors in a row with a specific ID

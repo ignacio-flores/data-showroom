@@ -1,4 +1,4 @@
-make_expandable <- function(text, threshold = 50) {
+make_expandable <- function(text, threshold = 80) {
   if (nchar(text) <= threshold) return(text)
 
   short <- substr(text, 1, threshold)
