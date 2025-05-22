@@ -125,16 +125,15 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             mode = ifelse("point" %in% gopts, "lines+markers", "lines"),
             fill = ifelse("area" %in% gopts, 'tozeroy', 'none'),
             line = list(shape = ifelse("step" %in% gopts, 'hv', 'linear')),
-            #stackgroup = ifelse("area" %in% gopts, "one", NULL),
+            stackgroup = ifelse("stack" %in% gopts, "one", NULL),
             height = plot_height,
             opacity = 1,
             legendgroup = ~get(color_var),
-            #showlegend = (facet_level == facet_levels[1])
             showlegend = !hide.legend && (facet_level == facet_levels[1])
           ) %>% layout(
             dragmode = "zoom",
-            xaxis = list(title = x_var_lab), #fixedrange = TRUE
-            yaxis = list(title = y_var_lab) #fixedrange = TRUE
+            xaxis = list(title = x_var_lab), 
+            yaxis = list(title = y_var_lab) 
           )
           
           # Add extra layer dynamically
@@ -156,7 +155,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                   text = ~tooltip_text,
                   hoverinfo = 'text',
                   color = I("black"), 
-                  #showlegend = (facet_level == facet_levels[1]),
                   showlegend = !hide.legend && (facet_level == facet_levels[1]),
                   legendgroup = "extra_layer"
                 ) %>% 
@@ -177,14 +175,21 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Compute global axis limits
         x_range <- range(df[[x_var]], na.rm = TRUE)
         
-        if (!is.null(extra_layer)) {
-          combined_y <- c(df[[y_var]], extra_df[[y_var]])
-          y_range <- range(combined_y, na.rm = TRUE)
-        } else {
-          y_range <- range(df[[y_var]], na.rm = TRUE)
+         if (!is.null(extra_layer)) {
+           combined_y <- c(df[[y_var]], extra_df[[y_var]])
+           y_range <- range(combined_y, na.rm = TRUE)
+         } else {
+           y_range <- range(df[[y_var]], na.rm = TRUE)
+         }
+
+        y_range <- range(df[[y_var]], na.rm = TRUE)
+        yaxis_opts <- list(
+          title = y_var_lab,
+          zeroline = FALSE
+        )
+        if (!"stack" %in% gopts) {
+          yaxis_opts$range <- y_range
         }
-        
-        #y_range <- range(df[[y_var]], na.rm = TRUE)
         
         # Generate subplot with fixed axis ranges
         pp <- subplot(plots, nrows = nrows, shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>%
@@ -214,14 +219,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               range = x_range, 
               title = x_var_lab, 
               zeroline = FALSE 
-              #fixedrange = T 
             ),  
-            yaxis = list(
-              range = y_range, 
-              title = y_var_lab, 
-              zeroline = FALSE 
-              #fixedrange = T
-            ), 
+            # yaxis = list(
+            #   range = y_range, 
+            #   title = y_var_lab, 
+            #   zeroline = FALSE 
+            # ), 
+            yaxis = yaxis_opts,
             legend = if (!hide.legend) list(
               orientation = "h",
               x = 0.5,
