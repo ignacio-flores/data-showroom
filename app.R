@@ -13,7 +13,7 @@ load_config("tests/config_topo_source.yaml", func = createViz)
 #load_config("tests/config_eigt.yaml", func = createViz)
 
 # Run app
-createViz(
+app <- createViz(
   data.file = data.file,
   meta.file = meta.file,
   data.wrangler = data.wrangler,
@@ -42,6 +42,8 @@ createViz(
   plot_height = plot_height,
   meta.loc = meta.loc
 )
+
+shiny::runApp(app)
 
 #Comments: extra_layers work with faceted plots only (can be made independent)
 #area plots (non-faceted) have stuck tooltips (solution is to make them directly
