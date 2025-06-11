@@ -21,7 +21,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     #display message if data not available
     output$messageDisplay <- renderUI({
       df <- filtered_data_func()
-      if (is.null(df)) {
+      if (is.null(df) || nrow(df) == 0) {
         h3("No data available for this selection", align = "center")
       } else {
         NULL  # Don't show message if data is present
@@ -31,6 +31,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()
       req(df)
+      req(nrow(df) > 0)
   
       # Extend last point in step plot
       if ("step" %in% gopts) {
@@ -40,11 +41,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         # Identify the last x-value for each group in color_var
         last_points <- do.call(rbind, lapply(split(df, df[[color_var]]), function(sub_df) {
-          last_row <- sub_df[sub_df[[x_var]] == max(sub_df[[x_var]], na.rm = TRUE), , drop = FALSE]
+          sub_df <- sub_df[!is.na(sub_df[[x_var]]), , drop = FALSE]
+          if (nrow(sub_df) == 0) {
+            return(NULL)
+          }
+          last_row <- sub_df[which.max(sub_df[[x_var]]), , drop = FALSE]
           last_row[[x_var]] <- extension_x  # Extend x-axis
-
           return(last_row)
-
         }))
 
         # Combine original data with the extended points
@@ -93,15 +96,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
    
       if (!is.null(extra_layer)){
-        
-        # Separate extra layer 
+
+        # Separate extra layer
         extra_df <- df %>%
           filter(!!sym(color_var) %in% extra_layer$values)
-        
+
         # Remove info from df
         df <- df %>%
           filter(!(!!sym(color_var) %in% extra_layer$values))
-        
+
+        req(nrow(df) > 0)
       }
 
       #use plotly directly if dealing with facets
