@@ -1,0 +1,59 @@
+#define data source
+data.file: "data/eigt_wide_viz.csv"
+data.wrangler: "R/data_prep_eigt.R" #add code to transform the data before plotting if needed 
+
+#define plot type 
+gopts: "step"
+ 
+#define main plot variables 
+x_var: "adjlbo"
+x_var_lab: "Bracket's Lower bound (USD Million, inflation adjusted)"
+xnum_breaks: 10  
+y_var: "adjmrt"
+y_var_lab: "Marginal tax rate"
+color_var: "year"
+color_var_lab: "Year"
+
+#Define main selector 
+selector_info:
+  Country:
+    label: "Country"
+    selected:
+      - "United States"
+      
+loose_selectors: 
+   year:
+    label: "Years"
+    type: "checkbox"
+    select: "spaced"
+   tax:
+    label: "Tax type"
+    selected: "Estate Tax"
+    type: "checkbox"
+
+#define the columns of the data table widget 
+dt.cols: 
+  GEO: "Country code"
+  year: "Year"
+  tax: "Tax type"
+  bracket: "Bracket"
+  currency: "Currency"
+  adjmrt: "Marginal tax rate"
+  adjlbo: "Lower bound in adjusted USD Millions"
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO: "Country:"
+  year: "Year:"
+  tax: "Tax type:"
+  currency: "Currency"
+  adjmrt: "Marginal tax rate"
+  adjlbo: "Lower bound in adjusted USD Millions"
+
+#other options 
+download.button: True
+hide.selectors: False
+listen: False
+table.display: True
+hide.legend: False
+plot_height: 700

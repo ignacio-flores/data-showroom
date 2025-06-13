@@ -1,0 +1,70 @@
+#define data source
+data.file: "data/ineq_warehouse_meta_v1_2.csv"
+data.wrangler: "R/dictionary_loader_ineq.R" 
+
+#combine columns into a string variable if needed 
+new.cols: 
+  var_per:
+    - "d3_vartype_lab"
+    - "percentile"
+
+#define plot type 
+gopts: 
+ - "line"
+ - "point"
+ 
+#define main plot variables 
+x_var: "year"
+xnum_breaks: 10
+y_var: "value"
+color_var: "legend"
+color_var_lab: "Source"
+color_style: "viridis"
+
+#Define main selectors 
+selector_info:
+  GEO_long:
+    label: "Country"
+    selected:
+      - "United States"
+  var_per:
+     label: "Variable"
+     selected: "Share of Total Net Wealth, p90p100"
+  d5_dboard_specific_lab:
+    label: "Unit of analysis"
+    selected:
+      - "Individuals - Adults"
+      - "Individuals - Adults (equal split)"
+      - "Households"
+      - "Tax Units"
+    multiple: true 
+
+#Define reactive or 'loose' selectors (react to changes in main selectors)
+loose_selectors:
+  Data_Type:
+    label: "Data type"
+    type: "checkbox"
+  legend:
+    label: "Source"
+    type: "checkbox"
+
+#define the columns of the data table widget 
+dt.cols:
+  Data_Type: "Data type"
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO_long: "Country:"
+  year: "Year:"
+  value: "Value:"
+  legend: "Source:"
+  #metadata: "Explanation:"
+  data_description: "Data type:"
+
+#other options 
+download.button: False
+hide.selectors: True
+listen: True
+table.display: False
+hide.legend: True
+plot_height: 480

@@ -1,0 +1,82 @@
+#define data source
+data.file: "data/topo_warehouse_meta_v1_2.csv"
+data.wrangler: "R/data_prep_topo.R" 
+
+#define plot type 
+gopts: 
+ - "area"
+ - "stack"
+ 
+#define main plot variables 
+x_var: "year"
+x_var_lab: "Year"
+y_var: "value"
+y_var_lab: "Value"
+color_var: "d4_concept_lab"
+color_var_lab: "Concept"
+color_style: "turbo"
+
+#Define main selectors 
+selector_info:
+  GEO_long:
+    label: "Country"
+    selected: "United States"
+  legend:
+    label: "Source"
+    selected: "World Inequality Database - Balance Sheet"  
+  xrate_lab: 
+    label: "Currency"
+    selected: "Euro (2023 prices)"
+  pop_lab: 
+    label: "Unit"
+    selected: "Per capita"
+  d2_sector_lab:
+    label: "Sector"
+    selected: "Households & NPISH"
+  d4_concept_lab:
+    label: "Asset or Debt type"
+    type: "checkbox"
+    selected: 
+      - "Cash, Deposits, Bonds & Loans"
+      - "Debt"  
+      - "Fixed Capital of Personal Businesses"
+      - "Pensions & Life Insurance"
+      - "Stocks, Businesses Equities & Fund Shares"
+      - "Financial Assets & Fixed Capital of Personal Businesses"
+      - "Housing & Land"
+      
+#facets 
+facet_var: "GEO_long"
+facet_var_lab: "Country"
+
+#Additional Variable Layer options
+extra_layer:
+   values: "Net Wealth"
+   type: "line" 
+
+#define the columns of the data table widget 
+dt.cols:
+  GEO: "Country code"
+  year: "Year"
+  GEO_long: "Country"
+  d4_concept_lab: "Asset or Debt type"
+  d2_sector_lab: "Sector"
+  value: "Value"
+  legend: "Source"
+  metadata: "Description"
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO_long: "Country:"
+  d4_concept_lab: "Wealth type"
+  year: "Year:"
+  value: "Value:"
+  legend: "Source:"
+ 
+#other options 
+download.button: True
+hide.selectors: False
+listen: False
+table.display: True
+hide.legend: False
+plot_height: 700

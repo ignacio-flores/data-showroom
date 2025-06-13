@@ -1,19 +1,19 @@
 # Load libraries and modules 
-source("libraries.R", local = T)
+source("modules/libraries.R", local = T)
 
 # Load configuration file
-#load_config("tests/config_ineq_single.yaml", func = createViz)
-#load_config("tests/config_ineq_multi.yaml", func = createViz)
-#load_config("tests/config_ineq_prev.yaml", func = createViz)
-#load_config("tests/config_topo_multi.yaml", func = createViz)
-#load_config("tests/config_topo_single.yaml", func = createViz)
-#load_config("tests/config_topo_single_d.yaml", func = createViz)
-load_config("tests/config_topo_source.yaml", func = createViz)
-#load_config("tests/config_topo_prev.yaml", func = createViz)
-#load_config("tests/config_eigt.yaml", func = createViz)
+#load_config("yaml/config_ineq_single.yaml", func = createViz)
+#load_config("yaml/config_ineq_multi.yaml", func = createViz)
+#load_config("yaml/config_ineq_prev.yaml", func = createViz)
+load_config("yaml/config_topo_multi.yaml", func = createViz)
+#load_config("yaml/config_topo_single.yaml", func = createViz)
+#load_config("yaml/config_topo_single_d.yaml", func = createViz)
+#load_config("yaml/config_topo_source.yaml", func = createViz)
+#load_config("yaml/config_topo_prev.yaml", func = createViz)
+#load_config("yaml/config_eigt.yaml", func = createViz)
 
 # Run app
-app <- createViz(
+createViz(
   data.file = data.file,
   meta.file = meta.file,
   data.wrangler = data.wrangler,
@@ -43,7 +43,6 @@ app <- createViz(
   meta.loc = meta.loc
 )
 
-shiny::runApp(app)
 
 #Comments: extra_layers work with faceted plots only (can be made independent)
 #area plots (non-faceted) have stuck tooltips (solution is to make them directly
