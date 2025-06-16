@@ -13,7 +13,7 @@ y_var: "value"
 y_var_lab: "Value"
 color_var: "d4_concept_lab"
 color_var_lab: "Concept"
-color_style: "viridis"
+color_style: "nationalparkcolors::Badlands"
 
 #Define main selectors 
 selector_info:
@@ -64,6 +64,7 @@ dt.cols:
 tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
+  d4_concept_lab: "Wealth type:"
   value: "Value:"
   legend: "Source:"
  

@@ -68,6 +68,7 @@ dt.cols:
 tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
+  d4_concept_lab: "Wealth type:"
   value: "Value:"
   legend: "Source:"
  

@@ -1,6 +1,6 @@
 #define data source
 data.file: "data/eigt_wide_viz.csv"
-data.wrangler: "R/data_prep_eigt.R" #add code to transform the data before plotting if needed 
+data.wrangler: "R/data_prep_eigt.R" 
 
 #define plot type 
 gopts: "step"
@@ -13,13 +13,17 @@ y_var: "adjmrt"
 y_var_lab: "Marginal tax rate"
 color_var: "year"
 color_var_lab: "Year"
+color_style: "dichromat::DarkRedtoBlue_12"
+groupvars:
+  - "year"
+  - "tax"
 
 #Define main selector 
 selector_info:
   Country:
     label: "Country"
     selected:
-      - "United States"
+      - "Italy"
       
 loose_selectors: 
    year:

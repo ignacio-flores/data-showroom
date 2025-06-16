@@ -13,21 +13,13 @@ y_var: "value"
 y_var_lab: "Value"
 color_var: "d4_concept_lab"
 color_var_lab: "Concept"
-color_style: "nationalparkcolors::Badlands"
+color_style: "fishualize::Acanthurus_coeruleus" #MexBrewer::Alacena
 
 #Define main selectors 
 selector_info:
   GEO_long:
     label: "Country"
-    selected: 
-      - "France"
-      - "United States"
-      - "Italy"
-      - "United Kingdom"
-    multiple: true
-  legend:
-    label: "Source"
-    selected: "World Inequality Database - Balance Sheet"  
+    selected: "United States"
   xrate_lab: 
     label: "Currency"
     selected: "Euro (2023 prices)"
@@ -37,13 +29,17 @@ selector_info:
   d2_sector_lab:
     label: "Sector"
     selected: "Households & NPISH"
+      
+#Define reactive or 'loose' selectors (react to changes in main selectors)
+loose_selectors:
   d4_concept_lab:
-    label: "Asset or Debt type"
+    label: "Wealth type"
     type: "checkbox"
+  legend:
+    label: "Source"
     selected: 
-      - "Financial Assets & Fixed Capital of Personal Businesses"
-      - "Housing & Land"
-      - "Debt"  
+      - "World Inequality Database - Balance Sheet"
+    type: "selector"
       
 #facets 
 facet_var: "GEO_long"
@@ -69,8 +65,8 @@ dt.cols:
 tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
-  d4_concept_lab: "Wealth type:"
   value: "Value:"
+  d4_concept_lab: "Wealth type:"
   legend: "Source:"
  
 #other options 

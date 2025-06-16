@@ -24,7 +24,7 @@ xnum_breaks: 10
 y_var: "value"
 color_var: "leg_are"
 color_var_lab: "Source"
-color_style: "plasma"
+color_style: "dichromat::DarkRedtoBlue_12"
 
 #Define main selectors 
 selector_info:

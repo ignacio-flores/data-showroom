@@ -21,7 +21,7 @@ xnum_breaks: 10
 y_var: "value"
 color_var: "legend"
 color_var_lab: "Source"
-color_style: "viridis"
+color_style: "LaCroixColoR::CranRaspberry"
 
 #Define main selectors 
 selector_info:

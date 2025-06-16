@@ -1,18 +1,25 @@
 # Load libraries and modules 
 source("modules/libraries.R")
 
-# Load configuration file
-load_config("yaml/config_ineq_single.yaml", func = createViz)
-#load_config("yaml/config_ineq_multi.yaml", func = createViz)
-#load_config("yaml/config_ineq_prev.yaml", func = createViz)
-#load_config("yaml/config_topo_multi.yaml", func = createViz)
-#load_config("yaml/config_topo_single.yaml", func = createViz)
-#load_config("yaml/config_topo_single_d.yaml", func = createViz)
-#load_config("yaml/config_topo_source.yaml", func = createViz)
-#load_config("yaml/config_topo_aba1.yaml", func = createViz)
-#load_config("yaml/config_topo_prev.yaml", func = createViz)
-#load_config("yaml/config_eigt.yaml", func = createViz)
+#check color palettes: https://r-graph-gallery.com/color-palette-finder
 
+# Load configuration file
+#load_config("yaml/config_ineq_single.yaml", func = createViz) # ready to update
+#load_config("yaml/config_ineq_multi.yaml", func = createViz) # ready to update
+#load_config("yaml/config_ineq_prev.yaml", func = createViz)  # ready to update
+#load_config("yaml/config_topo_multi.yaml", func = createViz) # ready to update
+#load_config("yaml/config_topo_single.yaml", func = createViz) # ready to update
+#load_config("yaml/config_topo_single_d.yaml", func = createViz) # ready to update
+#load_config("yaml/config_topo_source.yaml", func = createViz) #ready to publish 
+#load_config("yaml/config_topo_ffba1.yaml", func = createViz) #ready to publish 
+#load_config("yaml/config_topo_ffba2.yaml", func = createViz) #ready to publish 
+#load_config("yaml/config_topo_ffba3.yaml", func = createViz) #ready to publish 
+#load_config("yaml/config_topo_aba1.yaml", func = createViz) #ready to publish
+#load_config("yaml/config_topo_aba2.yaml", func = createViz) #ready to publish 
+#load_config("yaml/config_topo_prev.yaml", func = createViz) # ready to update
+#load_config("yaml/config_eigt_ft1.yaml", func = createViz) # (add log scale, xrates, make last line horizontal) pending for publication 
+#load_config("yaml/config_eigt_ft2.yaml", func = createViz) # (add log scale, xrates, make last line horizontal) pending for publication 
+load_config("yaml/config_eigt_kf1.yaml", func = createViz)
 
 # Run app
 createViz(

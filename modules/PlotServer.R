@@ -42,6 +42,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Identify the last x-value for each group in color_var
         last_points <- do.call(rbind, lapply(split(df, df[[color_var]]), function(sub_df) {
           last_row <- sub_df[sub_df[[x_var]] == max(sub_df[[x_var]], na.rm = TRUE), , drop = FALSE]
+          # sub_df <- sub_df[!is.na(sub_df[[x_var]]), , drop = FALSE]
+          # if (nrow(sub_df) == 0) {
+          #   return(NULL)
+          # }
+          # last_row <- sub_df[which.max(sub_df[[x_var]]), , drop = FALSE]
           last_row[[x_var]] <- extension_x  # Extend x-axis
           return(last_row)
         }))
@@ -101,6 +106,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         df <- df %>%
           filter(!(!!sym(color_var) %in% extra_layer$values))
       }
+      
+      #choose color palette 
+      n_grp <- length(unique(df[[color_var]]))  
+      pal_name <- color_style     
+      pal <- as.vector(                         
+        paletteer_d(
+          palette   = pal_name,  
+          n         = n_grp,     
+          direction = 1,          # -1 to reverse
+          type      = "continuous"  
+        )
+      )
 
       #use plotly directly if dealing with facets
       if (!is.null(facet_var) && facet_var != "null") {
@@ -111,18 +128,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
           df_facet <- df[df[[facet_var]] == facet_level, ]
           
-          #choose color palette 
-          n_grp <- length(unique(df[[color_var]]))  
-          pal_name <- color_style     
-          pal <- as.vector(                         
-            paletteer_d(
-              palette   = pal_name,  
-              n         = n_grp,     
-              direction = 1,          # -1 to reverse
-              type      = "continuous"  
-            )
-          )
-
           plt <- plot_ly(
             df_facet,
             x = ~get(x_var),
@@ -264,13 +269,12 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         p <- ggplot(df, aes(
           x = .data[[x_var]],
           y = .data[[y_var]],
-          #group = .data[[color_var]],
           group = !!group_expr,
           color = .data[[color_var]],
           fill = .data[[color_var]],
           text = tooltip_text)) +
-          scale_color_viridis(discrete = TRUE, option = color_style, direction = 1, end = 0.9, alpha = 0.9) +
-          scale_fill_viridis(discrete = TRUE, option = color_style, direction = 1, end = 0.9, alpha = 0.9) +
+          scale_colour_manual(values = pal) + 
+          scale_fill_manual(values = pal) + 
           labs(title = "", x = "", y = "", color = color_var_lab) +
           guides(color = guide_legend(override.aes = list(alpha = 1))) +
           theme(panel.background = element_blank(), panel.grid.major = element_blank(),

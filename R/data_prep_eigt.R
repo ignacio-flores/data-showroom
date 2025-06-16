@@ -2,6 +2,7 @@ library(zoo)
 library(dplyr)
 library(readxl)
 
+#load list of countries
 dictionary <- read_excel("data/dictionary.xlsx", sheet = "GEO")
 
 #load suplementary variables (cpi)
@@ -21,7 +22,6 @@ empty <- data %>% select(GEO, year, tax, adjlbo) %>%
 #replace -Inf with 0 in empty 
 empty$adjlbo[empty$adjlbo == -Inf] <- 0
 empty <- empty[!is.na(empty$adjlbo),]
-
 
 data <-  rows_append(data, empty) %>% arrange(tax, GEO, year, adjlbo, bracket) %>%
   group_by(GEO, tax, year) %>% mutate(adjmrt = zoo::na.locf(adjmrt, na.rm = FALSE))

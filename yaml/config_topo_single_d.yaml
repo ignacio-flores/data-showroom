@@ -14,7 +14,7 @@ y_var: "value"
 y_var_lab: "Value"
 color_var: "d4_concept_lab"
 color_var_lab: "Concept"
-color_style: "turbo"
+color_style: "nationalparkcolors::Badlands"
 
 #Define main selectors 
 selector_info:

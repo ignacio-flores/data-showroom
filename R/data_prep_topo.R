@@ -13,12 +13,6 @@ data_nom_lcu <- data %>%
 data_nom_lcu <- data_nom_lcu %>% 
   mutate(value = ifelse(d4_concept_lab == "Debt", -value, value))
 
-#load national income 
-# ni <- read.csv("data/supplementary_var_long.csv") %>% 
-#   filter(variable == "mnninc") %>% select(-c("GEO_WB", "GEO3", "variable")) %>% 
-#   rename(`ni` = value, GEO = country) %>% 
-#   mutate(pop_lab = "Percentage of National Income") 
-
 #Adjust using market xrates
 xrates_mer <- read.csv("data/supplementary_var_long.csv") %>% 
   filter(variable %in% c("xlceux", "xlcusx", "xlcyux")) %>% 

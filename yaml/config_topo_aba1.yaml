@@ -63,6 +63,7 @@ tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
   value: "Value:"
+  d4_concept_lab: "Wealth type:"
   legend: "Source:"
  
 #other options 
