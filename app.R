@@ -1,16 +1,18 @@
 # Load libraries and modules 
-source("modules/libraries.R", local = T)
+source("modules/libraries.R")
 
 # Load configuration file
-#load_config("yaml/config_ineq_single.yaml", func = createViz)
+load_config("yaml/config_ineq_single.yaml", func = createViz)
 #load_config("yaml/config_ineq_multi.yaml", func = createViz)
 #load_config("yaml/config_ineq_prev.yaml", func = createViz)
 #load_config("yaml/config_topo_multi.yaml", func = createViz)
 #load_config("yaml/config_topo_single.yaml", func = createViz)
 #load_config("yaml/config_topo_single_d.yaml", func = createViz)
-load_config("yaml/config_topo_source.yaml", func = createViz)
+#load_config("yaml/config_topo_source.yaml", func = createViz)
+#load_config("yaml/config_topo_aba1.yaml", func = createViz)
 #load_config("yaml/config_topo_prev.yaml", func = createViz)
 #load_config("yaml/config_eigt.yaml", func = createViz)
+
 
 # Run app
 createViz(
@@ -40,9 +42,9 @@ createViz(
   color_style = color_style,
   hide.legend = hide.legend,
   plot_height = plot_height,
-  meta.loc = meta.loc
+  meta.loc = meta.loc, 
+  groupvars = groupvars
 )
-
 
 #Comments: extra_layers work with faceted plots only (can be made independent)
 #area plots (non-faceted) have stuck tooltips (solution is to make them directly

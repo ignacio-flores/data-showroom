@@ -16,7 +16,7 @@ plotOutputUI <- function(id) {
 plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, 
                              color_var, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
-                             plot_height) {
+                             plot_height, groupvars) {
   moduleServer(id, function(input, output, session) {
 
     #display message if data not available
@@ -253,11 +253,19 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
       } else {
         
+        #define grouping variable 
+        group_expr <- if (!is.null(groupvars) && length(groupvars) > 0) {
+          expr(interaction(!!!syms(groupvars), drop = TRUE))
+        } else {
+          sym(color_var)
+        }
+        
         # Single faceted plots with ggplotly 
         p <- ggplot(df, aes(
           x = .data[[x_var]],
           y = .data[[y_var]],
-          group = .data[[color_var]],
+          #group = .data[[color_var]],
+          group = !!group_expr,
           color = .data[[color_var]],
           fill = .data[[color_var]],
           text = tooltip_text)) +
@@ -311,18 +319,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         if ("line" %in% gopts) {
           p <- p + geom_line(data = df,
-                             aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
+                             aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
                              color = "lightgray", alpha = 1, inherit.aes = FALSE,
                              linewidth = 0.6, linetype = 1)
         }
         if ("point" %in% gopts) {
           p <- p + geom_point(data = df,
-                              aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
+                              aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
                               color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 0.9)
         }
         if ("step" %in% gopts) {
           p <- p + geom_step(data = df,
-                             aes(x = .data[[x_var]], y = .data[[y_var]], group = .data[[color_var]]),
+                             aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
                              color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 0.9, direction = "hv")
         }
 
@@ -371,7 +379,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             yaxis = list(zeroline = FALSE),
             legend = list(
               title = list(text = ''),
-              #traceorder = "grouped",
               orientation = "h",
               x = 0.5,
               itemclick = "toggleothers",

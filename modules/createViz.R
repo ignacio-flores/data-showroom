@@ -16,7 +16,8 @@ createViz <- function(data.file, meta.file = NULL,
                       extra_layer = NULL, 
                       color_style = "viridis", 
                       plot_height = 700,
-                      meta.loc = NULL) {
+                      meta.loc = NULL, 
+                      groupvars = NULL) {
   
   tic("load packages for createViz")
     require(data.table)
@@ -330,7 +331,7 @@ createViz <- function(data.file, meta.file = NULL,
     # Generate plot
     plotModuleServer("plotModule", reactive(final_filtered_data()),
                      x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, 
-                     tooltip_vars, hide.legend, gopts, xnum_breaks, extra_layer, color_style, plot_height)
+                     tooltip_vars, hide.legend, gopts, xnum_breaks, extra_layer, color_style, plot_height, groupvars)
     
     # Render table
     output$tableOrMessageUI <- renderUI({
