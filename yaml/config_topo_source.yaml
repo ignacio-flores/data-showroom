@@ -1,5 +1,5 @@
 #define data source
-data.file: "data_test/topo_warehouse_meta_v1_2.csv"
+data.file: "data/topo_warehouse_meta_v1_2.csv"
 data.wrangler: "R/data_prep_topo.R" 
 
 #define plot type 
@@ -12,21 +12,21 @@ y_var: "value"
 y_var_lab: "Value"
 color_var: "d4_concept_lab"
 color_var_lab: "Concept"
-color_style: "viridis"
+color_style: "nationalparkcolors::Badlands"
 
 #Define main selectors 
 selector_info:
   GEO_long:
     label: "Country"
     selected: "United States"
-  # legend:
-  #   label: "Source"
-  #   selected: 
-  #     - "World Inequality Database - Balance Sheet"  
-  #     - "Credit Suisse Global wealth report"
-  #     - "Luxembourg Wealth Study Database - Balance Sheet"
-  #     - "Federal Reserve Board B.101.H - Balance Sheet"
-  #   multiple: true
+  legend:
+    label: "Source"
+    selected:
+      - "World Inequality Database - Balance Sheet"
+      - "Credit Suisse Global Wealth Report"
+      - "Luxembourg Wealth Study Database - Balance Sheet"
+      - "Federal Reserve Board B.101.H - Balance Sheet"
+    multiple: true
   xrate_lab: 
     label: "Currency"
     selected: "Euro (2023 prices)"
@@ -40,9 +40,9 @@ selector_info:
     label: "Asset or Debt type"
     type: "checkbox"
     selected: 
-      - "Financial Assets & Fixed Capital of Personal Businesses"
+      - "Debt" 
       - "Housing & Land"
-      - "Debt"  
+      - "Financial Assets & Fixed Capital of Personal Businesses"
       
 #facets 
 facet_var: "legend"

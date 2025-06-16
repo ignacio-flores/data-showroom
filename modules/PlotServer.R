@@ -1,6 +1,7 @@
 require(ggplot2)
 require(plotly)
 require(viridis)
+require(paletteer)
 require(scales)
 
 plotOutputUI <- function(id) {
@@ -21,7 +22,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     #display message if data not available
     output$messageDisplay <- renderUI({
       df <- filtered_data_func()
-      if (is.null(df) || nrow(df) == 0) {
+      if (is.null(df)) {
         h3("No data available for this selection", align = "center")
       } else {
         NULL  # Don't show message if data is present
@@ -31,7 +32,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()
       req(df)
-      req(nrow(df) > 0)
   
       # Extend last point in step plot
       if ("step" %in% gopts) {
@@ -41,11 +41,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         # Identify the last x-value for each group in color_var
         last_points <- do.call(rbind, lapply(split(df, df[[color_var]]), function(sub_df) {
-          sub_df <- sub_df[!is.na(sub_df[[x_var]]), , drop = FALSE]
-          if (nrow(sub_df) == 0) {
-            return(NULL)
-          }
-          last_row <- sub_df[which.max(sub_df[[x_var]]), , drop = FALSE]
+          last_row <- sub_df[sub_df[[x_var]] == max(sub_df[[x_var]], na.rm = TRUE), , drop = FALSE]
           last_row[[x_var]] <- extension_x  # Extend x-axis
           return(last_row)
         }))
@@ -104,8 +100,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Remove info from df
         df <- df %>%
           filter(!(!!sym(color_var) %in% extra_layer$values))
-
-        req(nrow(df) > 0)
       }
 
       #use plotly directly if dealing with facets
@@ -116,20 +110,33 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         plots <- lapply(facet_levels, function(facet_level) {
 
           df_facet <- df[df[[facet_var]] == facet_level, ]
+          
+          #choose color palette 
+          n_grp <- length(unique(df[[color_var]]))  
+          pal_name <- color_style     
+          pal <- as.vector(                         
+            paletteer_d(
+              palette   = pal_name,  
+              n         = n_grp,     
+              direction = 1,          # -1 to reverse
+              type      = "continuous"  
+            )
+          )
 
           plt <- plot_ly(
             df_facet,
             x = ~get(x_var),
             y = ~get(y_var),
             color = ~get(color_var),
-            colors = viridis_pal(option = color_style)(length(unique(df[[color_var]]))),
+            colors = pal, 
+            #colors = viridis_pal(option = color_style)(length(unique(df[[color_var]]))),
             text = ~tooltip_text,
             hoverinfo = 'text',
             type = 'scatter',
             mode = ifelse("point" %in% gopts, "lines+markers", "lines"),
             fill = ifelse("area" %in% gopts, 'tozeroy', 'none'),
             line = list(shape = ifelse("step" %in% gopts, 'hv', 'linear')),
-            stackgroup = ifelse("stack" %in% gopts, "one", NULL),
+            #stackgroup = ifelse("area" %in% gopts, "one", NULL),
             height = plot_height,
             opacity = 1,
             legendgroup = ~get(color_var),
@@ -183,16 +190,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
            combined_y <- c(df[[y_var]], extra_df[[y_var]])
            y_range <- range(combined_y, na.rm = TRUE)
          } else {
-           y_range <- range(df[[y_var]], na.rm = TRUE)
-         }
-
-        y_range <- range(df[[y_var]], na.rm = TRUE)
-        yaxis_opts <- list(
-          title = y_var_lab,
-          zeroline = FALSE
-        )
-        if (!"stack" %in% gopts) {
-          yaxis_opts$range <- y_range
+            y_range <- range(df[[y_var]], na.rm = TRUE)
         }
         
         # Generate subplot with fixed axis ranges
@@ -224,12 +222,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               title = x_var_lab, 
               zeroline = FALSE 
             ),  
-            # yaxis = list(
-            #   range = y_range, 
-            #   title = y_var_lab, 
-            #   zeroline = FALSE 
-            # ), 
-            yaxis = yaxis_opts,
+            yaxis = list(
+              range = y_range,
+              title = y_var_lab,
+              zeroline = FALSE
+            ),
             legend = if (!hide.legend) list(
               orientation = "h",
               x = 0.5,
