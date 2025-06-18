@@ -1,5 +1,5 @@
 #define data source
-data.file: "data/eigt_wide_viz.csv"
+data.file: "data/eigt_warehouse_meta_v1_2.csv"
 data.wrangler: "R/data_prep_eigt.R" 
 
 #define plot type 
