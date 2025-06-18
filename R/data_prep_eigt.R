@@ -27,4 +27,3 @@ data <-  rows_append(data, empty) %>% arrange(tax, GEO, year, adjlbo, bracket) %
   group_by(GEO, tax, year) %>% mutate(adjmrt = zoo::na.locf(adjmrt, na.rm = FALSE))
 data <- data %>% mutate(year = as.character(year)) %>% 
   group_by(GEO, tax, year) %>% mutate(test = sum(adjmrt)) %>% filter(test != 0) %>% select(-c("test")) 
-
