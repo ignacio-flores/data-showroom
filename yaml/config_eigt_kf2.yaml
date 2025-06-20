@@ -1,64 +1,59 @@
 #define data source
 data.file: "data/eigt_warehouse_meta_v1_2.csv"
-data.wrangler: "R/data_prep_eigt.R" 
+data.wrangler: "R/data_prep_eigt2.R" 
 
 #define plot type 
-gopts: "step"
+gopts: "line"
  
 #define main plot variables 
-x_var: "adjlbo"
-x_var_lab: "Bracket's Lower bound (USD Million, inflation adjusted)"
+x_var: "year"
+x_var_lab: "Year"
 xnum_breaks: 10  
-y_var: "adjmrt"
-y_var_lab: "Marginal tax rate"
-color_var: "Country"
+y_var: "value"
+y_var_lab: "Value"
+color_var: "GEO_long"
 color_var_lab: "Country"
 color_style: "dichromat::DarkRedtoBlue_12"
-groupvars:
-  - "year"
-  - "tax"
+groupvars: 
+  - "GEO_long"
+  - "d2_sector_lab"
 
 #Define main selector 
 selector_info:
-  year: 
-    label: "Year"
-    selected: 2008
-  Country:
+  GEO_long:
     label: "Country"
     selected:
       - "Italy"
       - "France" 
-      - "Germany"
+      - "United States"
+      - "Canada"
+      - "Sweden"
     multiple: true   
-      
+  d4_concept_lab: 
+    label: "Tax Features"
+    selected: "Total Revenue from Tax as % of Total Tax Revenue"
+    
 loose_selectors: 
-   year:
-    label: "Years"
-    type: "checkbox"
-    select: "spaced"
-   tax:
+  d2_sector_lab: 
     label: "Tax type"
-    selected: "Estate Tax"
     type: "checkbox"
-
+  
 #define the columns of the data table widget 
 dt.cols: 
-  GEO: "Country code"
+  GEO_long: "Country code"
   year: "Year"
-  tax: "Tax type"
-  bracket: "Bracket"
-  currency: "Currency"
-  adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD Millions"
+  d4_concept_lab: "Variable"
+  value: "Value"
+  d2_sector_lab: "Tax type"
+  
 
 #define the information shown in the tooltip
 tooltip_vars:
-  GEO: "Country:"
+  GEO_long: "Country:"
   year: "Year:"
-  tax: "Tax type:"
-  currency: "Currency"
-  adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD Millions"
+  value: "Value:"  
+  d4_concept_lab: "Concept:"
+  d2_sector_lab: "Tax type:"
 
 #other options 
 download.button: True

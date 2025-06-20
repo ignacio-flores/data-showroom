@@ -19,7 +19,7 @@ source("modules/libraries.R")
 #load_config("yaml/config_topo_prev.yaml", func = createViz) # ready to update
 #load_config("yaml/config_eigt_ft1.yaml", func = createViz) # (add log scale, xrates, make last line horizontal) pending for publication 
 #load_config("yaml/config_eigt_ft2.yaml", func = createViz) # (add log scale, xrates, make last line horizontal) pending for publication 
-load_config("yaml/config_eigt_kf2.yaml", func = createViz)
+#load_config("yaml/config_eigt_kf2.yaml", func = createViz) # (filter options more, add currency and log scale) 
 
 # Run app
 createViz(
