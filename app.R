@@ -19,11 +19,11 @@ trace(
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
 
 # Load configuration file
-load_config("yaml/config_ineq_single.yaml", func = createViz) # ready to update
+#load_config("yaml/config_ineq_single.yaml", func = createViz) # ready to update
 #load_config("yaml/config_ineq_multi.yaml", func = createViz) # ready to update
 #load_config("yaml/config_ineq_prev.yaml", func = createViz)  # ready to update
 #load_config("yaml/config_topo_multi.yaml", func = createViz) # ready to update
-#load_config("yaml/config_topo_single.yaml", func = createViz) # ready to update
+load_config("yaml/config_topo_single.yaml", func = createViz) # ready to update
 #load_config("yaml/config_topo_single_d.yaml", func = createViz) # ready to update
 #load_config("yaml/config_topo_source.yaml", func = createViz) #ready to publish 
 #load_config("yaml/config_topo_ffba1.yaml", func = createViz) #ready to publish 
