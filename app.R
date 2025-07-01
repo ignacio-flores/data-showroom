@@ -1,10 +1,25 @@
 # Load libraries and modules 
 source("modules/libraries.R")
 
+options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
+trace(
+  what   = "left_join",
+  where  = asNamespace("dplyr"),
+  tracer = quote({
+    this_call <- sys.call(-1)
+    cat(
+      "[TRACE left_join] at ", deparse(this_call), "\n",
+      "  x_class =", paste(class(x), collapse="/"), "\n",
+      "  y_class =", paste(class(y), collapse="/"), "\n\n"
+    )
+  }),
+  print = FALSE
+)
+
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
 
 # Load configuration file
-#load_config("yaml/config_ineq_single.yaml", func = createViz) # ready to update
+load_config("yaml/config_ineq_single.yaml", func = createViz) # ready to update
 #load_config("yaml/config_ineq_multi.yaml", func = createViz) # ready to update
 #load_config("yaml/config_ineq_prev.yaml", func = createViz)  # ready to update
 #load_config("yaml/config_topo_multi.yaml", func = createViz) # ready to update
