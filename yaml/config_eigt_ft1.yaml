@@ -1,6 +1,6 @@
 #define data source
 data.file: "data/eigt_wide_viz.csv"
-data.wrangler: "R/data_prep_eigt.R" 
+data.wrangler: "custom_code/data_prep_eigt.R" 
 
 #define plot type 
 gopts: "step"

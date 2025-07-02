@@ -13,6 +13,3 @@ deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-country-v
 #deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-aba1")
 #deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-country-view")
 #deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-prev")
-
-
-rsconnect::appDependencies()
