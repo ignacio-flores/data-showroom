@@ -1,0 +1,63 @@
+#define data source
+data.file: "data/eigt_warehouse_meta_v1_2.csv"
+data.wrangler: "custom_code/data_prep_eigt3.R" 
+keep.col: 
+  - "d4_concept_lab"
+  - "d2_sector_lab"
+  - "value"
+  - "GEO_long"
+
+#define plot type 
+gopts: "point"
+ 
+#define main plot variables 
+axis_vars: 
+  x_axis:
+    var: "total_revenue_from_tax_as_percent_of_total_tax_revenue"
+    label: "X axis"
+    breaks: 10
+  y_axis:    
+    var: "top_marginal_rate" 
+    label: "Y axis"
+
+color: 
+  var: "geo_long"
+  label: "Country"
+  style: "dichromat::DarkRedtoBlue_12"
+  group: 
+    - "geo_long"
+    #- "d2_sector_lab"
+
+#Define main selector 
+fixed_selectors:
+  year: 
+    label: "Year" 
+    selected: 2021
+    
+loose_selectors:
+  geo_long: 
+    label: "Country" 
+    type: "checkbox"
+  # d2_sector_lab: 
+  #   label: "Tax type"
+  #   type: "checkbox"
+  
+#define the columns of the data table widget 
+dt.cols: 
+  geo_long: "Country code"
+  year: "Year"
+  #d2_sector_lab: "Tax type"
+  
+#define the information shown in the tooltip
+tooltip_vars:
+  geo_long: "Country:"
+  year: "Year:"  
+  #d2_sector_lab: "Tax type:"
+
+#other options 
+download.button: True
+hide.selectors: False
+listen: False
+table.display: True
+hide.legend: True 
+plot_height: 700

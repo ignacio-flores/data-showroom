@@ -7,19 +7,24 @@ gopts:
  - "line"
  
 #define main plot variables 
-x_var: "year"
-x_var_lab: "Year"
-y_var: "value"
-y_var_lab: "Value"
-color_var: "legend"
-color_var_lab: "Source"
-color_style: "PNWColors::Bay"
-groupvars:
-  - "d2_sector_lab"
-  - "legend"
+axis_vars: 
+  x_axis: 
+    var: "year" 
+    label: "Year"
+  y_axis: 
+    var: "value" 
+    label: "Value" 
+
+color:
+  var: "legend"
+  label: "Source"
+  style: "PNWColors::Bay"
+  group:
+    - "d2_sector_lab"
+    - "legend"
 
 #Define main selectors 
-selector_info:
+fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"

@@ -1,4 +1,5 @@
 load_config <- function(file, func = NULL) {
+  
   tic("loading YAML configuration")
   library(yaml)
   

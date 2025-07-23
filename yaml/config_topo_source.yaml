@@ -6,16 +6,21 @@ data.wrangler: "custom_code/data_prep_topo.R"
 gopts: "area"
  
 #define main plot variables 
-x_var: "year"
-x_var_lab: "Year"
-y_var: "value"
-y_var_lab: "Value"
-color_var: "d4_concept_lab"
-color_var_lab: "Concept"
-color_style: "nationalparkcolors::Badlands"
+axis_vars: 
+  x_axis: 
+    var: "year" 
+    label: "Year"
+  y_axis: 
+    var: "value" 
+    label: "Value" 
+     
+color:     
+  var: "d4_concept_lab"
+  label: "Concept"
+  style: "nationalparkcolors::Badlands"
 
 #Define main selectors 
-selector_info:
+fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"

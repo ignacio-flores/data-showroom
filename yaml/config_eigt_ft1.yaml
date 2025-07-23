@@ -2,24 +2,36 @@
 data.file: "data/eigt_wide_viz.csv"
 data.wrangler: "custom_code/data_prep_eigt.R" 
 
-#define plot type 
+#define graph options 
 gopts: "step"
+plot_height: 700
+
+download.button: True
+hide.legend: False
+hide.selectors: False
+listen: False 
  
 #define main plot variables 
-x_var: "adjlbo"
-x_var_lab: "Bracket's Lower bound (USD Million, inflation adjusted)"
-xnum_breaks: 10  
-y_var: "adjmrt"
-y_var_lab: "Marginal tax rate"
-color_var: "year"
-color_var_lab: "Year"
-color_style: "dichromat::DarkRedtoBlue_12"
-groupvars:
-  - "year"
-  - "tax"
+axis_vars:
+  x_axis:
+    var: "adjlbo"
+    label: "Bracket's Lower bound (USD Million, inflation adjusted)"
+    breaks: 10
+  y_axis:
+    var: "adjmrt"
+    label: "Marginal tax rate"
+
+#define colors 
+color:  
+  var: "year" 
+  label: "Year"
+  style: "dichromat::DarkRedtoBlue_12"
+  group:
+    - "year"
+    - "tax"
 
 #Define main selector 
-selector_info:
+fixed_selectors:
   Country:
     label: "Country"
     selected:
@@ -55,9 +67,4 @@ tooltip_vars:
   adjlbo: "Lower bound in adjusted USD Millions"
 
 #other options 
-download.button: True
-hide.selectors: False
-listen: False
 table.display: True
-hide.legend: False
-plot_height: 700

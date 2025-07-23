@@ -1,40 +1,67 @@
 createViz <- function(data.file, meta.file = NULL,
-                      x_var, x_var_lab = NULL, xnum_breaks = NULL,
-                      y_var, y_var_lab = NULL,
+                      axis_vars = NULL, 
                       new.cols = NULL,
                       tooltip_vars = NULL,
-                      color_var, color_var_lab = NULL,
-                      selector_info, 
+                      color = NULL,
+                      fixed_selectors, 
                       loose_selectors = NULL,
                       facet_var = NULL, facet_var_lab = NULL,
                       table.display = F, dt.cols = NULL,
-                      download.button = F, hide.legend = F,
-                      hide.selectors = F, listen = F,
                       value_scale = "normal", 
                       data.wrangler = NULL, 
-                      gopts = "line", num.conversion = NULL,
-                      extra_layer = NULL, 
-                      color_style = "viridis", 
+                      gopts = "line",
                       plot_height = 700,
+                      download.button = F, 
+                      hide.legend = F,
+                      hide.selectors = F, 
+                      listen = F,
+                      num.conversion = NULL,
+                      extra_layer = NULL, 
                       meta.loc = NULL, 
-                      groupvars = NULL) {
+                      keep.col = NULL
+                      ) {
   
   tic("load packages for createViz")
     require(data.table)
   toc()
   
+  # Parse axis variables 
+  if(is.null(axis_vars$x_axis$var) | is.null(axis_vars$x_axis$var)) {
+    stop("Please specify both x_axis and y_axis variables") 
+  } 
+ 
+  #Pase colors 
+  if(is.null(color$var)) {
+    stop("please specify color variable")
+  } else {
+    color_var <<- color$var 
+  }
+  if(!is.null(color$label)) {
+    color_var_lab <- color$label 
+  }
+  if(is.null(color$style)) {
+    color_style <- "viridis"
+  } else {
+    color_style <- color$style
+  }
+  if(!is.null(color$group)) {
+    groupvars <- color$group
+  } else {
+    groupvars = NULL
+  }
+  
   # Preprocess inputs to ensure list format 
   tic("perform preliminary checks")
-    selector_info <- ensureListStructure(selector_info)
+    fixed_selectors <- ensureListStructure(fixed_selectors)
     if (!is.null(dt.cols)) {
       dt.cols <- ensureListStructure(dt.cols)
     }
     tooltip_vars <- ensureListStructure(tooltip_vars)
   toc()
   if (!is.null(loose_selectors)) {
-    all_selectors <- c(selector_info, loose_selectors)
+    all_selectors <- c(fixed_selectors, loose_selectors)
   } else {
-    all_selectors <- selector_info
+    all_selectors <- fixed_selectors
   }
   
   # Load dataset and create new vars
@@ -46,8 +73,8 @@ createViz <- function(data.file, meta.file = NULL,
     new_col_names <- names(new.cols)
     all_varlists <- list(
       new_col_groups,
-      x_var, y_var,
-      names(selector_info),
+      axis_vars$x_axis$var, axis_vars$y_axis$var,
+      names(fixed_selectors),
       names(dt.cols),
       names(tooltip_vars),
       "source"
@@ -56,8 +83,8 @@ createViz <- function(data.file, meta.file = NULL,
   } else {
     if (!is.null(tooltip_vars)) {
       all_varlists <- list(
-        x_var, y_var,
-        names(selector_info),
+        axis_vars$x_axis$var, axis_vars$y_axis$var,
+        names(fixed_selectors),
         names(dt.cols),
         names(tooltip_vars),
         color_var, "source"
@@ -65,8 +92,8 @@ createViz <- function(data.file, meta.file = NULL,
       all_vars <- unique(unlist(all_varlists))
     } else {
       all_varlists <- list(
-        x_var, y_var,
-        names(selector_info),
+        axis_vars$x_axis$var, axis_vars$y_axis$var,
+        names(fixed_selectors),
         names(dt.cols),
         color_var,
         "source")
@@ -77,7 +104,11 @@ createViz <- function(data.file, meta.file = NULL,
   #read the data  
   data_cols <- fread(data.file, sep = ",", nrows = 1) %>% colnames()
   all_vars <- intersect(unique(unlist(all_varlists)), data_cols)
-  data <- fread(data.file, sep = "," , select = all_vars)
+  if (!is.null(keep.col)) {
+    data <- fread(data.file, sep = "," , select = c(all_vars, keep.col))
+  } else {
+    data <- fread(data.file, sep = "," , select = all_vars)
+  }
   data <- as.data.frame(data)
   rm(data_cols)
 
@@ -251,15 +282,18 @@ createViz <- function(data.file, meta.file = NULL,
   server <- function(input, output, session) {
     
     observeEvent(input$externalGEO_long, {
-      if ("GEO_long" %in% names(selector_info)) {
+      if ("GEO_long" %in% names(fixed_selectors)) {
         updatePickerInput(session, "GEO_long", selected = input$externalGEO_long)
       }
     })
     
     # filter data with main selectors 
     filtered_data <- dataFilter(input, output, session, 
-        data, x_var, y_var, color_var, 
-        selector_vars = names(selector_info),
+        data, 
+        x_var = axis_vars$x_axis$var, 
+        y_var = axis_vars$y_axis$var, 
+        color_var, 
+        selector_vars = names(fixed_selectors),
         dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal",
         extra_layer = extra_layer)
     
@@ -330,8 +364,14 @@ createViz <- function(data.file, meta.file = NULL,
     
     # Generate plot
     plotModuleServer("plotModule", reactive(final_filtered_data()),
-                     x_var, x_var_lab, y_var, y_var_lab, color_var, color_var_lab, facet_var, facet_var_lab, 
-                     tooltip_vars, hide.legend, gopts, xnum_breaks, extra_layer, color_style, plot_height, groupvars)
+                     x_var = axis_vars$x_axis$var, 
+                     x_var_lab = axis_vars$x_axis$label, 
+                     y_var = axis_vars$y_axis$var, 
+                     y_var_lab = axis_vars$y_axis$label, 
+                     color_var, color_var_lab, facet_var, facet_var_lab, 
+                     tooltip_vars, hide.legend, gopts, 
+                     xnum_breaks=axis_vars$x_axis$breaks, 
+                     extra_layer, color_style, plot_height, groupvars)
     
     # Render table
     output$tableOrMessageUI <- renderUI({

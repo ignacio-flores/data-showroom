@@ -6,20 +6,25 @@ data.wrangler: "custom_code/data_prep_eigt.R"
 gopts: "step"
  
 #define main plot variables 
-x_var: "adjlbo"
-x_var_lab: "Bracket's Lower bound (USD Million, inflation adjusted)"
-xnum_breaks: 10  
-y_var: "adjmrt"
-y_var_lab: "Marginal tax rate"
-color_var: "Country"
-color_var_lab: "Country"
-color_style: "dichromat::DarkRedtoBlue_12"
-groupvars:
-  - "year"
-  - "tax"
+axis_vars: 
+  x_axis: 
+    var: "adjlbo"
+    label: "Bracket's Lower bound (USD Million, inflation adjusted)"
+    breaks: 10 
+  y_axis: 
+    var: "adjmrt"
+    label: "Marginal tax rate"
+    
+color: 
+  var: "Country"
+  label: "Country" 
+  style: "dichromat::DarkRedtoBlue_12"
+  group:
+    - "year"
+    - "tax"
 
 #Define main selector 
-selector_info:
+fixed_selectors:
   year: 
     label: "Year"
     selected: 2008
@@ -32,10 +37,6 @@ selector_info:
     multiple: true   
       
 loose_selectors: 
-   year:
-    label: "Years"
-    type: "checkbox"
-    select: "spaced"
    tax:
     label: "Tax type"
     selected: "Estate Tax"

@@ -3,24 +3,11 @@ source("modules/libraries.R")
 
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
+graph = "eigt_kf3"
+load_config(paste0("yaml/config_", graph, ".yaml"), func = createViz)
 
-# Load configuration file
-load_config("yaml/config_ineq_single.yaml", func = createViz) # ready to update
-#load_config("yaml/config_ineq_multi.yaml", func = createViz) # ready to update
-#load_config("yaml/config_ineq_prev.yaml", func = createViz)  # ready to update
-#load_config("yaml/config_topo_multi.yaml", func = createViz) # ready to update
-#load_config("yaml/config_topo_single.yaml", func = createViz) # ready to update
-#load_config("yaml/config_topo_single_d.yaml", func = createViz) # ready to update
-#load_config("yaml/config_topo_source.yaml", func = createViz) #ready to publish 
-#load_config("yaml/config_topo_ffba1.yaml", func = createViz) #ready to publish 
-#load_config("yaml/config_topo_ffba2.yaml", func = createViz) #ready to publish 
-#load_config("yaml/config_topo_ffba3.yaml", func = createViz) #ready to publish 
-#load_config("yaml/config_topo_aba1.yaml", func = createViz) #ready to publish
-#load_config("yaml/config_topo_aba2.yaml", func = createViz) #ready to publish 
-#load_config("yaml/config_topo_prev.yaml", func = createViz) # ready to update
-#load_config("yaml/config_eigt_ft1.yaml", func = createViz) # (add log scale, xrates, make last line horizontal) pending for publication 
-#load_config("yaml/config_eigt_ft2.yaml", func = createViz) # (add log scale, xrates, make last line horizontal) pending for publication 
-#load_config("yaml/config_eigt_kf2.yaml", func = createViz) # (filter options more, add currency and log scale) 
+#eigt_ft1 and ft2: add log scale, xrates, make last line horizontal pending for publication 
+#eigt_kf2: filter options more, add currency and log scale
 
 # Run app
 createViz(
@@ -29,16 +16,11 @@ createViz(
   data.wrangler = data.wrangler,
   new.cols = new.cols,
   gopts = gopts, 
-  x_var = x_var,
-  x_var_lab = x_var_lab,
-  xnum_breaks = xnum_breaks,
-  y_var = y_var,
-  y_var_lab = y_var_lab,
-  color_var = color_var,
-  color_var_lab = color_var_lab,
+  axis_vars = axis_vars, 
+  color = color, 
   facet_var = facet_var,
   facet_var_lab = facet_var_lab,
-  selector_info = selector_info,
+  fixed_selectors = fixed_selectors,
   loose_selectors = loose_selectors,
   tooltip_vars = tooltip_vars,
   table.display = table.display,
@@ -47,11 +29,10 @@ createViz(
   hide.selectors = hide.selectors,
   listen = listen,
   extra_layer = extra_layer, 
-  color_style = color_style,
   hide.legend = hide.legend,
   plot_height = plot_height,
   meta.loc = meta.loc, 
-  groupvars = groupvars
+  keep.col = keep.col 
 )
 
 #Comments: extra_layers work with faceted plots only (can be made independent)

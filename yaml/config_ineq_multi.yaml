@@ -19,15 +19,20 @@ gopts:
  - "point"
  
 #define main plot variables 
-x_var: "year"
-xnum_breaks: 10
-y_var: "value"
-color_var: "leg_are"
-color_var_lab: "Source"
-color_style: "dichromat::DarkRedtoBlue_12"
+axis_vars:
+  x_axis: 
+    var: "year"
+    breaks: 10 
+  y_axis: 
+    var: "value"
+    
+color: 
+  var: "leg_are"
+  label: "Source"
+  style: "dichromat::DarkRedtoBlue_12"
 
 #Define main selectors 
-selector_info:
+fixed_selectors:
   GEO_long:
     label: "Country"
     selected:

@@ -6,20 +6,25 @@ data.wrangler: "custom_code/data_prep_eigt2.R"
 gopts: "line"
  
 #define main plot variables 
-x_var: "year"
-x_var_lab: "Year"
-xnum_breaks: 10  
-y_var: "value"
-y_var_lab: "Value"
-color_var: "GEO_long"
-color_var_lab: "Country"
-color_style: "dichromat::DarkRedtoBlue_12"
-groupvars: 
-  - "GEO_long"
-  - "d2_sector_lab"
+axis_vars: 
+  x_axis: 
+    var: "year" 
+    label: "Year" 
+    breaks: 10 
+  y_axis: 
+    var: "value"
+    label: "Value"
+
+color: 
+  var: "GEO_long"
+  label: "Country"
+  style: "dichromat::DarkRedtoBlue_12"
+  group: 
+    - "GEO_long"
+    - "d2_sector_lab"
 
 #Define main selector 
-selector_info:
+fixed_selectors:
   GEO_long:
     label: "Country"
     selected:

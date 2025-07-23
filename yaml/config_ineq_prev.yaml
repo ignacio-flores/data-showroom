@@ -14,15 +14,20 @@ gopts:
  - "point"
  
 #define main plot variables 
-x_var: "year"
-xnum_breaks: 10
-y_var: "value"
-color_var: "legend"
-color_var_lab: "Source"
-color_style: "LaCroixColoR::CranRaspberry"
+axis_vars: 
+  x_axis: 
+    var: "year"
+    breaks: 10 
+  y_axis: 
+    var: "value"
+    
+color:     
+  var: "legend"
+  label: "Source"
+  style: "LaCroixColoR::CranRaspberry"
 
 #Define main selectors 
-selector_info:
+fixed_selectors:
   GEO_long:
     label: "Country"
     selected:

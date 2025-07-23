@@ -14,17 +14,29 @@ new.cols:
 gopts: 
  - "line"
  - "point"
+plot_height: 700
+hide.selectors: False
+hide.legend: False
+download.button: True
+listen: False
  
 #define main plot variables 
-x_var: "year"
-xnum_breaks: 10
-y_var: "value"
-color_var: "legend"
-color_var_lab: "Source"
-color_style: "LaCroixColoR::CranRaspberry"
+axis_vars: 
+  x_axis:
+    var: "year"
+    label: "Year"
+    breaks: 10 
+  y_axis:   
+    var: "value" 
+    label: "Value"
+    
+color:     
+  var: "legend"
+  label: "Source"
+  style: "LaCroixColoR::CranRaspberry"
 
 #Define main selectors 
-selector_info:
+fixed_selectors:
   GEO_long:
     label: "Country"
     selected:
@@ -39,7 +51,7 @@ selector_info:
       - "Individuals - Adults (equal split)"
       - "Households"
       - "Tax Units"
-    multiple: true #necessary if you have more than one 
+    multiple: true 
 
 #Define reactive or 'loose' selectors (react to changes in main selectors)
 loose_selectors:
@@ -62,6 +74,7 @@ dt.cols:
   metadata: "Description"
   data_description: "Metadata"
   Data_Type: "Data type"
+table.display: True  
 
 #define the information shown in the tooltip
 tooltip_vars:
@@ -72,11 +85,5 @@ tooltip_vars:
   metadata: "Explanation:"
   data_description: "Data type:"
 
-#other options 
-download.button: True
-hide.selectors: False
-listen: False
-table.display: True
-hide.legend: False
-plot_height: 700
+
 
