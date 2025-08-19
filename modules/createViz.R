@@ -21,128 +21,24 @@ createViz <- function(data.file, meta.file = NULL,
                       keep.col = NULL
                       ) {
   
-  tic("load packages for createViz")
+  tic("loading and preliminary work")
     require(data.table)
-  toc()
-  
-  # Parse axis variables 
-  if(is.null(axis_vars$x_axis$var) | is.null(axis_vars$x_axis$var)) {
-    stop("Please specify both x_axis and y_axis variables") 
-  } 
- 
-  #Pase colors 
-  if(is.null(color$var)) {
-    stop("please specify color variable")
-  } else {
-    color_var <<- color$var 
-  }
-  if(!is.null(color$label)) {
-    color_var_lab <- color$label 
-  }
-  if(is.null(color$style)) {
-    color_style <- "viridis"
-  } else {
-    color_style <- color$style
-  }
-  if(!is.null(color$group)) {
-    groupvars <- color$group
-  } else {
-    groupvars = NULL
-  }
-  
-  # Preprocess inputs to ensure list format 
-  tic("perform preliminary checks")
-    fixed_selectors <- ensureListStructure(fixed_selectors)
-    if (!is.null(dt.cols)) {
-      dt.cols <- ensureListStructure(dt.cols)
+    source("modules/preliminary_checks.R", local = TRUE)
+    source("modules/define_varlists.R", local = TRUE)
+    source("modules/read_dataset.R", local = TRUE)
+    if (!is.null(data.wrangler)) {
+      source(data.wrangler, local = TRUE)  
     }
-    tooltip_vars <- ensureListStructure(tooltip_vars)
-  toc()
-  if (!is.null(loose_selectors)) {
-    all_selectors <- c(fixed_selectors, loose_selectors)
-  } else {
-    all_selectors <- fixed_selectors
-  }
-  
-  # Load dataset and create new vars
-  tic(paste0("loading ", data.file))
-  
-  # Define new columns if necessary
-  if (!is.null(new.cols)) {
-    new_col_groups <- lapply(new.cols, function(x) x)
-    new_col_names <- names(new.cols)
-    all_varlists <- list(
-      new_col_groups,
-      axis_vars$x_axis$var, axis_vars$y_axis$var,
-      names(fixed_selectors),
-      names(dt.cols),
-      names(tooltip_vars),
-      "source"
-    )
-  all_vars <- setdiff(unique(unlist(all_varlists)), new_col_names)
-  } else {
-    if (!is.null(tooltip_vars)) {
-      all_varlists <- list(
-        axis_vars$x_axis$var, axis_vars$y_axis$var,
-        names(fixed_selectors),
-        names(dt.cols),
-        names(tooltip_vars),
-        color_var, "source"
-      )
-      all_vars <- unique(unlist(all_varlists))
-    } else {
-      all_varlists <- list(
-        axis_vars$x_axis$var, axis_vars$y_axis$var,
-        names(fixed_selectors),
-        names(dt.cols),
-        color_var,
-        "source")
-      all_vars <- unique(unlist(all_varlists))
-    }
-  }
-  
-  #read the data  
-  data_cols <- fread(data.file, sep = ",", nrows = 1) %>% colnames()
-  all_vars <- intersect(unique(unlist(all_varlists)), data_cols)
-  if (!is.null(keep.col)) {
-    data <- fread(data.file, sep = "," , select = c(all_vars, keep.col))
-  } else {
-    data <- fread(data.file, sep = "," , select = all_vars)
-  }
-  data <- as.data.frame(data)
-  rm(data_cols)
-
-  if (!is.null(new.cols)) {
-    data <- combine_multiple_columns(data,
-       new.col.groups = new_col_groups,
-       new.col.names = new_col_names
-    )
-  }
-  toc()
-  
-  # Run ad-hoc R script if necessary 
-  if (!is.null(data.wrangler)) {
-    source(data.wrangler, local = TRUE)  
-  }
-  
-  # Load metadata if necessary
-  if (!is.null(meta.file)) {
-     
-    #load methodological tables
-    tic("loading methodological table") 
-    meth <- read_excel(meta.file) %>% 
-      rename(Country = `country`) %>% 
-      select(-c("area", "GEO3", "Source")) 
-    toc()
-  } else {
-    meth <- NULL 
-  }
+    source("modules/load_meta.R", local = TRUE)
+  toc()  
   
   ### Define UI
   ui <- page_fluid(
     
-    # Add Bootstrap theme and prevent padding 
+    # Add Bootstrap theme 
     theme = bs_theme(version = 5),
+    
+    # Prevent padding
     tags$style(HTML("
       html, body {
         margin: 0;
@@ -214,7 +110,7 @@ createViz <- function(data.file, meta.file = NULL,
     ),
     
     # Place selectors in a row with a specific ID
-    fluidRow(id = "selectorRow", createSelectors(data, all_selectors, num.conversion, extra_layer)),
+    fluidRow(id = "selectorRow", createSelectors(data, all_selectors, axis_vars, num.conversion, extra_layer)),
     
     # Placeholder for conditional download button
     uiOutput("downloadButtonUI"),

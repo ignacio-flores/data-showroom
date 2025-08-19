@@ -1,86 +1,243 @@
 require(shiny)
 require(shinyWidgets)
 
-createSelectors <- function(data, selector_info, num.conversion, extra_layer) {
+# Enhanced createSelectors: supports axis choice alt.names separately from selector title labels
+createSelectors <- function(data,
+                            selector_info,
+                            axis_vars = NULL,
+                            num.conversion = NULL,
+                            extra_layer = NULL) {
+  # Helper: parse 'c("a","b")' strings into vectors
+  parseChoices <- function(ch) {
+    if (is.character(ch) && length(ch) == 1 && grepl("^c\\(", ch)) {
+      tryCatch(eval(parse(text = ch)), error = function(e) {
+        warning("Failed to parse choices: ", ch)
+        ch
+      })
+    } else {
+      ch
+    }
+  }
   
-  # Determine the number of selectors
-  numSelectors <- length(selector_info)
+  # Layout counts
+  baseCount     <- length(selector_info)
+  hasX          <- !is.null(axis_vars) && !is.null(axis_vars$x_axis$choices)
+  hasY          <- !is.null(axis_vars) && !is.null(axis_vars$y_axis$choices)
+  axisCount     <- sum(c(hasX, hasY))
+  convCount     <- if (!is.null(num.conversion)) 1 else 0
+  totalControls <- baseCount + axisCount + convCount
+  columns       <- min(totalControls, 4)
+  colWidth      <- 12 / columns
   
-  if (!is.null(num.conversion)) numSelectors <- numSelectors + 1
-
-  # Generate each selector based on its type and properties
-  selectorInputs <- lapply(names(selector_info), function(var) {
+  inputs <- list()
+  
+  # X-axis selector: title from x_axis$label, displayed names from x_axis$alt.names
+  if (hasX) {
+    x_info <- axis_vars$x_axis
+    raw_ch <- parseChoices(x_info$choices)
+    # Apply alternative display names if provided
+    if (!is.null(x_info$alt.names)) {
+      alt_names <- parseChoices(x_info$alt.names)
+      if (length(alt_names) == length(raw_ch)) names(raw_ch) <- alt_names
+    }
+    # UI title for selector
+    title_x <- if (!is.null(x_info$label) && is.character(x_info$label) && length(x_info$label) == 1)
+      x_info$label else "X Axis"
+    # Default selected var
+    sel_x <- if (!is.null(x_info$var) && length(x_info$var) == 1)
+      x_info$var else raw_ch[1]
+    
+    inputs <- c(inputs, list(
+      column(width = colWidth,
+             selectInput(
+               inputId = "x_axis",
+               label   = title_x,
+               choices = raw_ch,
+               selected= sel_x
+             )
+      )
+    ))
+  }
+  
+  # Y-axis selector: title from y_axis$label, displayed names from y_axis$alt.names
+  if (hasY) {
+    y_info <- axis_vars$y_axis
+    raw_ch <- parseChoices(y_info$choices)
+    if (!is.null(y_info$alt.names)) {
+      alt_names <- parseChoices(y_info$alt.names)
+      if (length(alt_names) == length(raw_ch)) names(raw_ch) <- alt_names
+    }
+    title_y <- if (!is.null(y_info$label) && is.character(y_info$label) && length(y_info$label) == 1)
+      y_info$label else "Y Axis"
+    sel_y <- if (!is.null(y_info$var) && length(y_info$var) == 1)
+      y_info$var else raw_ch[1]
+    
+    inputs <- c(inputs, list(
+      column(width = colWidth,
+             selectInput(
+               inputId = "y_axis",
+               label   = title_y,
+               choices = raw_ch,
+               selected= sel_y
+             )
+      )
+    ))
+  }
+  
+  # Other selectors from selector_info
+  selectorCols <- lapply(names(selector_info), function(var) {
     info <- selector_info[[var]]
-    inputType <- ifelse("type" %in% names(info), info$type, "select") # Default to dropdown
-
-    # Define choices explicitly removing extra_layer values if necessary
-    if (exists("extra_layer") && !is.null(extra_layer$values) && var == color_var) {
-      extra_layer_values <- unlist(extra_layer$values)
-      # Explicitly remove extra_layer values from selector
-      choices <- sort(setdiff(unique(data[[var]]), extra_layer_values))
+    type <- if ("type" %in% names(info)) info$type else "select"
+    
+    # Exclude extra_layer values when var matches
+    if (!is.null(extra_layer) && !is.null(extra_layer$var) && var == extra_layer$var && !is.null(extra_layer$values)) {
+      excl_vals <- unlist(extra_layer$values)
+      choices <- sort(setdiff(unique(data[[var]]), excl_vals))
     } else {
       choices <- sort(unique(data[[var]]))
     }
     
-    # Default to select all if type is "checkbox" 
-    selected <- if (inputType == "checkbox") {
-      if ("selected" %in% names(info)) info$selected else choices
+    # Default selection
+    if (type == "checkbox") {
+      sel <- if ("selected" %in% names(info)) info$selected else choices
     } else {
-      if ("selected" %in% names(info)) info$selected else NULL
+      sel <- if ("selected" %in% names(info)) info$selected else NULL
     }
-    label <- if ("label" %in% names(info)) info$label else var
+    # Title label for control
+    lbl <- if ("label" %in% names(info) && is.character(info$label)) info$label else var
     
-    # Create input control based on type
-    inputControl <- if (inputType == "checkbox") {
-      pickerInput(
-        inputId = var,
-        label = label,
-        choices = choices,
-        selected = selected,
-        multiple = TRUE,  
-        options = list(
-          `actions-box` = TRUE, # Adds "Select All/Deselect All" buttons
-          `live-search` = TRUE, # Adds search functionality
-          `dropdown-align-right` = TRUE, # Align dropdown to the right (optional)
-          `selected-text-format` = "count", # Show count instead of items
-          `count-selected-text` =  "{0} selected" # Show "All" if all selected
-        )
-      )
-    } else if (inputType == "selector" ) {
-      pickerInput(
-        inputId = var,
-        label = label,
-        choices = choices,
-        selected = selected
-      )
-    } else {
-      selectInput(
-        inputId = var,
-        label = label,
-        choices = choices,
-        selected = selected,
-        multiple = ifelse("multiple" %in% names(info), info$multiple, FALSE)
-      )
-    }
-
-    # Define column width dynamically based on the number of selectors
-    columnWidth <- 12 / min(numSelectors, 4)
-    column(width = columnWidth, inputControl)
-  })
-
-  # Add the conversion selector if num.conversion is not NULL
-  if (!is.null(num.conversion)) {
-    conversionChoices <- sapply(unname(num.conversion), function(x) x$label)
-    conversionSelector <- selectInput(
-      inputId = "conversion",
-      label = "Conversion",
-      choices = conversionChoices
+    ctrl <- switch(type,
+                   checkbox = pickerInput(
+                     inputId = var,
+                     label   = lbl,
+                     choices = choices,
+                     selected= sel,
+                     multiple= TRUE,
+                     options = list(
+                       `actions-box`          = TRUE,
+                       `live-search`          = TRUE,
+                       `dropdown-align-right` = TRUE,
+                       `selected-text-format` = "count",
+                       `count-selected-text`  = "{0} selected"
+                     )
+                   ),
+                   selector = pickerInput(
+                     inputId = var,
+                     label   = lbl,
+                     choices = choices,
+                     selected= sel
+                   ),
+                   selectInput(
+                     inputId = var,
+                     label   = lbl,
+                     choices = choices,
+                     selected= sel,
+                     multiple = if ("multiple" %in% names(info)) info$multiple else FALSE
+                   )
     )
-    conversionColumn <- column(width = 12 / min(numSelectors, 4), conversionSelector)
-    selectorInputs <- append(selectorInputs, list(conversionColumn))
+    column(width = colWidth, ctrl)
+  })
+  inputs <- c(inputs, selectorCols)
+  
+  # Conversion selector if defined
+  if (!is.null(num.conversion)) {
+    convChoices <- sapply(num.conversion, function(x) x$label)
+    convCtrl    <- selectInput(
+      inputId = "conversion",
+      label   = "Conversion",
+      choices = convChoices
+    )
+    inputs <- c(inputs, list(column(width = colWidth, convCtrl)))
   }
-
-  # Arrange all selectors in a fluid row
-  do.call(fluidRow, selectorInputs)
+  
+  # Render row of inputs
+  do.call(fluidRow, inputs)
 }
+
+
+# require(shiny)
+# require(shinyWidgets)
+# 
+# createSelectors <- function(data, selector_info, axis_vars, num.conversion, extra_layer) {
+# 
+#   # Determine the number of selectors
+#   numSelectors <- length(selector_info)
+# 
+#   if (!is.null(num.conversion)) numSelectors <- numSelectors + 1
+# 
+#   # Generate each selector based on its type and properties
+#   selectorInputs <- lapply(names(selector_info), function(var) {
+#     info <- selector_info[[var]]
+#     inputType <- ifelse("type" %in% names(info), info$type, "select") # Default to dropdown
+# 
+#     # Define choices explicitly removing extra_layer values if necessary
+#     if (exists("extra_layer") && !is.null(extra_layer$values) && var == color_var) {
+#       extra_layer_values <- unlist(extra_layer$values)
+#       # Explicitly remove extra_layer values from selector
+#       choices <- sort(setdiff(unique(data[[var]]), extra_layer_values))
+#     } else {
+#       choices <- sort(unique(data[[var]]))
+#     }
+# 
+#     # Default to select all if type is "checkbox"
+#     selected <- if (inputType == "checkbox") {
+#       if ("selected" %in% names(info)) info$selected else choices
+#     } else {
+#       if ("selected" %in% names(info)) info$selected else NULL
+#     }
+#     label <- if ("label" %in% names(info)) info$label else var
+# 
+#     # Create input control based on type
+#     inputControl <- if (inputType == "checkbox") {
+#       pickerInput(
+#         inputId = var,
+#         label = label,
+#         choices = choices,
+#         selected = selected,
+#         multiple = TRUE,
+#         options = list(
+#           `actions-box` = TRUE, # Adds "Select All/Deselect All" buttons
+#           `live-search` = TRUE, # Adds search functionality
+#           `dropdown-align-right` = TRUE, # Align dropdown to the right (optional)
+#           `selected-text-format` = "count", # Show count instead of items
+#           `count-selected-text` =  "{0} selected" # Show "All" if all selected
+#         )
+#       )
+#     } else if (inputType == "selector" ) {
+#       pickerInput(
+#         inputId = var,
+#         label = label,
+#         choices = choices,
+#         selected = selected
+#       )
+#     } else {
+#       selectInput(
+#         inputId = var,
+#         label = label,
+#         choices = choices,
+#         selected = selected,
+#         multiple = ifelse("multiple" %in% names(info), info$multiple, FALSE)
+#       )
+#     }
+# 
+#     # Define column width dynamically based on the number of selectors
+#     columnWidth <- 12 / min(numSelectors, 4)
+#     column(width = columnWidth, inputControl)
+#   })
+# 
+#   # Add the conversion selector if num.conversion is not NULL
+#   if (!is.null(num.conversion)) {
+#     conversionChoices <- sapply(unname(num.conversion), function(x) x$label)
+#     conversionSelector <- selectInput(
+#       inputId = "conversion",
+#       label = "Conversion",
+#       choices = conversionChoices
+#     )
+#     conversionColumn <- column(width = 12 / min(numSelectors, 4), conversionSelector)
+#     selectorInputs <- append(selectorInputs, list(conversionColumn))
+#   }
+# 
+#   # Arrange all selectors in a fluid row
+#   do.call(fluidRow, selectorInputs)
+# }
 

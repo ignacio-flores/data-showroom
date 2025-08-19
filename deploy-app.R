@@ -1,15 +1,24 @@
 library(rsconnect)
-source("auth/shiny_auth.R")
-rsconnect::setAccountInfo(name='gcwealth',
+source("auth/shiny_auth_hubquin.R")
+rsconnect::setAccountInfo(name=shiny_account,
                           token=shiny_token,
                           secret=shiny_secret)
 
-# Define the paths
-deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-country-view")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-country-comp")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "ineq-prev")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-country-comp")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-source-comp")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-aba1")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-country-view")
-#deployApp(appDir = "~/Documents/GitHub/data-showroom", appName = "topo-prev")
+# Define name
+#name = "ineq-country-view"
+#name = "ineq-country-comp"
+#name = "ineq-prev"
+#name = "topo-country-view"
+#name = "topo-source-comp"
+#name = "topo-country-comp"
+#name = "topo-prev"
+#name = "topo-aba1"
+#name = "topo-aba2"
+#name = "topo-ffba1"
+#name = "topo-ffba2"
+#name = "topo-ffba3"
+#name = "eigt-ft1"
+#name = "eigt-ft2"
+name = "eigt-kf2"
+
+deployApp(appDir = ".", appName = name)

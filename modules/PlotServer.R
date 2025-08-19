@@ -32,6 +32,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()
       req(df)
+      
+      #make axes dynamic if necessary 
+      # print(paste0("printing input x_axis", input, "!"))
+      # if (!is.null(input$x_axis)) x_var <- input$x_axis
+      # if (!is.null(input$y_axis)) y_var <- input$y_axis
   
       # Extend last point in step plot
       if ("step" %in% gopts) {
@@ -330,7 +335,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         if ("point" %in% gopts) {
           p <- p + geom_point(data = df,
                               aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
-                              color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 0.9)
+                              color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 2)
         }
         if ("step" %in% gopts) {
           p <- p + geom_step(data = df,
@@ -354,7 +359,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         # Conditional addition of geom_point
         if ("point" %in% gopts) {
-          p <- p + geom_point(size = 1)
+          p <- p + geom_point(size = 2)
         }
 
         # Conditional addition of geom_point
