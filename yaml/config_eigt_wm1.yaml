@@ -1,0 +1,51 @@
+#define data source
+data.file: "data/eigt_warehouse_meta_v1_2.csv"
+data.wrangler: "custom_code/data_prep_eigt4.R" 
+
+#define plot type 
+gopts: "map"
+
+color: 
+  var: "iso3"
+  label: "Country"
+  style: "rcartocolor::BluGrn"
+  group: 
+    - "iso3"
+    - "d2_sector_lab"
+    
+axis_vars:
+  y_axis: 
+    var: "value"
+    
+#Define main selector 
+fixed_selectors:
+  d4_concept_lab: 
+    label: "Tax Features"
+    selected: "Total Revenue from Tax as % of Gross Domestic Product"
+loose_selectors: 
+  d2_sector_lab: 
+    label: "Tax type"
+    type: "checkbox"
+  
+#define the columns of the data table widget 
+dt.cols: 
+  GEO_long: "Country name"
+  GEO: "Country code"
+  year: "Year"
+  d4_concept_lab: "Variable"
+  value: "Value"
+  d2_sector_lab: "Tax type"
+  
+tooltip_vars:
+  d4_concept_lab: "Tax type:"
+  GEO_long: "Country:"
+  year: "Year:"
+  value: "Value: "
+
+#other options 
+download.button: True
+hide.selectors: False
+listen: False
+table.display: True
+hide.legend: False
+plot_height: 700

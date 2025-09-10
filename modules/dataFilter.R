@@ -1,13 +1,17 @@
 # Module for reactive data filtering
 dataFilter <- function(input, output, session,
-                       data, x_var, y_var, color_var, selector_vars,
+                       data, x_var, y_var, color_var = NULL, selector_vars,
                        dt_cols, tooltip_vars, value_scale, num.conversion,
                        extra_layer = NULL) {
   reactive({
     
     data_filtered <- data
+    
+    
+    
     for (var in selector_vars) {
-      if (var == color_var & !is.null(extra_layer)) {
+      #if (var == color_var & !is.null(extra_layer)) {
+      if (!is.null(color_var) && var == color_var & !is.null(extra_layer)) {  
         data_filtered <- data_filtered[data_filtered[[var]] %in% unique(c(extra_layer$values, input[[var]])), ]
       } else {
         data_filtered <- data_filtered[data_filtered[[var]] %in% input[[var]], ]
@@ -19,7 +23,10 @@ dataFilter <- function(input, output, session,
     } else {
       
       data_filtered <- data_filtered %>%
-        select(all_of(c(dt_cols, x_var, selector_vars, y_var, color_var, names(tooltip_vars))))
+        select(all_of(c(dt_cols, x_var, selector_vars, y_var, 
+                        if (!is.null(color_var)) color_var,
+                        #color_var, 
+                        names(tooltip_vars))))
       
       # Extract selected variable names
       sort_vars <- c()
@@ -32,7 +39,10 @@ dataFilter <- function(input, output, session,
       
       # Return filtered and sorted data
       data_sorted %>%
-        select(all_of(c(dt_cols, x_var, selector_vars, y_var, color_var, names(tooltip_vars))))
+        select(all_of(c(dt_cols, x_var, selector_vars, y_var, 
+                        if (!is.null(color_var)) color_var,    
+                        #color_var, 
+                        names(tooltip_vars))))
     }
   })
 }

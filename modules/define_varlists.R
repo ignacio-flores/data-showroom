@@ -1,3 +1,5 @@
+if (!exists("color_var")) color_var <- NULL
+
 # Define new columns if necessary
 if (!is.null(new.cols)) {
   new_col_groups <- lapply(new.cols, function(x) x)

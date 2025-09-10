@@ -1,15 +1,20 @@
 
 # Parse axis variables 
 if(is.null(axis_vars$x_axis$var) | is.null(axis_vars$x_axis$var)) {
-  stop("Please specify both x_axis and y_axis variables") 
+  if (gopts != "map") {
+    stop("Please specify both x_axis and y_axis variables")  
+  }
 } 
 
 #Parse color
-if(is.null(color$var)) {
-  stop("please specify a color variable")
-} else {
-  color_var <<- color$var 
+if (!("bar" %in% gopts)) {
+  if(is.null(color$var)) {
+    stop("please specify a color variable")
+  } else {
+    color_var <<- color$var 
+  }
 }
+
 if(!is.null(color$label)) {
   color_var_lab <- color$label 
 }

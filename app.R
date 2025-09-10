@@ -3,7 +3,7 @@ source("modules/libraries.R")
 
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
-graph = "eigt_kf3"
+graph = "eigt_wm2"
 load_config(paste0("yaml/config_", graph, ".yaml"), func = createViz)
 
 #eigt_ft1 and ft2: add log scale, xrates, make last line horizontal pending for publication 
