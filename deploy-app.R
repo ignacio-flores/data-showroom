@@ -1,5 +1,5 @@
 library(rsconnect)
-source("auth/shiny_auth_gregcull.R")
+source("auth/shiny_auth_gcwealth.R")
 rsconnect::setAccountInfo(name=shiny_account,
                           token=shiny_token,
                           secret=shiny_secret)
@@ -7,8 +7,8 @@ rsconnect::setAccountInfo(name=shiny_account,
 # Define name
 #name = "ineq-country-view"
 #name = "ineq-country-comp"
-#name = "ineq-prev"2
-#name = "topo-country-view"
+#name = "ineq-prev"
+name = "topo-country-view"
 #name = "topo-source-comp"
 #name = "topo-country-comp"
 #name = "topo-prev"
@@ -20,6 +20,6 @@ rsconnect::setAccountInfo(name=shiny_account,
 #name = "eigt-ft1"
 #name = "eigt-ft2"
 #name = "eigt-kf3"
-name = "eigt-wm2"
+#name = "eigt-wm2"
 
 deployApp(appDir = ".", appName = name)

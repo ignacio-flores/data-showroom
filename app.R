@@ -3,10 +3,8 @@ source("modules/libraries.R")
 
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
-graph = "eigt_wm2"
+graph = "topo_single"
 load_config(paste0("yaml/config_", graph, ".yaml"), func = createViz)
-
-#eigt_ft1 and ft2: add log scale, xrates, make last line horizontal pending for publication 
 #eigt_kf2: filter options more, add currency and log scale
 
 # Run app
@@ -32,7 +30,9 @@ createViz(
   hide.legend = hide.legend,
   plot_height = plot_height,
   meta.loc = meta.loc, 
-  keep.col = keep.col 
+  keep.col = keep.col, 
+  area_stack_toggle = area_stack_toggle, 
+  area_stack_default = area_stack_default 
 )
 
 #Comments: extra_layers work with faceted plots only (can be made independent)

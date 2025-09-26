@@ -4,13 +4,29 @@ require(viridis)
 require(paletteer)
 require(scales)
 
-plotOutputUI <- function(id) {
+plotOutputUI <- function(id,
+                         show_stack_toggle = FALSE,
+                         stacked_default = FALSE,
+                         enable_only_when_area = TRUE,
+                         gopts = NULL) {
   ns <- NS(id)
   fluidRow(
-    uiOutput(ns("messageDisplay")),   # UI element for displaying messages
+    uiOutput(ns("messageDisplay")),
+    if (isTRUE(show_stack_toggle) &&
+        (!isTRUE(enable_only_when_area) || (!is.null(gopts) && ("area" %in% gopts)))) {
+      div(
+        style = "margin: 20px 20px;",
+        shinyWidgets::materialSwitch(
+          inputId   = ns("stacked"), 
+          label = "Stack areas",
+          status = "primary",
+          right = TRUE)
+      )
+    } else NULL,
     plotlyOutput(ns("valuePlot"), width = "100%")
   )
 }
+
 
 # Server logic for the plot module
 plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, 
@@ -18,6 +34,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars) {
   moduleServer(id, function(input, output, session) {
+    
+    stack_active <- reactive({
+      val <- input$stacked
+      if (is.null(val)) isTRUE(stacked_default) else isTRUE(val)
+    })
 
     #display message if data not available
     output$messageDisplay <- renderUI({
@@ -151,7 +172,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             mode = ifelse("point" %in% gopts, "lines+markers", "lines"),
             fill = ifelse("area" %in% gopts, 'tozeroy', 'none'),
             line = list(shape = ifelse("step" %in% gopts, 'hv', 'linear')),
-            #stackgroup = ifelse("area" %in% gopts, "one", NULL),
+            stackgroup = if (isTRUE(stack_active())) "one" else NULL,  
             height = plot_height,
             opacity = 1,
             legendgroup = ~get(color_var),
@@ -168,25 +189,28 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             df_extra_facet <- extra_df[extra_df[[facet_var]] == facet_level, ]
             
             if (nrow(df_extra_facet) > 0) {
-              plt <- plt %>%
-                add_trace(
-                  data = df_extra_facet, 
-                  x = ~get(x_var),
-                  y = ~get(y_var),
-                  type = 'scatter',
-                  mode = extra_layer$type,
-                  line = list(color = "black", width = 2),
-                  fill = NULL,
-                  name = extra_layer$values,
-                  text = ~tooltip_text,
-                  hoverinfo = 'text',
-                  color = I("black"), 
-                  showlegend = !hide.legend && (facet_level == facet_levels[1]),
-                  legendgroup = "extra_layer"
-                ) %>% 
-                layout(
-                  dragmode = "zoom"
-                )
+              if (!isTRUE(stack_active())) {
+                plt <- plt %>%
+                  add_trace(
+                    data = df_extra_facet, 
+                    x = ~get(x_var),
+                    y = ~get(y_var),
+                    type = 'scatter',
+                    mode = extra_layer$type,
+                    line = list(color = "black", width = 2),
+                    fill = NULL,
+                    name = extra_layer$values,
+                    text = ~tooltip_text,
+                    hoverinfo = if (isTRUE(stack_active())) "skip" else "text", 
+                    color = I("black"), 
+                    showlegend = !hide.legend && (facet_level == facet_levels[1]),
+                    legendgroup = "extra_layer",
+                    inherit = FALSE 
+                  ) %>% 
+                  layout(
+                    dragmode = "zoom"
+                  )
+              }
             }
           }
           plt
@@ -765,7 +789,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         if ("point" %in% gopts) {
           p <- p + geom_point(data = df,
                               aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
-                              color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 2)
+                              color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 1)
         }
         if ("step" %in% gopts) {
           p <- p + geom_step(data = df,
@@ -789,7 +813,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         # Conditional addition of geom_point
         if ("point" %in% gopts) {
-          p <- p + geom_point(size = 2)
+          p <- p + geom_point(size = 1)
         }
 
         # Conditional addition of geom_point
@@ -813,6 +837,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           layout(
             dragmode = "zoom",
             font = list(family = "Arial", size = 12, color = "#000"),
+            hoverlabel = list(
+              font = list(size = 16)  
+            ),
             autosize = TRUE,
             xaxis = list(zeroline = FALSE),
             yaxis = list(zeroline = FALSE),

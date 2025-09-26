@@ -18,7 +18,9 @@ createViz <- function(data.file, meta.file = NULL,
                       num.conversion = NULL,
                       extra_layer = NULL, 
                       meta.loc = NULL, 
-                      keep.col = NULL
+                      keep.col = NULL,
+                      area_stack_toggle = FALSE,  
+                      area_stack_default = TRUE   
                       ) {
   
   tic("loading and preliminary work")
@@ -36,7 +38,7 @@ createViz <- function(data.file, meta.file = NULL,
   ui <- page_fluid(
     
     # Add Bootstrap theme 
-    theme = bs_theme(version = 5),
+    #theme = bs_theme(version = 5),
     
     # Prevent padding
     tags$style(HTML("
@@ -120,14 +122,20 @@ createViz <- function(data.file, meta.file = NULL,
       if (is.null(meta.file)) {
         # Case 1: Show only Visualization and Data tabs (no metadata)
         fluidRow(column(width = 12, tabsetPanel(
-          tabPanel("Visualization", plotOutputUI("plotModule")),
+          tabPanel("Visualization", plotOutputUI("plotModule",
+                                                 show_stack_toggle     = area_stack_toggle,   
+                                                 stacked_default       = area_stack_default,  
+                                                 gopts                 = gopts)),
           tabPanel("Data", uiOutput("tableOrMessageUI"))
         )))
         
       } else if (meta.loc == "tab") {
         # Case 2: Metadata shown as a separate tab
         fluidRow(column(width = 12, tabsetPanel(
-          tabPanel("Visualization", plotOutputUI("plotModule")),
+          tabPanel("Visualization", plotOutputUI("plotModule",
+                                                 show_stack_toggle     = area_stack_toggle,   
+                                                 stacked_default       = area_stack_default,  
+                                                 gopts                 = gopts)),
           tabPanel("Data", uiOutput("tableOrMessageUI")),
           tabPanel("Methodological table", metaTableUI("metaModule"))
         )))
@@ -135,7 +143,10 @@ createViz <- function(data.file, meta.file = NULL,
       } else if (meta.loc == "below") {
         tagList(
           fluidRow(
-            column(width = 12, plotOutputUI("plotModule"))
+            column(width = 12, plotOutputUI("plotModule",
+                                            show_stack_toggle     = area_stack_toggle,   
+                                            stacked_default       = area_stack_default,  
+                                            gopts                 = gopts))
           ),
           fluidRow(
             column(width = 12,
@@ -158,18 +169,27 @@ createViz <- function(data.file, meta.file = NULL,
         )
       } else {
         # Fallback if meta.loc is something unexpected
-        fluidRow(column(width = 12, plotOutputUI("plotModule")))
+        fluidRow(column(width = 12, plotOutputUI("plotModule",
+                                                 show_stack_toggle     = area_stack_toggle,   
+                                                 stacked_default       = area_stack_default,  
+                                                 gopts                 = gopts)))
       }
       
     } else {
       # Case 4: No table.display, just the plot (and maybe metadata below)
       if (!is.null(meta.file) && meta.loc == "below") {
         fluidRow(column(width = 12,
-                        plotOutputUI("plotModule"),
+                        plotOutputUI("plotModule",
+                                     show_stack_toggle     = area_stack_toggle,   
+                                     stacked_default       = area_stack_default,  
+                                     gopts                 = gopts),
                         tags$div(style = "margin-top: 100px;", metaTableUI("metaModule"))
         ))
       } else {
-        fluidRow(column(width = 12, plotOutputUI("plotModule")))
+        fluidRow(column(width = 12, plotOutputUI("plotModule",
+                                                 show_stack_toggle     = area_stack_toggle,   
+                                                 stacked_default       = area_stack_default,  
+                                                 gopts                 = gopts)))
       }
     }
   )
