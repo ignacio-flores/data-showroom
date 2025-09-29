@@ -13,6 +13,17 @@ data_nom_lcu <- data %>%
 data_nom_lcu <- data_nom_lcu %>% 
   mutate(value = ifelse(d4_concept_lab == "Debt", -value, value))
 
+#create database with % of NI 
+natinc <- read.csv("data/supplementary_var_long.csv") %>% 
+  filter(variable == "mnninc") %>%
+  select(country, year, value) %>% 
+  rename(pop = `value`, GEO = `country`) %>% 
+  mutate(pop_lab = "Ratio to National Income")
+
+# data_ni <- data_nom_lcu %>% 
+#   left_join(natinc, by = c("GEO", "year"), multiple = "all") %>% 
+#   mutate(value = value / natinc) 
+
 #Adjust using market xrates
 xrates_mer <- read.csv("data/supplementary_var_long.csv") %>% 
   filter(variable %in% c("xlceux", "xlcusx", "xlcyux")) %>% 
@@ -79,6 +90,7 @@ pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "npopul", "Per capita", pop_
 pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "npopul_adu", "Per adult", pop_lab))
 pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "npopem", "Per employed population", pop_lab))
 pops <- pops %>% mutate(pop_lab = ifelse(pop_lab == "ntaxma", "Per tax unit", pop_lab))
+pops <- pops %>% rbind(natinc)
 
 data <- left_join(data, pops, by = c("GEO", "year"), multiple = "all") 
 rm(pops)
@@ -87,3 +99,4 @@ data <- rbind(data, data_mac) %>%
   arrange(GEO, xrate, pop, year)
 rm(data_mac, dictionary)
 
+write.csv(data, file = "data/topo_ready.csv")
