@@ -32,7 +32,7 @@ plotOutputUI <- function(id,
 plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, 
                              color_var = NULL, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
-                             plot_height, groupvars) {
+                             plot_height, groupvars, stacked_default = FALSE) {
   moduleServer(id, function(input, output, session) {
     
     stack_active <- reactive({

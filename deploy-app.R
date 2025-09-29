@@ -1,5 +1,5 @@
 library(rsconnect)
-source("auth/shiny_auth_gcwealth.R")
+source("auth/shiny_auth_ign-flores.R")
 rsconnect::setAccountInfo(name=shiny_account,
                           token=shiny_token,
                           secret=shiny_secret)
@@ -8,10 +8,10 @@ rsconnect::setAccountInfo(name=shiny_account,
 #name = "ineq-country-view"
 #name = "ineq-country-comp"
 #name = "ineq-prev"
-name = "topo-country-view"
+#name = "topo-country-view"
 #name = "topo-source-comp"
 #name = "topo-country-comp"
-#name = "topo-prev"
+name = "topo-prev"
 #name = "topo-aba1"
 #name = "topo-aba2"
 #name = "topo-ffba1"

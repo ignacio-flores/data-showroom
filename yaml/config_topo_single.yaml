@@ -7,7 +7,6 @@ area_stack_toggle: true
 #define plot type 
 gopts: 
  - "area"
- - "stack"
  
 #define main plot variables 
 axis_vars: 
@@ -82,4 +81,4 @@ hide.selectors: False
 listen: False
 table.display: True
 hide.legend: False
-plot_height: 700
+plot_height: 650
