@@ -99,4 +99,4 @@ data <- rbind(data, data_mac) %>%
   arrange(GEO, xrate, pop, year)
 rm(data_mac, dictionary)
 
-write.csv(data, file = "data/topo_ready.csv")
+qs::qsave(data, "data/topo_ready.qs", preset = "fast")
