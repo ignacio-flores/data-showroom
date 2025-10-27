@@ -15,7 +15,7 @@ plotOutputUI <- function(id,
     if (isTRUE(show_stack_toggle) &&
         (!isTRUE(enable_only_when_area) || (!is.null(gopts) && ("area" %in% gopts)))) {
       div(
-        style = "margin: 20px 20px;",
+        style = "margin: 10px 10px;",
         shinyWidgets::materialSwitch(
           inputId   = ns("stacked"), 
           label = "Stack areas",

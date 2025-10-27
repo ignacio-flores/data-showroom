@@ -1,6 +1,7 @@
 #define data source
-data.file: "data/topo_ready.csv"
-#data.wrangler: "custom_code/data_prep_topo.R" 
+data.file: "data/topo_ready.qs"
+meta.file: "data/topo_meta.qs"
+meta.loc: "tab"
 
 area_stack_toggle: true  
 
