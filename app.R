@@ -3,12 +3,13 @@ source("modules/libraries.R")
 
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
-graph = "topo_single"
+graph = "topo_aba2"
 load_config(paste0("yaml/config_", graph, ".yaml"), func = createViz)
 #eigt_kf2: filter options more, add currency and log scale
 
 # Run app
 createViz(
+  graph = graph, 
   data.file = data.file,
   meta.file = meta.file,
   data.wrangler = data.wrangler,

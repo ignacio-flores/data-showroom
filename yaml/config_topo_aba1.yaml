@@ -1,6 +1,7 @@
 #define data source
-data.file: "data/topo_warehouse_meta_v1_2.csv"
-data.wrangler: "custom_code/data_prep_topo_debtplus.R" 
+data.file: "data/topo_ready_dp.qs"
+meta.file: "data/topo_meta.qs"
+meta.loc: "tab"
 
 #define plot type 
 gopts: 

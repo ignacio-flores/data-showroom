@@ -253,7 +253,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 traceorder = "grouped",
                 borderwidth = 1,  
                 opacity = 1,
-                font = list(size = 14, color = "black", family = "Arial")  
+                font = list(size = 18, color = "black", family = "Arial")  
               )
             }),
             xaxis = list(
@@ -737,12 +737,12 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           labs(title = "", x = "", y = "", color = color_var_lab) +
           guides(color = guide_legend(override.aes = list(alpha = 1))) +
           theme(panel.background = element_blank(), panel.grid.major = element_blank(),
-                axis.title.x = element_text(size = 12),
-                axis.title.y = element_text(size = 12),
-                axis.text.x = element_text(size = 12, angle = 40, hjust = 1),
-                axis.text.y = element_text(size = 12),
-                legend.title = element_text(size = 12, face = "bold"),
-                legend.text = element_text(size = 12),
+                axis.title.x = element_text(size = 16),
+                axis.title.y = element_text(size = 16),
+                axis.text.x = element_text(size = 16, angle = 40, hjust = 1),
+                axis.text.y = element_text(size = 16),
+                legend.title = element_text(size = 16, face = "bold"),
+                legend.text = element_text(size = 16),
                 legend.position = if (hide.legend) "none" else "center")
 
         # Apply facet if facet_var is not NULL
@@ -836,9 +836,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           style(hoverinfo = "text") %>%
           layout(
             dragmode = "zoom",
-            font = list(family = "Arial", size = 12, color = "#000"),
+            font = list(family = "Arial", size = 18, color = "#000"),
             hoverlabel = list(
-              font = list(size = 16)  
+              font = list(size = 18)  
             ),
             autosize = TRUE,
             xaxis = list(zeroline = FALSE),

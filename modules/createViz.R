@@ -1,4 +1,5 @@
-createViz <- function(data.file, meta.file = NULL,
+createViz <- function(graph = NULL, 
+                      data.file, meta.file = NULL,
                       axis_vars = NULL, 
                       new.cols = NULL,
                       tooltip_vars = NULL,
@@ -305,7 +306,7 @@ createViz <- function(data.file, meta.file = NULL,
     
     # Render metadata table
     if (!is.null(meta.file)) {
-      metaTableServer("metaModule", reactive(final_filtered_data()), meta = meth)
+      metaTableServer("metaModule", reactive(final_filtered_data()), meta = meth, graph = graph)
     }
     
     # Download button conditionally rendered

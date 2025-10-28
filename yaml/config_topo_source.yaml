@@ -86,4 +86,4 @@ hide.selectors: False
 listen: False
 table.display: True
 hide.legend: False
-plot_height: 680
+plot_height: 600
