@@ -1,6 +1,4 @@
-library(tidyr)
-library(dplyr)
-library(readxl)
+source("modules/libraries.R")
 
 #load list of countries 
 dictionary <- read_excel("data/dictionary.xlsx", sheet = "GEO")

@@ -139,7 +139,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
       
       pal_name <- color_style   
-      if (!is.null(color_style) & !(gopts %in% c("bar"))) {
+      if (!is.null(color_style) && !"bar" %in% gopts) {
         pal <- as.vector(                         
           paletteer_d(
             palette   = pal_name,  
@@ -743,7 +743,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 axis.text.y = element_text(size = 16),
                 legend.title = element_text(size = 16, face = "bold"),
                 legend.text = element_text(size = 16),
-                legend.position = if (hide.legend) "none" else "center")
+                legend.position = if (hide.legend) "none" else "center",
+                plot.margin = margin(5.5, 5.5, 5.5, 5.5)
+              )
 
         # Apply facet if facet_var is not NULL
         if (!is.null(facet_var) && facet_var != "null") {

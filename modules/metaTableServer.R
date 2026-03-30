@@ -31,8 +31,8 @@ metaTableServer <- function(id, filtered_data, meta, graph) {
       })
 
       # Define thresholds
-      moderate_threshold <- 25
-      extreme_threshold <- 200
+      moderate_threshold <- 20
+      extreme_threshold <- 100
 
       list(
         moderate_columns = names(max_lengths[max_lengths > moderate_threshold & max_lengths <= extreme_threshold]),
@@ -59,12 +59,12 @@ metaTableServer <- function(id, filtered_data, meta, graph) {
       }
       
       column_defs <- NULL
-      if (identical(substr(graph, 1, 4), "ineq")) {
+      #if (identical(substr(graph, 1, 4), "ineq")) {
         column_defs <- list(
-          list(width = "150px", targets = which(names(filtered_meta) %in% data$moderate_columns)),
-          list(width = "200px", targets = which(names(filtered_meta) %in% data$extreme_columns))
+          list(width = "300px", targets = which(names(filtered_meta) %in% data$moderate_columns)),
+          list(width = "400px", targets = which(names(filtered_meta) %in% data$extreme_columns))
         )
-      }
+      #}
       
       datatable(filtered_meta,
                 rownames = FALSE,
