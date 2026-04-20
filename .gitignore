@@ -3,9 +3,11 @@
 *.dcf
 *.Rhistory
 auth/
-data/topo_warehouse_meta_v1_2.csv
-data/ineq_warehouse_meta_v1_2.csv
-data/eigt_warehouse_meta_v1_2.csv
+data/topo_warehouse_*
+data/ineq_warehouse_*
+data/eigt_warehouse_*
+data/eigt_wide*
+data/inhe_warehouse*
 data/eigt_wide_viz.csv
 data/methodological_table.xlsx
 data/topo_warehouse_meta_v1_2.csv

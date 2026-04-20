@@ -1,0 +1,61 @@
+#define data source
+data.file: "data/inhe_warehouse_v2.csv"
+data.wrangler: "custom_code/dictionary_loader_inhe.R"
+
+#define plot type 
+gopts: 
+ - "line"
+ - "point"
+plot_height: 700
+hide.selectors: False
+hide.legend: False
+download.button: True
+listen: False
+ 
+#define main plot variables 
+axis_vars: 
+  x_axis:
+    var: "year"
+    label: "Year"
+    breaks: 10 
+  y_axis:   
+    var: "value" 
+    label: "Value"
+    
+color:     
+  var: "source"
+  label: "Source"
+  style: "LaCroixColoR::CranRaspberry"
+
+#Define main selectors 
+fixed_selectors:
+  GEO_long:
+    label: "Country"
+    selected:
+      - "United States"
+  varcode:
+     label: "Variable"
+   
+  d5_dboard_specific_lab:
+    label: "specific"
+
+#define the columns of the data table widget 
+dt.cols:
+  GEO: "Country code"
+  year: "Year"
+  GEO_long: "Country"
+  var_per: "Variable"
+  value: "Value"
+  source: "Source"
+  
+table.display: True  
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO_long: "Country:"
+  year: "Year:"
+  value: "Value:"
+  
+
+
+

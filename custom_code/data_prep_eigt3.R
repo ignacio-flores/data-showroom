@@ -17,7 +17,3 @@ data <- data %>%
   values_fill  = list(value = NA)
   )
 colnames(data) <- make_clean_names(colnames(data))
-
-data <- data %>% 
-   mutate(total_revenue_from_tax_as_percent_of_total_tax_revenue = total_revenue_from_tax_as_percent_of_total_tax_revenue * 100,
-          total_revenue_from_tax_as_percent_of_gross_domestic_product = total_revenue_from_tax_as_percent_of_gross_domestic_product * 100)

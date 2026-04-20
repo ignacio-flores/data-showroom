@@ -1,6 +1,5 @@
 #define data source
-data.file: "data/eigt_wide_viz.csv"
-data.wrangler: "custom_code/data_prep_eigt.R" 
+data.file: "data/eigt_wide.qs"
 
 #define graph options 
 gopts: "step"
@@ -28,11 +27,11 @@ color:
   style: "dichromat::DarkRedtoBlue_12"
   group:
     - "year"
-    - "tax"
+    - "d2_label"
 
 #Define main selector 
 fixed_selectors:
-  Country:
+  GEO_long:
     label: "Country"
     selected:
       - "Italy"
@@ -42,27 +41,25 @@ loose_selectors:
     label: "Years"
     type: "checkbox"
     select: "spaced"
-   tax:
+   d2_label:
     label: "Tax type"
-    selected: "Estate Tax"
-    type: "checkbox"
+    selected: "Estate Tax for Everybody"
+    type: "checkbox"   
 
 #define the columns of the data table widget 
 dt.cols: 
-  GEO: "Country code"
+  GEO_long: "Country code"
   year: "Year"
-  tax: "Tax type"
-  bracket: "Bracket"
-  currency: "Currency"
+  d2_label: "Tax type"
+  d5_code: "Bracket"
   adjmrt: "Marginal tax rate"
   adjlbo: "Lower bound in adjusted USD Millions"
 
 #define the information shown in the tooltip
 tooltip_vars:
-  GEO: "Country:"
+  GEO_long: "Country:"
   year: "Year:"
-  tax: "Tax type:"
-  currency: "Currency"
+  d2_label: "Tax type:"
   adjmrt: "Marginal tax rate"
   adjlbo: "Lower bound in adjusted USD Millions"
 
