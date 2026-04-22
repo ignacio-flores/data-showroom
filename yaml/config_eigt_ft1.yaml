@@ -1,5 +1,6 @@
 #define data source
 data.file: "data/eigt_wide.qs"
+data.wrangler: "custom_code/data_prep_eigt_ft1.R"
 
 #define graph options 
 gopts: "step"
@@ -35,16 +36,16 @@ fixed_selectors:
     label: "Country"
     selected:
       - "Italy"
+  d2_label:
+    label: "Tax type"
+    selected: "Inheritance Tax for Spouse"
       
 loose_selectors: 
    year:
     label: "Years"
     type: "checkbox"
     select: "spaced"
-   d2_label:
-    label: "Tax type"
-    selected: "Estate Tax for Everybody"
-    type: "checkbox"   
+
 
 #define the columns of the data table widget 
 dt.cols: 
