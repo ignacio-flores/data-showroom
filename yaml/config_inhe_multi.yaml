@@ -14,10 +14,10 @@ listen: False
 
 #combine columns into a string variable if needed 
 new.cols: 
-  var_con_sou_val:
+  cou_var_sou_val:
+    - "GEO_long"
     - "source"
     - "d3_vartype_lab"
-    - "d4_concept_lab"
     - "d5_dboard_specific_lab"
  
 #define main plot variables 
@@ -31,7 +31,7 @@ axis_vars:
     label: "Value"
     
 color:     
-  var: "var_con_sou_val"
+  var: "cou_var_sou_val"
   label: "Source"
   style: "LaCroixColoR::CranRaspberry"
 
@@ -40,16 +40,19 @@ fixed_selectors:
   GEO_long:
     label: "Country"
     selected:
-      - "France"
+      - "United Kingdom"
+      - "France" 
+      - "Italy"
+    multiple: true    
   d3_vartype_lab:
      label: "Variable"
      selected: "Ratio" 
   d5_dboard_specific_lab:
     label: "Valutation"
-    type: "checkbox" 
+    selected: "Fiscal Flow" 
   d4_concept_lab:
     label: "Concept" 
-    type: "checkbox"     
+    selected: "Inheritances"    
 
 #define loose selectors 
 loose_selectors:
