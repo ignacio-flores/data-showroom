@@ -32,14 +32,14 @@ axis_vars:
 color:     
   var: "con_sou_val"
   label: "Source"
-  style: "LaCroixColoR::CranRaspberry"
+  style: "nationalparkcolors::Acadia"
 
 #Define main selectors 
 fixed_selectors:
   GEO_long:
     label: "Country"
     selected:
-      - "France"
+      - "United States"
   d3_vartype_lab:
      label: "Variable"
      selected: "Ratio" 
