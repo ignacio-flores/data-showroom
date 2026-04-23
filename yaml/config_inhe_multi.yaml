@@ -14,12 +14,10 @@ listen: False
 
 #combine columns into a string variable if needed 
 new.cols: 
-  cou_var_sou_val:
+  cou_sou_val:
     - "GEO_long"
-    - "source"
-    - "d3_vartype_lab"
-    - "d5_dboard_specific_lab"
- 
+    - "legend"
+    
 #define main plot variables 
 axis_vars: 
   x_axis:
@@ -31,7 +29,7 @@ axis_vars:
     label: "Value"
     
 color:     
-  var: "cou_var_sou_val"
+  var: "cou_sou_val"
   label: "Source"
   style: "LaCroixColoR::CranRaspberry"
 
@@ -43,22 +41,24 @@ fixed_selectors:
       - "United Kingdom"
       - "France" 
       - "Italy"
-    multiple: true    
-  d3_vartype_lab:
-     label: "Variable"
-     selected: "Ratio" 
-  d5_dboard_specific_lab:
-    label: "Valutation"
-    selected: "Fiscal Flow" 
+      - "Switzerland"
+    multiple: true
   d4_concept_lab:
     label: "Concept" 
-    selected: "Inheritances"    
+    selected: "Inheritances & Gifts"      
+  d3_vartype_lab:
+     label: "Variable"
+     selected: "Ratio"       
+  d5_dboard_specific_lab:
+    label: "Valutation"
+    type: "Economic Flow"   
 
 #define loose selectors 
 loose_selectors:
-   source: 
+   legend: 
     label: "Source"
     type: "checkbox" 
+   
       
 
 #define the columns of the data table widget 
@@ -67,7 +67,9 @@ dt.cols:
   year: "Year"
   GEO_long: "Country"
   value: "Value"
-  source: "Source"
+  d4_concept_lab: "Concept"
+  d5_dboard_specific_lab: "Valuation"
+  legend: "Source"
   
 table.display: True  
 
@@ -76,6 +78,9 @@ tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
   value: "Value:"
+  legend: "Source"
+  d4_concept_lab: "Concept"
+  d5_dboard_specific_lab: "Valuation" 
   
 
 

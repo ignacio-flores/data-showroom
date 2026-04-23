@@ -3,7 +3,12 @@ source("modules/libraries.R")
 
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
-graph = "eigt_ft1"
+default_graph <- "inhe_multi"
+graph <- Sys.getenv("DATA_SHOWROOM_GRAPH", unset = "")
+if (!nzchar(graph) && file.exists("active_graph.txt")) {
+  graph <- trimws(readLines("active_graph.txt", n = 1, warn = FALSE))
+}
+if (!nzchar(graph)) graph <- default_graph
 load_config(paste0("yaml/config_", graph, ".yaml"), func = createViz)
 #eigt_kf2: filter options more, add currency and log scale
 

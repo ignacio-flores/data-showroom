@@ -6,11 +6,11 @@ data.wrangler: "custom_code/dictionary_loader_inhe.R"
 gopts: 
  - "line"
  - "point"
-plot_height: 700
-hide.selectors: False
-hide.legend: False
-download.button: True
-listen: False
+plot_height: 480
+hide.selectors: True
+hide.legend: True
+download.button: False
+listen: True
 
 #combine columns into a string variable if needed 
 new.cols: 
@@ -67,7 +67,7 @@ dt.cols:
   d5_dboard_specific_lab: "Valuation"
   legend: "Source"
   
-table.display: True  
+table.display: False 
 
 #define the information shown in the tooltip
 tooltip_vars:

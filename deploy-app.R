@@ -1,22 +1,10 @@
 library(rsconnect)
-source("auth/shiny_auth_ign-flores.R")
-rsconnect::setAccountInfo(name=shiny_account,
-                          token=shiny_token,
-                          secret=shiny_secret)
+source("auth/shiny_auth_gregcull.R")
+rsconnect::setAccountInfo(name = shiny_account,
+                          token = shiny_token,
+                          secret = shiny_secret)
 
 # Define name
-#name = "ineq-country-view"
-#name = "ineq-country-comp"
-#name = "ineq-prev"
-#name = "topo-country-view"
-#name = "topo-source-comp"
-#name = "topo-country-comp"
-#name = "topo-prev"
-name = "topo-aba2"
-#name = "topo-ffba3"
-#name = "eigt-ft1"
-#name = "eigt-ft2"
-#name = "eigt-kf3"
-#name = "eigt-wm2"
+name = "inhe_multi"
 
 deployApp(appDir = ".", appName = name)
