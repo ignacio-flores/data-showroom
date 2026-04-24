@@ -44,6 +44,9 @@ fixed_selectors:
   var_per:
      label: "Variable"
      selected: "Share of Total Net Wealth, p99p100"
+  d4_concept_lab:
+    label: "Concept"
+    selected: "Net Wealth"      
   d5_dboard_specific_lab:
     label: "Unit of analysis"
     selected:

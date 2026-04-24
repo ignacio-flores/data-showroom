@@ -59,6 +59,53 @@ createViz <- function(graph = NULL,
     }
     stats::setNames(labs, as.character(vals))
   }
+
+  # Pre-compute initial loose-selector selections to avoid first-render flash
+  # where all values are briefly selected before observe() narrows them.
+  if (!is.null(loose_selectors) && length(loose_selectors) > 0) {
+    init_loose_data <- data
+
+    if (!is.null(fixed_selectors) && length(fixed_selectors) > 0) {
+      for (fvar in names(fixed_selectors)) {
+        if (!fvar %in% names(init_loose_data)) next
+        finfo <- fixed_selectors[[fvar]]
+        if (!("selected" %in% names(finfo)) || is.null(finfo$selected)) next
+        init_loose_data <- init_loose_data[init_loose_data[[fvar]] %in% finfo$selected, , drop = FALSE]
+      }
+    }
+
+    for (lvar in names(loose_selectors)) {
+      linfo <- loose_selectors[[lvar]]
+      if (!lvar %in% names(init_loose_data)) next
+      if ("selected" %in% names(linfo) && !is.null(linfo$selected)) next
+      if (is.null(linfo$select)) next
+
+      choices_data <- init_loose_data
+
+      if (identical(lvar, "year")) {
+        y_var_name <- if (!is.null(axis_vars) && !is.null(axis_vars$y_axis)) axis_vars$y_axis$var else NULL
+        x_var_name <- if (!is.null(axis_vars) && !is.null(axis_vars$x_axis)) axis_vars$x_axis$var else NULL
+        if (!is.null(y_var_name) && y_var_name %in% names(choices_data)) {
+          choices_data <- choices_data[!is.na(choices_data[[y_var_name]]), , drop = FALSE]
+        }
+        if (!is.null(x_var_name) && x_var_name %in% names(choices_data)) {
+          choices_data <- choices_data[!is.na(choices_data[[x_var_name]]), , drop = FALSE]
+        }
+      }
+
+      choices <- sort(unique(choices_data[[lvar]]))
+      choices <- choices[!is.na(choices)]
+
+      selchoices <- choices
+      if (identical(linfo$select, "random") && length(choices) > 5) {
+        selchoices <- sample(choices, 5)
+      } else if (identical(linfo$select, "spaced") && length(choices) > 5) {
+        selchoices <- choices[seq(1, length(choices), length.out = 5)]
+      }
+
+      all_selectors[[lvar]]$selected <- selchoices
+    }
+  }
   
   ### Define UI
   ui <- page_fluid(
@@ -346,7 +393,25 @@ createViz <- function(graph = NULL,
         
         observe({
           req(filtered_data())
-          choices <- unique(filtered_data()[[var]])
+          choices_data <- filtered_data()
+
+          # Avoid offering years that have no drawable points for the current axes.
+          if (identical(var, "year")) {
+            y_var_name <- selected_y_var()
+            x_var_name <- axis_vars$x_axis$var
+
+            if (!is.null(y_var_name) && y_var_name %in% names(choices_data)) {
+              choices_data <- choices_data %>%
+                dplyr::filter(!is.na(.data[[y_var_name]]))
+            }
+            if (!is.null(x_var_name) && x_var_name %in% names(choices_data)) {
+              choices_data <- choices_data %>%
+                dplyr::filter(!is.na(.data[[x_var_name]]))
+            }
+          }
+
+          choices <- sort(unique(choices_data[[var]]))
+          choices <- choices[!is.na(choices)]
           selchoices <- choices
           
         # check if the selector is random and has more than 5 choices

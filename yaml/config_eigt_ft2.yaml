@@ -35,6 +35,7 @@ fixed_selectors:
       - "Italy"
       - "France" 
       - "Germany"
+      - "Chile"
     multiple: true   
   d2_label:
     label: "Tax type"

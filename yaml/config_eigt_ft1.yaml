@@ -49,7 +49,8 @@ loose_selectors:
 
 #define the columns of the data table widget 
 dt.cols: 
-  GEO_long: "Country code"
+  GEO_long: "Country"
+  GEO: "Country code"
   year: "Year"
   d2_label: "Tax type"
   d5_code: "Bracket"
