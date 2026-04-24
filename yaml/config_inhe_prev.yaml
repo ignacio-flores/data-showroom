@@ -32,7 +32,7 @@ axis_vars:
 color:     
   var: "con_sou_val"
   label: "Source"
-  style: "nationalparkcolors::Acadia"
+  style: "LaCroixColoR::Apricot"
 
 #Define main selectors 
 fixed_selectors:

@@ -31,7 +31,7 @@ axis_vars:
 color:     
   var: "cou_sou_val"
   label: "Source"
-  style: "LaCroixColoR::CranRaspberry"
+  style: "LaCroixColoR::Apricot"
 
 #Define main selectors 
 fixed_selectors:

@@ -16,19 +16,19 @@ axis_vars:
     label: "Marginal tax rate"
     
 color: 
-  var: "Country"
+  var: "GEO_long"
   label: "Country" 
   style: "dichromat::DarkRedtoBlue_12"
   group:
     - "year"
-    - "tax"
+    - "d2_label"
 
 #Define main selector 
 fixed_selectors:
   year: 
     label: "Year"
     selected: 2008
-  Country:
+  GEO_long:
     label: "Country"
     selected:
       - "Italy"
@@ -37,27 +37,25 @@ fixed_selectors:
     multiple: true   
       
 loose_selectors: 
-   tax:
+   d2_label:
     label: "Tax type"
-    selected: "Estate Tax"
+    selected: "Estate Tax for Children"
     type: "checkbox"
 
 #define the columns of the data table widget 
 dt.cols: 
-  GEO: "Country code"
+  GEO_long: "Country"
   year: "Year"
-  tax: "Tax type"
-  bracket: "Bracket"
-  currency: "Currency"
+  d2_label: "Tax type"
+  d5_code: "Bracket"
   adjmrt: "Marginal tax rate"
   adjlbo: "Lower bound in adjusted USD Millions"
 
 #define the information shown in the tooltip
 tooltip_vars:
-  GEO: "Country:"
+  GEO_long: "Country:"
   year: "Year:"
-  tax: "Tax type:"
-  currency: "Currency"
+  d2_label: "Tax type:"
   adjmrt: "Marginal tax rate"
   adjlbo: "Lower bound in adjusted USD Millions"
 
