@@ -176,3 +176,11 @@ targets:
     auth_script: auth/shiny_auth_frolle.R
     tags: [eigt, prev]
     enabled: true
+
+  - target_id: eigt-kf1
+    graph: eigt_kf1
+    app_name: eigt-kf1
+    profile: frolle
+    auth_script: auth/shiny_auth_frolle.R
+    tags: [eigt, kf]
+    enabled: true  
