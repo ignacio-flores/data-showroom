@@ -1,0 +1,170 @@
+version: 1
+
+targets:
+  - target_id: ineq-country-comp
+    graph: ineq_multi
+    app_name: ineq-country-comp
+    profile: gcwealth
+    auth_script: auth/shiny_auth_gcwealth.R
+    tags: [ineq, multi]
+    enabled: true
+
+  - target_id: ineq-country-view
+    graph: ineq_single
+    app_name: ineq-country-view
+    profile: gcwealth
+    auth_script: auth/shiny_auth_gcwealth.R
+    tags: [ineq, single]
+    enabled: true
+
+  - target_id: ineq-prev
+    graph: ineq_prev
+    app_name: ineq-prev
+    profile: gcwealth
+    auth_script: auth/shiny_auth_gcwealth.R
+    tags: [ineq, preview]
+    enabled: true
+
+  - target_id: topo-country-comp
+    graph: topo_multi
+    app_name: topo-country-comp
+    profile: gcwealth
+    auth_script: auth/shiny_auth_gcwealth.R
+    tags: [topo, multi]
+    enabled: true
+
+  - target_id: topo-country-view
+    graph: topo_single
+    app_name: topo-country-view
+    profile: gcwealth
+    auth_script: auth/shiny_auth_gcwealth.R
+    tags: [topo, single]
+    enabled: true
+
+  - target_id: eigt-wm2
+    graph: eigt_wm2
+    app_name: eigt-wm2
+    profile: gregcull
+    auth_script: auth/shiny_auth_gregcull.R
+    tags: [eigt, map]
+    enabled: true
+
+  - target_id: eigt-kf3
+    graph: eigt_kf3
+    app_name: eigt-kf3
+    profile: gregcull
+    auth_script: auth/shiny_auth_gregcull.R
+    tags: [eigt, kf]
+    enabled: true
+
+  - target_id: eigt-wm1
+    graph: eigt_wm1
+    app_name: eigt-wm1
+    profile: gregcull
+    auth_script: auth/shiny_auth_gregcull.R
+    tags: [eigt, map]
+    enabled: true
+
+  - target_id: inhe_single
+    graph: inhe_single
+    app_name: inhe_single
+    profile: gregcull
+    auth_script: auth/shiny_auth_gregcull.R
+    tags: [inhe, single]
+    enabled: true
+
+  - target_id: inhe_multi
+    graph: inhe_multi
+    app_name: inhe_multi
+    profile: gregcull
+    auth_script: auth/shiny_auth_gregcull.R
+    tags: [inhe, multi]
+    enabled: true
+
+  - target_id: inhe_prev
+    graph: inhe_prev
+    app_name: inhe_prev
+    profile: frolle
+    auth_script: auth/shiny_auth_frolle.R
+    tags: [inhe, preview]
+    enabled: true
+
+  - target_id: eigt-ft1
+    graph: eigt_ft1
+    app_name: eigt-ft1
+    profile: hubquin
+    auth_script: auth/shiny_auth_hubquin.R
+    tags: [eigt, ft]
+    enabled: true
+
+  - target_id: eigt-ft2
+    graph: eigt_ft2
+    app_name: eigt-ft2
+    profile: hubquin
+    auth_script: auth/shiny_auth_hubquin.R
+    tags: [eigt, ft]
+    enabled: true
+
+  - target_id: eigt-kf2
+    graph: eigt_kf2
+    app_name: eigt-kf2
+    profile: hubquin
+    auth_script: auth/shiny_auth_hubquin.R
+    tags: [eigt, kf]
+    enabled: true
+
+  - target_id: topo-ffba2
+    graph: topo_ffba2
+    app_name: topo-ffba2
+    profile: hubquin
+    auth_script: auth/shiny_auth_hubquin.R
+    tags: [topo, ffba]
+    enabled: true
+
+  - target_id: topo-ffba3
+    graph: topo_ffba3
+    app_name: topo-ffba3
+    profile: hubquin
+    auth_script: auth/shiny_auth_hubquin.R
+    tags: [topo, ffba]
+    enabled: true
+
+  - target_id: topo-aba1
+    graph: topo_aba1
+    app_name: topo-aba1
+    profile: ign-flores
+    auth_script: auth/shiny_auth_ignflores.R
+    tags: [topo, aba]
+    enabled: true
+
+  - target_id: topo-aba2
+    graph: topo_aba2
+    app_name: topo-aba2
+    profile: ign-flores
+    auth_script: auth/shiny_auth_ignflores.R
+    tags: [topo, aba]
+    enabled: true
+
+  - target_id: topo-ffba1
+    graph: topo_ffba1
+    app_name: topo-ffba1
+    profile: ign-flores
+    auth_script: auth/shiny_auth_ignflores.R
+    tags: [topo, ffba]
+    enabled: true
+
+  - target_id: topo-prev
+    graph: topo_prev
+    app_name: topo-prev
+    profile: ign-flores
+    auth_script: auth/shiny_auth_ignflores.R
+    tags: [topo, preview]
+    enabled: true
+
+  - target_id: topo-source-comp
+    graph: topo_source
+    app_name: topo-source-comp
+    profile: ign-flores
+    auth_script: auth/shiny_auth_ignflores.R
+    tags: [topo, source]
+    enabled: true

@@ -1,10 +1,7 @@
 #define data source
-#data.wrangler: "custom_code/data_prep_topo.R" 
-#data.wrangler: "custom_code/data_prep_topo_debtplus.R" 
-#data.file: "data/topo_warehouse_meta_v1_2.csv"
 data.file: "data/topo_ready.qs"
-meta.file: "data/topo_meta.qs"
-meta.loc: "tab"
+#meta.file: "data/topo_meta.qs"
+#meta.loc: "tab"
 
 area_stack_toggle: true     
 

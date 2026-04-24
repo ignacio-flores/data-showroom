@@ -1,6 +1,9 @@
+source("modules/libraries.R")
 library(tidyr)
 library(dplyr)
 library(readxl)
+
+data <- read_csv("data/topo_warehouse_meta_v2.csv")
 
 #load list of countries 
 dictionary <- read_excel("data/dictionary.xlsx", sheet = "GEO")

@@ -26,7 +26,7 @@ It is especially geared toward the GC Wealth Data Warehouse ecosystem, but the a
 ```text
 .
 ├── app.R                  # Shiny entrypoint; selects which YAML preset to run
-├── deploy-app.R           # shinyapps.io deployment helper
+├── deploy-app.R           # shinyapps.io deployment CLI
 ├── modules/               # Core app modules
 ├── yaml/                  # Dashboard presets
 ├── custom_code/           # Optional dataset-specific wrangling scripts
@@ -80,13 +80,13 @@ install.packages(c(
 
 ### 2. Choose a dashboard preset
 
-Open [`app.R`](app.R) and change the `graph` value:
+Set the preset via environment variable before launching:
 
 ```r
-graph <- "topo_single"
+Sys.setenv(DATA_SHOWROOM_GRAPH = "topo_single")
 ```
 
-The app loads the matching file from `yaml/config_<graph>.yaml`.
+The app loads `yaml/config_<graph>.yaml`.
 
 ### 3. Run the app
 
@@ -242,24 +242,60 @@ At runtime, the app follows this pipeline:
 
 ## Deployment
 
-[`deploy-app.R`](deploy-app.R) deploys the app with `rsconnect::deployApp()`. It expects a local auth script:
+Deployment targets are defined once in [`yaml/deploy_targets.yaml`](yaml/deploy_targets.yaml):
 
-```r
-source("auth/shiny_auth_ign-flores.R")
+- target ID
+- `graph` (runtime config key, mapped to `yaml/config_<graph>.yaml`)
+- shinyapps app name
+- profile/account label (used automatically for deployment account selection)
+- optional `server` (defaults to `shinyapps.io`)
+- explicit auth script path
+- optional tags and enabled flag
+
+Use [`deploy-app.R`](deploy-app.R) with selectors:
+
+```bash
+Rscript deploy-app.R --target inhe_multi
+Rscript deploy-app.R --profile gregcull
+Rscript deploy-app.R --tag topo
+Rscript deploy-app.R --all
+Rscript deploy-app.R --profile hubquin --tag eigt --dry-run
 ```
 
-That file is not committed, so you will need your own shinyapps.io credentials before deployment.
+Deployments run sequentially and continue on errors. The script prints a final success/failure summary.
+Deploy calls use `forceUpdate = TRUE`, so existing apps with the same `app_name` are updated in place.
+
+Credential files in `auth/` are not committed, so each profile used in the registry must exist locally.
+
+### Deploy from RStudio Console
+
+If you `source("deploy-app.R")`, the script does not auto-run. Use helper functions:
+
+```r
+source("deploy-app.R")
+
+# List deployable targets (IDs are what you type to deploy)
+list_deploy_targets()
+
+# Deploy one app by name
+deploy_by_target("inhe_multi")
+
+# Deploy multiple by name
+deploy_by_target(c("inhe_single", "inhe_multi"))
+
+# Preview selection without deploying
+deploy_by_target("inhe_multi", dry_run = TRUE)
+```
 
 ## Current limitations
 
 - There is no `renv.lock`, `DESCRIPTION`, or other formal dependency manifest yet.
-- `app.R` launches one preset at a time by editing a hard-coded `graph` variable.
+- Deployments depend on local credential files in `auth/`.
 - Some presets depend on datasets that are not included in the repository.
 - Deployment credentials are expected from an untracked local file.
 
 ## Suggested next improvements
 
 - Add `renv` for reproducible package management
-- Replace the hard-coded `graph` switch with an environment variable or command-line argument
 - Document each preset with a one-line purpose note inside `yaml/`
 - Add a small fully self-contained demo dataset/config for first-time users
