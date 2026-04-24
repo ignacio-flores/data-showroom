@@ -1,65 +1,60 @@
 #define data source
 data.file: "data/eigt_wide.qs"
-data.wrangler: "custom_code/data_prep_eigt.R" 
+data.wrangler: "custom_code/data_prep_eigt_kf1_dual.R"
 
-#define plot type 
-gopts: "step"
- 
-#define main plot variables 
-axis_vars: 
-  x_axis: 
-    var: "adjlbo"
-    label: "Bracket's Lower bound (USD Million, inflation adjusted)"
-    breaks: 10 
-  y_axis: 
-    var: "adjmrt"
-    label: "Marginal tax rate"
-    
-color: 
-  var: "GEO_long"
-  label: "Country" 
-  style: "dichromat::DarkRedtoBlue_12"
-  group:
-    - "year"
-    - "d2_label"
+#define plot type
+gopts: "dual_axis_line"
 
-#Define main selector 
-fixed_selectors:
-  year: 
+#define main plot variables
+axis_vars:
+  x_axis:
+    var: "year"
     label: "Year"
-    selected: 2008
+    breaks: 10
+  y_axis:
+    var: "prorev"
+    label: "Left Axis"
+    choices: c("prorev", "revgdp")
+    alt.names: c("EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+  y2_axis:
+    var: "toprat"
+    label: "Right Axis"
+    choices: c("toprat", "prorev", "revgdp")
+    alt.names: c("Top Marginal Rate", "EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+
+color:
+  var: "GEO_long"
+  label: "Country"
+  style: "dichromat::DarkRedtoBlue_12"
+
+#Define main selectors
+fixed_selectors:
   GEO_long:
     label: "Country"
-    selected:
-      - "Italy"
-      - "France" 
-      - "Germany"
-    multiple: true   
-      
-loose_selectors: 
-   d2_label:
+    selected: "United States"
+  d2_label:
     label: "Tax type"
     selected: "Estate Tax for Children"
-    type: "checkbox"
 
-#define the columns of the data table widget 
-dt.cols: 
+#define the columns of the data table widget
+dt.cols:
   GEO_long: "Country"
   year: "Year"
   d2_label: "Tax type"
-  d5_code: "Bracket"
-  adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD Millions"
+  prorev: "EIG Tax % Total Tax Revenue"
+  revgdp: "EIG Tax % GDP"
+  toprat: "Top Marginal Rate"
 
 #define the information shown in the tooltip
 tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
   d2_label: "Tax type:"
-  adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD Millions"
+  prorev: "EIG Tax % Total Tax Revenue:"
+  revgdp: "EIG Tax % GDP:"
+  toprat: "Top Marginal Rate:"
 
-#other options 
+#other options
 download.button: True
 hide.selectors: False
 listen: False

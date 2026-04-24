@@ -30,6 +30,7 @@ plotOutputUI <- function(id,
 
 # Server logic for the plot module
 plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, 
+                             y2_var = NULL, y2_var_lab = NULL,
                              color_var = NULL, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE) {
@@ -53,6 +54,20 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()
       req(df)
+
+      resolveValue <- function(val) {
+        if (is.reactive(val) || (is.function(val) && !is.null(environment(val)))) {
+          return(val())
+        }
+        val
+      }
+
+      x_var <- resolveValue(x_var)
+      x_var_lab <- resolveValue(x_var_lab)
+      y_var <- resolveValue(y_var)
+      y_var_lab <- resolveValue(y_var_lab)
+      y2_var <- resolveValue(y2_var)
+      y2_var_lab <- resolveValue(y2_var_lab)
       
       #make axes dynamic if necessary 
       # print(paste0("printing input x_axis", input, "!"))
@@ -148,6 +163,126 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             type      = "continuous"  
           )
         )
+      }
+
+      if ("dual_axis_line" %in% gopts) {
+        validate(need(x_var %in% names(df), paste0("x_var '", x_var, "' not in df")))
+        validate(need(y_var %in% names(df), paste0("y_var '", y_var, "' not in df")))
+        validate(need(!is.null(y2_var) && y2_var %in% names(df), paste0("y2_var '", y2_var, "' not in df")))
+
+        df <- df %>%
+          dplyr::filter(!is.na(.data[[x_var]])) %>%
+          dplyr::arrange(.data[[x_var]])
+
+        left_ok <- any(!is.na(df[[y_var]]))
+        right_ok <- any(!is.na(df[[y2_var]]))
+        validate(need(left_ok || right_ok, "No data available for the selected axes"))
+
+        left_name <- if (!is.null(y_var_lab) && nzchar(y_var_lab)) y_var_lab else y_var
+        right_name <- if (!is.null(y2_var_lab) && nzchar(y2_var_lab)) y2_var_lab else y2_var
+        x_name <- if (!is.null(x_var_lab) && nzchar(x_var_lab)) x_var_lab else x_var
+        axis_left_col <- "#2C6DB2"
+        axis_right_col <- "#E6A21A"
+
+        fmt_num <- function(v) {
+          ifelse(
+            is.na(v),
+            "NA",
+            formatC(as.numeric(v), format = "f", digits = 2, big.mark = ",")
+          )
+        }
+
+        hover_left <- paste0(
+          "<b>", left_name, "</b>: ", fmt_num(df[[y_var]]),
+          "<br><b>", x_name, "</b>: ", df[[x_var]],
+          if ("GEO_long" %in% names(df)) paste0("<br><b>Country</b>: ", df$GEO_long) else "",
+          if ("d2_label" %in% names(df)) paste0("<br><b>Tax type</b>: ", df$d2_label) else "",
+          "<extra></extra>"
+        )
+        hover_right <- paste0(
+          "<b>", right_name, "</b>: ", fmt_num(df[[y2_var]]),
+          "<br><b>", x_name, "</b>: ", df[[x_var]],
+          if ("GEO_long" %in% names(df)) paste0("<br><b>Country</b>: ", df$GEO_long) else "",
+          if ("d2_label" %in% names(df)) paste0("<br><b>Tax type</b>: ", df$d2_label) else "",
+          "<extra></extra>"
+        )
+
+        # Start with an empty widget and add only explicit traces.
+        # Initializing with x but no y creates an unintended default "trace 0".
+        pp <- plot_ly(height = plot_height)
+
+        if (left_ok) {
+          pp <- pp %>%
+            add_trace(
+              data = df,
+              x = ~get(x_var),
+              y = ~get(y_var),
+              type = "scatter",
+              mode = "lines+markers",
+              name = left_name,
+              line = list(color = axis_left_col, width = 2),
+              marker = list(color = axis_left_col, size = 5),
+              hovertemplate = hover_left
+            )
+        }
+
+        if (right_ok) {
+          pp <- pp %>%
+            add_trace(
+              data = df,
+              x = ~get(x_var),
+              y = ~get(y2_var),
+              type = "scatter",
+              mode = "lines+markers",
+              name = right_name,
+              yaxis = "y2",
+              line = list(color = axis_right_col, width = 2),
+              marker = list(color = axis_right_col, size = 5),
+              hovertemplate = hover_right
+            )
+        }
+
+        pp <- pp %>%
+          layout(
+            dragmode = "zoom",
+            hovermode = "x unified",
+            xaxis = list(
+              title = x_var_lab,
+              zeroline = FALSE
+            ),
+            yaxis = list(
+              title = left_name,
+              zeroline = FALSE,
+              tickfont = list(color = axis_left_col),
+              titlefont = list(color = axis_left_col)
+            ),
+            yaxis2 = list(
+              title = right_name,
+              overlaying = "y",
+              side = "right",
+              zeroline = FALSE,
+              tickfont = list(color = axis_right_col),
+              titlefont = list(color = axis_right_col)
+            ),
+            legend = if (!hide.legend) list(
+              orientation = "h",
+              x = 0.5,
+              xanchor = "center",
+              y = -0.2
+            ) else list()
+          ) %>%
+          config(displaylogo = FALSE,
+                 modeBarButtonsToRemove = list(
+                   "autoScale2d", "resetScale2d", "hoverClosestCartesian",
+                   "toggleSpikelines", "lasso2d", "hoverCompareCartesian",
+                   "zoomInGeo", "zoomOutGeo", "resetGeo", "hoverClosestGeo",
+                   "toImage", "sendDataToCloud", "hoverClosestGl2d",
+                   "hoverClosestPie", "toggleHover", "resetViews",
+                   "resetViewMapbox", "select2d", "zoom"
+                 )
+          )
+
+        return(pp)
       }
 
       #use plotly directly if dealing with facets

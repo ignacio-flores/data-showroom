@@ -1,10 +1,13 @@
 
 # Parse axis variables 
-if(is.null(axis_vars$x_axis$var) | is.null(axis_vars$x_axis$var)) {
-  if (gopts != "map") {
-    stop("Please specify both x_axis and y_axis variables")  
-  }
-} 
+if ((is.null(axis_vars$x_axis$var) || is.null(axis_vars$y_axis$var)) &&
+    !("map" %in% gopts)) {
+  stop("Please specify both x_axis and y_axis variables")
+}
+
+if ("dual_axis_line" %in% gopts && is.null(axis_vars$y2_axis$var)) {
+  stop("Please specify axis_vars$y2_axis$var for dual_axis_line plots")
+}
 
 #Parse color
 if (!("bar" %in% gopts)) {

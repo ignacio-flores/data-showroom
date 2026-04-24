@@ -1,5 +1,5 @@
 #define data source
-data.file: "data/ineq_warehouse_meta_v1_2.csv"
+data.file: "data/ineq_warehouse_meta_v2.csv"
 data.wrangler: "custom_code/dictionary_loader_ineq.R" 
 
 #combine columns into a string variable if needed 

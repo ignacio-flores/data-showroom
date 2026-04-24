@@ -23,7 +23,8 @@ createSelectors <- function(data,
   baseCount     <- length(selector_info)
   hasX          <- !is.null(axis_vars) && !is.null(axis_vars$x_axis$choices)
   hasY          <- !is.null(axis_vars) && !is.null(axis_vars$y_axis$choices)
-  axisCount     <- sum(c(hasX, hasY))
+  hasY2         <- !is.null(axis_vars) && !is.null(axis_vars$y2_axis$choices)
+  axisCount     <- sum(c(hasX, hasY, hasY2))
   convCount     <- if (!is.null(num.conversion)) 1 else 0
   totalControls <- baseCount + axisCount + convCount
   columns       <- min(totalControls, 4)
@@ -79,6 +80,31 @@ createSelectors <- function(data,
                label   = title_y,
                choices = raw_ch,
                selected= sel_y
+             )
+      )
+    ))
+  }
+
+  # Secondary Y-axis selector: title from y2_axis$label, displayed names from y2_axis$alt.names
+  if (hasY2) {
+    y2_info <- axis_vars$y2_axis
+    raw_ch <- parseChoices(y2_info$choices)
+    if (!is.null(y2_info$alt.names)) {
+      alt_names <- parseChoices(y2_info$alt.names)
+      if (length(alt_names) == length(raw_ch)) names(raw_ch) <- alt_names
+    }
+    title_y2 <- if (!is.null(y2_info$label) && is.character(y2_info$label) && length(y2_info$label) == 1)
+      y2_info$label else "Y2 Axis"
+    sel_y2 <- if (!is.null(y2_info$var) && length(y2_info$var) == 1)
+      y2_info$var else raw_ch[1]
+
+    inputs <- c(inputs, list(
+      column(width = colWidth,
+             selectInput(
+               inputId = "y2_axis",
+               label   = title_y2,
+               choices = raw_ch,
+               selected= sel_y2
              )
       )
     ))
@@ -153,4 +179,3 @@ createSelectors <- function(data,
   # Render row of inputs
   do.call(fluidRow, inputs)
 }
-
