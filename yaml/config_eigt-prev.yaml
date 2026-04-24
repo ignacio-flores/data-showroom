@@ -55,9 +55,9 @@ tooltip_vars:
   toprat: "Top Marginal Rate:"
 
 #other options
-download.button: True
-hide.selectors: False
-listen: False
-table.display: True
-hide.legend: False
-plot_height: 700
+download.button: False
+hide.selectors: True
+listen: True
+table.display: False
+hide.legend: True
+plot_height: 480

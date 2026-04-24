@@ -168,3 +168,11 @@ targets:
     auth_script: auth/shiny_auth_ignflores.R
     tags: [topo, source]
     enabled: true
+
+  - target_id: eigt-prev
+    graph: eigt-prev
+    app_name: eigt-prev
+    profile: frolle
+    auth_script: auth/shiny_auth_frolle.R
+    tags: [eigt, prev]
+    enabled: true

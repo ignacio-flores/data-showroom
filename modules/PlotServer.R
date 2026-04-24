@@ -258,6 +258,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               type = "scatter",
               mode = "lines+markers",
               name = left_name,
+              showlegend = !hide.legend,
               line = list(color = axis_left_col, width = 2),
               marker = list(color = axis_left_col, size = 5),
               hovertemplate = hover_left
@@ -273,6 +274,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               type = "scatter",
               mode = "lines+markers",
               name = right_name,
+              showlegend = !hide.legend,
               yaxis = "y2",
               line = list(color = axis_right_col, width = 2),
               marker = list(color = axis_right_col, size = 5),
@@ -284,13 +286,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           layout(
             dragmode = "zoom",
             hovermode = "x unified",
+            showlegend = !hide.legend,
             xaxis = list(
               title = x_var_lab,
-              zeroline = FALSE
+              zeroline = FALSE,
+              showgrid = FALSE,
+              automargin = TRUE
             ),
             yaxis = list(
               title = left_name,
               zeroline = FALSE,
+              showgrid = FALSE,
+              automargin = TRUE,
               tickfont = list(color = axis_left_col),
               titlefont = list(color = axis_left_col)
             ),
@@ -299,9 +306,12 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               overlaying = "y",
               side = "right",
               zeroline = FALSE,
+              showgrid = FALSE,
+              automargin = TRUE,
               tickfont = list(color = axis_right_col),
               titlefont = list(color = axis_right_col)
             ),
+            margin = if (hide.legend) list(b = 12) else NULL,
             legend = if (!hide.legend) list(
               orientation = "h",
               x = 0.5,
