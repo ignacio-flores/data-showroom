@@ -74,29 +74,67 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       # if (!is.null(input$x_axis)) x_var <- input$x_axis
       # if (!is.null(input$y_axis)) y_var <- input$y_axis
   
+      x_limits <- NULL
+
       # Extend last point in step plot
       if ("step" %in% gopts) {
+        # Keep only rows with valid x/color for the extension computation
+        step_df <- df[!is.na(df[[x_var]]) & !is.na(df[[color_var]]), , drop = FALSE]
 
-        max_x <- max(df[[x_var]], na.rm = TRUE)  # Find max x value
-        extension_x <- max_x * 1.1  
+        if (nrow(step_df) > 0) {
+          # Build step-group IDs consistent with plotting grouping
+          if (!is.null(groupvars) && length(groupvars) > 0) {
+            valid_groupvars <- groupvars[groupvars %in% names(step_df)]
+            if (length(valid_groupvars) > 0) {
+              step_group_id <- do.call(interaction, c(step_df[valid_groupvars], list(drop = TRUE, lex.order = TRUE)))
+            } else {
+              step_group_id <- step_df[[color_var]]
+            }
+          } else {
+            step_group_id <- step_df[[color_var]]
+          }
 
-        # Identify the last x-value for each group in color_var
-        last_points <- do.call(rbind, lapply(split(df, df[[color_var]]), function(sub_df) {
-          last_row <- sub_df[sub_df[[x_var]] == max(sub_df[[x_var]], na.rm = TRUE), , drop = FALSE]
-          # sub_df <- sub_df[!is.na(sub_df[[x_var]]), , drop = FALSE]
-          # if (nrow(sub_df) == 0) {
-          #   return(NULL)
-          # }
-          # last_row <- sub_df[which.max(sub_df[[x_var]]), , drop = FALSE]
-          last_row[[x_var]] <- extension_x  # Extend x-axis
-          return(last_row)
-        }))
+          # Extend to the visible right edge when breaks are requested; otherwise +10%
+          x_min <- min(step_df[[x_var]], na.rm = TRUE)
+          x_max <- max(step_df[[x_var]], na.rm = TRUE)
+          if (!is.null(xnum_breaks)) {
+            candidate_breaks <- pretty(c(x_min, x_max), n = xnum_breaks)
+            candidate_breaks <- candidate_breaks[is.finite(candidate_breaks)]
+            right_edge <- if (length(candidate_breaks) > 0) max(candidate_breaks) else NA_real_
+            extension_x <- if (!is.na(right_edge) && right_edge > x_max) right_edge else x_max * 1.1
+          } else {
+            extension_x <- x_max * 1.1
+          }
 
-        # Combine original data with the extended points
-        df <- rbind(df, last_points)
+          # Pick one last row per step group and append an extended point
+          idx_by_group <- split(seq_len(nrow(step_df)), step_group_id)
+          last_idx <- vapply(
+            idx_by_group,
+            function(ix) ix[which.max(step_df[[x_var]][ix])],
+            integer(1)
+          )
+          last_points <- step_df[last_idx, , drop = FALSE]
+          last_points[[x_var]] <- extension_x
 
-        # delete missing color_var
-        df <- df[!is.na(df[[color_var]]),]
+          # Combine original data with the extended points
+          df <- rbind(df, last_points)
+        }
+
+        # Keep valid series rows for step plotting.
+        # NA x rows (for example bracket code 0 rows) break the path and can hide
+        # the visual tail extension, so remove them here.
+        df <- df[!is.na(df[[color_var]]) & !is.na(df[[x_var]]), ]
+
+        # Keep deterministic order within groups for path-based geoms.
+        if (!is.null(groupvars) && length(groupvars) > 0) {
+          order_vars <- unique(c(groupvars[groupvars %in% names(df)], x_var))
+        } else {
+          order_vars <- unique(c(color_var, x_var))
+        }
+        if (length(order_vars) > 0) {
+          df <- df[do.call(order, df[order_vars]), , drop = FALSE]
+        }
+        x_limits <- range(df[[x_var]], na.rm = TRUE)
       }
 
       # Define x-axis breaks dynamically
@@ -887,9 +925,22 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           p <- p + facet_wrap(as.formula(paste("~", facet_var)), scales = "fixed")
         }
 
-        #modify scale if necessary
-        if (!is.null(breaks_x)) {
-          p <- p + scale_x_continuous(breaks = breaks_x)
+        # modify x scale if necessary
+        if (!is.null(breaks_x) || !is.null(x_limits)) {
+          if (!is.null(breaks_x) && !is.null(x_limits)) {
+            p <- p + scale_x_continuous(
+              breaks = breaks_x,
+              limits = x_limits,
+              expand = expansion(mult = c(0, 0))
+            )
+          } else if (!is.null(breaks_x)) {
+            p <- p + scale_x_continuous(breaks = breaks_x)
+          } else {
+            p <- p + scale_x_continuous(
+              limits = x_limits,
+              expand = expansion(mult = c(0, 0))
+            )
+          }
         }
 
         # ADD GRAY BACKGROUND LAYERS

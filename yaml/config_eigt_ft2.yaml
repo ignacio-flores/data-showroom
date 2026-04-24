@@ -1,6 +1,6 @@
 #define data source
 data.file: "data/eigt_wide.qs"
-data.wrangler: "custom_code/data_prep_eigt.R" 
+data.wrangler: "custom_code/data_prep_eigt_ft.R"
 
 #define plot type 
 gopts: "step"
@@ -9,57 +9,56 @@ gopts: "step"
 axis_vars: 
   x_axis: 
     var: "adjlbo"
-    label: "Bracket's Lower bound (USD Million, inflation adjusted)"
+    label: "Bracket's Lower bound (2023 USD Million, inflation adjusted)"
     breaks: 10 
   y_axis: 
     var: "adjmrt"
     label: "Marginal tax rate"
     
 color: 
-  var: "Country"
+  var: "GEO_long"
   label: "Country" 
   style: "dichromat::DarkRedtoBlue_12"
   group:
     - "year"
-    - "tax"
+    - "d2_label"
+    - "GEO_long"
 
 #Define main selector 
 fixed_selectors:
   year: 
     label: "Year"
-    selected: 2008
-  Country:
+    selected: 2007
+  GEO_long:
     label: "Country"
     selected:
       - "Italy"
       - "France" 
       - "Germany"
     multiple: true   
-      
-loose_selectors: 
-   tax:
+  d2_label:
     label: "Tax type"
-    selected: "Estate Tax"
-    type: "checkbox"
+    selected: "Inheritance Tax for Spouse"
+    type: "checkbox"  
+
 
 #define the columns of the data table widget 
 dt.cols: 
+  GEO_long: "Country"
   GEO: "Country code"
   year: "Year"
-  tax: "Tax type"
-  bracket: "Bracket"
-  currency: "Currency"
+  d2_label: "Tax type"
+  d5_code: "Bracket"
   adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD Millions"
+  adjlbo: "Lower bound in adjusted 2023 USD Millions"
 
 #define the information shown in the tooltip
 tooltip_vars:
-  GEO: "Country:"
+  GEO_long: "Country:"
   year: "Year:"
-  tax: "Tax type:"
-  currency: "Currency"
+  d2_label: "Tax type:"
   adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted USD Millions"
+  adjlbo: "Lower bound in adjusted 2023 USD Millions"
 
 #other options 
 download.button: True
