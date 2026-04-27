@@ -6,7 +6,8 @@ createSelectors <- function(data,
                             selector_info,
                             axis_vars = NULL,
                             num.conversion = NULL,
-                            extra_layer = NULL) {
+                            extra_layer = NULL,
+                            scatter_options = NULL) {
   # Helper: parse 'c("a","b")' strings into vectors
   parseChoices <- function(ch) {
     if (is.character(ch) && length(ch) == 1 && grepl("^c\\(", ch)) {
@@ -24,9 +25,10 @@ createSelectors <- function(data,
   hasX          <- !is.null(axis_vars) && !is.null(axis_vars$x_axis$choices)
   hasY          <- !is.null(axis_vars) && !is.null(axis_vars$y_axis$choices)
   hasY2         <- !is.null(axis_vars) && !is.null(axis_vars$y2_axis$choices)
+  hasXScale     <- isTRUE(scatter_options$x_scale_selector)
   axisCount     <- sum(c(hasX, hasY, hasY2))
   convCount     <- if (!is.null(num.conversion)) 1 else 0
-  totalControls <- baseCount + axisCount + convCount
+  totalControls <- baseCount + axisCount + convCount + if (hasXScale) 1 else 0
   columns       <- min(totalControls, 4)
   colWidth      <- 12 / columns
   
@@ -55,6 +57,19 @@ createSelectors <- function(data,
                label   = title_x,
                choices = raw_ch,
                selected= sel_x
+             )
+      )
+    ))
+  }
+
+  if (hasXScale) {
+    inputs <- c(inputs, list(
+      column(width = colWidth,
+             selectInput(
+               inputId = "x_axis_scale",
+               label = "X Axis Scale",
+               choices = c("Regular Scale" = "regular", "Log Scale" = "log"),
+               selected = "regular"
              )
       )
     ))

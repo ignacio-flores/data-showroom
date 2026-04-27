@@ -33,7 +33,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              y2_var = NULL, y2_var_lab = NULL,
                              color_var = NULL, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
-                             plot_height, groupvars, stacked_default = FALSE) {
+                             plot_height, groupvars, stacked_default = FALSE,
+                             x_scale = NULL, scatter_options = NULL) {
   moduleServer(id, function(input, output, session) {
     
     stack_active <- reactive({
@@ -68,6 +69,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       y_var_lab <- resolveValue(y_var_lab)
       y2_var <- resolveValue(y2_var)
       y2_var_lab <- resolveValue(y2_var_lab)
+      x_scale <- resolveValue(x_scale)
+      if (is.null(x_scale)) x_scale <- "regular"
       
       #make axes dynamic if necessary 
       # print(paste0("printing input x_axis", input, "!"))
@@ -153,20 +156,23 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           tooltip_vars <- setNames(tooltip_vars, tooltip_vars)
         }
         
+        format_tooltip_value <- function(value, name) {
+          if (identical(name, "year")) {
+            return(value)
+          }
+
+          numeric_value <- suppressWarnings(as.numeric(value))
+          if (!is.na(numeric_value)) {
+            return(formatC(numeric_value, format = "f", big.mark = ",", digits = 2))
+          }
+
+          value
+        }
+
         # Construct tooltip text using labels explicitly
         df$tooltip_text <- apply(df[, names(tooltip_vars), drop = FALSE], 1, function(row) {
           paste(sapply(names(tooltip_vars), function(name) {
-            if (name == y_var) {
-              value <- round(as.numeric(row[[name]]), 2)  # Round to 2 decimals
-              formatted_value <- ifelse(
-                value == floor(value),  # Check if it's an integer
-                formatC(value, format = "f", big.mark = ",", digits = 0),  # No decimals
-                formatC(value, format = "f", big.mark = ",", digits = 2)   # Show 2 decimals
-              )
-              paste(tooltip_vars[[name]], " ", formatted_value)
-            }  else {
-              paste(tooltip_vars[[name]], " ", row[[name]])
-            }
+            paste(tooltip_vars[[name]], " ", format_tooltip_value(row[[name]], name))
           }), collapse = "<br>")
         })
 
@@ -312,6 +318,122 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               titlefont = list(color = axis_right_col)
             ),
             margin = if (hide.legend) list(b = 12) else NULL,
+            legend = if (!hide.legend) list(
+              orientation = "h",
+              x = 0.5,
+              xanchor = "center",
+              y = -0.2
+            ) else list()
+          ) %>%
+          config(displaylogo = FALSE,
+                 modeBarButtonsToRemove = list(
+                   "autoScale2d", "resetScale2d", "hoverClosestCartesian",
+                   "toggleSpikelines", "lasso2d", "hoverCompareCartesian",
+                   "zoomInGeo", "zoomOutGeo", "resetGeo", "hoverClosestGeo",
+                   "toImage", "sendDataToCloud", "hoverClosestGl2d",
+                   "hoverClosestPie", "toggleHover", "resetViews",
+                   "resetViewMapbox", "select2d", "zoom"
+                 )
+          )
+
+        return(pp)
+      }
+
+      if (isTRUE(scatter_options$enabled)) {
+        validate(need(x_var %in% names(df), paste0("x_var '", x_var, "' not in df")))
+        validate(need(y_var %in% names(df), paste0("y_var '", y_var, "' not in df")))
+        validate(need(!is.null(color_var) && color_var %in% names(df), "No color variable available"))
+
+        df <- df %>%
+          dplyr::filter(!is.na(.data[[x_var]]), !is.na(.data[[y_var]]))
+
+        if (identical(x_scale, "log")) {
+          df <- df %>% dplyr::filter(.data[[x_var]] > 0)
+        }
+
+        validate(need(nrow(df) > 0, "No data available for the selected axes"))
+
+        is_percent_axis <- function(var_name) {
+          grepl("percent|rate", var_name, ignore.case = TRUE)
+        }
+
+        format_axis_value <- function(value, is_percent = FALSE) {
+          suffix <- if (is_percent) "%" else ""
+          paste0(formatC(value, format = "f", big.mark = ",", digits = 2), suffix)
+        }
+
+        x_axis_layout <- list(
+          title = paste0(
+            x_var_lab,
+            if (identical(x_scale, "log")) " - Log Scale" else " - Regular Scale"
+          ),
+          type = if (identical(x_scale, "log")) "log" else NULL,
+          zeroline = FALSE,
+          automargin = TRUE
+        )
+        if (is_percent_axis(x_var)) {
+          x_axis_layout$ticksuffix <- "%"
+          x_axis_layout$tickformat <- ".2f"
+        }
+        if (identical(x_scale, "log")) {
+          positive_x <- df[[x_var]][is.finite(df[[x_var]]) & df[[x_var]] > 0]
+          log_breaks <- pretty(log10(range(positive_x, na.rm = TRUE)), n = if (!is.null(xnum_breaks)) xnum_breaks else 8)
+          tick_vals <- 10^log_breaks
+          tick_vals <- tick_vals[tick_vals >= min(positive_x, na.rm = TRUE) & tick_vals <= max(positive_x, na.rm = TRUE)]
+          if (length(tick_vals) > 0) {
+            x_axis_layout$tickmode <- "array"
+            x_axis_layout$tickvals <- tick_vals
+            x_axis_layout$ticktext <- vapply(
+              tick_vals,
+              format_axis_value,
+              character(1),
+              is_percent = is_percent_axis(x_var)
+            )
+            x_axis_layout$ticksuffix <- NULL
+            x_axis_layout$tickformat <- NULL
+          }
+        }
+
+        y_axis_layout <- list(
+          title = y_var_lab,
+          zeroline = FALSE,
+          automargin = TRUE
+        )
+        if (is_percent_axis(y_var)) {
+          y_axis_layout$ticksuffix <- "%"
+          y_axis_layout$tickformat <- ".2f"
+        }
+
+        point_text <- if (isTRUE(scatter_options$show_labels) && "geo_long" %in% names(df)) {
+          df$point_label <- df$geo_long
+          ~point_label
+        } else {
+          NULL
+        }
+
+        pp <- plot_ly(
+          data = df,
+          x = ~get(x_var),
+          y = ~get(y_var),
+          color = ~get(color_var),
+          colors = pal,
+          text = point_text,
+          hovertext = ~tooltip_text,
+          hoverinfo = "text",
+          type = "scatter",
+          mode = if (!is.null(point_text)) "markers+text" else "markers",
+          textposition = "bottom center",
+          marker = list(size = 8, opacity = 0.85),
+          showlegend = !hide.legend,
+          height = plot_height
+        ) %>%
+          layout(
+            dragmode = "zoom",
+            hovermode = "closest",
+            showlegend = !hide.legend,
+            xaxis = x_axis_layout,
+            yaxis = y_axis_layout,
+            margin = if (hide.legend) list(b = 50, l = 70, r = 40, t = 20) else NULL,
             legend = if (!hide.legend) list(
               orientation = "h",
               x = 0.5,

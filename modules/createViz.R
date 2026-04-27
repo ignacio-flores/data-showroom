@@ -21,7 +21,8 @@ createViz <- function(graph = NULL,
                       meta.loc = NULL, 
                       keep.col = NULL,
                       area_stack_toggle = FALSE,  
-                      area_stack_default = TRUE   
+                      area_stack_default = TRUE,
+                      scatter_options = NULL
                       ) {
   
   tic("loading and preliminary work")
@@ -36,6 +37,9 @@ createViz <- function(graph = NULL,
   toc()  
 
   is_dual_mode <- "dual_axis_line" %in% gopts
+  is_dynamic_scatter <- isTRUE(scatter_options$enabled) &&
+    ("point" %in% gopts) &&
+    !is_dual_mode
 
   parseAxisChoices <- function(ch) {
     if (is.character(ch) && length(ch) == 1 && grepl("^c\\(", ch)) {
@@ -50,14 +54,19 @@ createViz <- function(graph = NULL,
   }
 
   axisChoiceLabelMap <- function(axis_info) {
-    vals <- axisChoiceValues(axis_info)
+    choices <- parseAxisChoices(axis_info$choices)
+    vals <- if (!is.null(choices)) choices else axisChoiceValues(axis_info)
     if (is.null(vals)) return(setNames(character(0), character(0)))
     labs <- as.character(vals)
     alt_names <- parseAxisChoices(axis_info$alt.names)
     if (!is.null(alt_names) && length(alt_names) == length(vals)) {
       labs <- as.character(alt_names)
     }
-    stats::setNames(labs, as.character(vals))
+    label_map <- stats::setNames(labs, as.character(vals))
+    if (!is.null(axis_info$var) && !axis_info$var %in% names(label_map)) {
+      label_map[[axis_info$var]] <- if (!is.null(axis_info$label)) axis_info$label else axis_info$var
+    }
+    label_map
   }
 
   # Pre-compute initial loose-selector selections to avoid first-render flash
@@ -185,7 +194,17 @@ createViz <- function(graph = NULL,
     ),
     
     # Place selectors in a row with a specific ID
-    fluidRow(id = "selectorRow", createSelectors(data, all_selectors, axis_vars, num.conversion, extra_layer)),
+    fluidRow(
+      id = "selectorRow",
+      createSelectors(
+        data,
+        all_selectors,
+        axis_vars,
+        num.conversion,
+        extra_layer,
+        scatter_options = if (is_dynamic_scatter) scatter_options else NULL
+      )
+    ),
     
     # Placeholder for conditional download button
     uiOutput("downloadButtonUI"),
@@ -269,11 +288,27 @@ createViz <- function(graph = NULL,
   
   ## Define Server
   server <- function(input, output, session) {
+    selected_x_var <- reactive({
+      if (is_dynamic_scatter && !is.null(input$x_axis) && nzchar(input$x_axis)) {
+        input$x_axis
+      } else {
+        axis_vars$x_axis$var
+      }
+    })
+
     selected_y_var <- reactive({
-      if (is_dual_mode && !is.null(input$y_axis) && nzchar(input$y_axis)) {
+      if ((is_dual_mode || is_dynamic_scatter) && !is.null(input$y_axis) && nzchar(input$y_axis)) {
         input$y_axis
       } else {
         axis_vars$y_axis$var
+      }
+    })
+
+    selected_x_scale <- reactive({
+      if (is_dynamic_scatter && !is.null(input$x_axis_scale) && nzchar(input$x_axis_scale)) {
+        input$x_axis_scale
+      } else {
+        "regular"
       }
     })
 
@@ -286,8 +321,21 @@ createViz <- function(graph = NULL,
       }
     })
 
+    selected_x_lab <- reactive({
+      if (!is_dynamic_scatter) return(axis_vars$x_axis$label)
+      var_name <- selected_x_var()
+      lab_map <- axisChoiceLabelMap(axis_vars$x_axis)
+      if (!is.null(lab_map[[var_name]])) {
+        lab_map[[var_name]]
+      } else if (!is.null(axis_vars$x_axis$label)) {
+        axis_vars$x_axis$label
+      } else {
+        var_name
+      }
+    })
+
     selected_y_lab <- reactive({
-      if (!is_dual_mode) return(axis_vars$y_axis$label)
+      if (!(is_dual_mode || is_dynamic_scatter)) return(axis_vars$y_axis$label)
       var_name <- selected_y_var()
       lab_map <- axisChoiceLabelMap(axis_vars$y_axis)
       if (!is.null(lab_map[[var_name]])) {
@@ -367,6 +415,46 @@ createViz <- function(graph = NULL,
 
         data_filtered
       })
+    } else if (is_dynamic_scatter) {
+      filtered_data <- reactive({
+        data_filtered <- data
+        selector_vars <- names(fixed_selectors)
+
+        for (var in selector_vars) {
+          if (!var %in% names(data_filtered) || is.null(input[[var]])) next
+          data_filtered <- data_filtered[data_filtered[[var]] %in% input[[var]], , drop = FALSE]
+        }
+
+        if (nrow(data_filtered) == 0) return(NULL)
+
+        axis_candidates <- unique(c(
+          axisChoiceValues(axis_vars$x_axis),
+          axisChoiceValues(axis_vars$y_axis),
+          selected_x_var(),
+          selected_y_var()
+        ))
+
+        cols_to_keep <- unique(c(
+          names(dt.cols),
+          axis_candidates,
+          selector_vars,
+          names(loose_selectors),
+          if (!is.null(color_var)) color_var,
+          names(tooltip_vars)
+        ))
+        cols_to_keep <- cols_to_keep[!is.na(cols_to_keep) & nzchar(cols_to_keep)]
+        cols_to_keep <- intersect(cols_to_keep, names(data_filtered))
+
+        data_filtered <- data_filtered %>% select(all_of(cols_to_keep))
+
+        sort_vars <- unique(c(selector_vars, names(loose_selectors), selected_x_var()))
+        sort_vars <- sort_vars[sort_vars %in% names(data_filtered)]
+        if (length(sort_vars) > 0) {
+          data_filtered <- data_filtered[do.call(order, data_filtered[sort_vars]), , drop = FALSE]
+        }
+
+        data_filtered
+      })
     } else {
       filtered_data <- dataFilter(input, output, session,
         data,
@@ -398,7 +486,7 @@ createViz <- function(graph = NULL,
           # Avoid offering years that have no drawable points for the current axes.
           if (identical(var, "year")) {
             y_var_name <- selected_y_var()
-            x_var_name <- axis_vars$x_axis$var
+            x_var_name <- selected_x_var()
 
             if (!is.null(y_var_name) && y_var_name %in% names(choices_data)) {
               choices_data <- choices_data %>%
@@ -464,8 +552,8 @@ createViz <- function(graph = NULL,
     
     # Generate plot
     plotModuleServer("plotModule", reactive(final_filtered_data()),
-                     x_var = axis_vars$x_axis$var, 
-                     x_var_lab = axis_vars$x_axis$label, 
+                     x_var = if (is_dynamic_scatter) selected_x_var else axis_vars$x_axis$var, 
+                     x_var_lab = if (is_dynamic_scatter) selected_x_lab else axis_vars$x_axis$label, 
                      y_var = selected_y_var,
                      y_var_lab = selected_y_lab,
                      y2_var = if (is_dual_mode) selected_y2_var else NULL,
@@ -473,7 +561,9 @@ createViz <- function(graph = NULL,
                      color_var, color_var_lab, facet_var, facet_var_lab, 
                      tooltip_vars, hide.legend, gopts, 
                      xnum_breaks=axis_vars$x_axis$breaks, 
-                     extra_layer, color_style, plot_height, groupvars)
+                     extra_layer, color_style, plot_height, groupvars,
+                     x_scale = if (is_dynamic_scatter) selected_x_scale else NULL,
+                     scatter_options = if (is_dynamic_scatter) scatter_options else NULL)
     
     # Render table
     output$tableOrMessageUI <- renderUI({

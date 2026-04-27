@@ -4,7 +4,7 @@ source("modules/libraries.R")
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
 
-default_graph <- "eigt_kf2"
+default_graph <- "eigt_kf3"
 graph <- Sys.getenv("DATA_SHOWROOM_GRAPH", unset = "")
 if (!nzchar(graph) && file.exists("active_graph.txt")) {
   graph <- trimws(readLines("active_graph.txt", n = 1, warn = FALSE))
@@ -38,7 +38,8 @@ createViz(
   meta.loc = meta.loc, 
   keep.col = keep.col, 
   area_stack_toggle = area_stack_toggle, 
-  area_stack_default = area_stack_default 
+  area_stack_default = area_stack_default,
+  scatter_options = scatter_options
 )
 
 #Comments: extra_layers work with faceted plots only (can be made independent)

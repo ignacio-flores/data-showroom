@@ -1,67 +1,84 @@
 #define data source
 data.file: "data/eigt_warehouse_meta_v2.csv"
-data.wrangler: "custom_code/data_prep_eigt3.R" 
-keep.col: 
-  - "d4_concept_lab"
-  - "d2_sector_lab"
-  - "value"
+data.wrangler: "custom_code/data_prep_eigt3.R"
+keep.col:
+  - "GEO"
   - "GEO_long"
+  - "d4_concept_lab"
+  - "value"
 
-#define plot type 
+#define plot type
 gopts: "point"
- 
-#define main plot variables 
-axis_vars: 
+
+scatter_options:
+  enabled: true
+  show_labels: true
+  x_scale_selector: true
+  monetary_axes_use_usd_2023: true
+
+#define main plot variables
+axis_vars:
   x_axis:
     var: "total_revenue_from_tax_as_percent_of_total_tax_revenue"
-    choices: c("total_revenue_from_tax_as_percent_of_gross_domestic_product", "top_marginal_rate","total_revenue_from_tax_as_percent_of_total_tax_revenue")
-    alt.names: c("option 1", "option 2", "option 3")
-    label: "X LABEL"
+    choices: c("top_marginal_rate", "exemption_threshold", "total_revenue_from_tax", "total_revenue_from_tax_as_percent_of_total_tax_revenue", "total_revenue_from_tax_as_percent_of_gross_domestic_product")
+    alt.names: c("Top Marginal Rates", "Exemption Thresholds (2023 USD millions)", "EIG Tax Revenue (2023 USD millions)", "EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+    label: "X Axis"
     breaks: 10
-  y_axis:    
+  y_axis:
     var: "top_marginal_rate"
-    choices: c("top_marginal_rate", "total_revenue_from_tax_as_percent_of_gross_domestic_product", "total_revenue_from_tax_as_percent_of_total_tax_revenue")
-    alt.names: c("option a", "option b", "option c")
-    #label: "Y LABEL"
-    
-color: 
+    choices: c("top_marginal_rate", "exemption_threshold", "total_revenue_from_tax", "total_revenue_from_tax_as_percent_of_total_tax_revenue", "total_revenue_from_tax_as_percent_of_gross_domestic_product")
+    alt.names: c("Top Marginal Rates", "Exemption Thresholds (2023 USD millions)", "EIG Tax Revenue (2023 USD millions)", "EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+    label: "Y Axis"
+
+color:
   var: "geo_long"
   label: "Country"
   style: "dichromat::DarkRedtoBlue_12"
-  group: 
+  group:
     - "geo_long"
-    #- "d2_sector_lab"
 
-#Define main selector 
+#Define main selector
 fixed_selectors:
-  year: 
-    label: "Year" 
-    selected: 2021
-    
+  year:
+    label: "Year"
+    selected: 2022
+  d2_sector_lab:
+    label: "Type of Tax"
+    type: "checkbox" 
+    selected: "Gift Tax for Spouse" 
+
 loose_selectors:
-  geo_long: 
-    label: "Country" 
+  geo_long:
+    label: "Country"
     type: "checkbox"
-  # d2_sector_lab: 
-  #   label: "Tax type"
-  #   type: "checkbox"
-  
-#define the columns of the data table widget 
-dt.cols: 
-  geo_long: "Country code"
+
+
+#define the columns of the data table widget
+dt.cols:
+  geo_long: "Country"
   year: "Year"
-  #d2_sector_lab: "Tax type"
-  
+  d2_sector_lab: "Type of Tax"
+  top_marginal_rate: "Top Marginal Rates"
+  exemption_threshold: "Exemption Thresholds (2023 USD millions)"
+  total_revenue_from_tax: "EIG Tax Revenue (2023 USD millions)"
+  total_revenue_from_tax_as_percent_of_total_tax_revenue: "EIG Tax % Total Tax Revenue"
+  total_revenue_from_tax_as_percent_of_gross_domestic_product: "EIG Tax % GDP"
+
 #define the information shown in the tooltip
 tooltip_vars:
   geo_long: "Country:"
-  year: "Year:"  
-  #d2_sector_lab: "Tax type:"
+  year: "Year:"
+  d2_sector_lab: "Type of Tax:"
+  top_marginal_rate: "Top Marginal Rates:"
+  exemption_threshold: "Exemption Thresholds (2023 USD millions):"
+  total_revenue_from_tax: "EIG Tax Revenue (2023 USD millions):"
+  total_revenue_from_tax_as_percent_of_total_tax_revenue: "EIG Tax % Total Tax Revenue:"
+  total_revenue_from_tax_as_percent_of_gross_domestic_product: "EIG Tax % GDP:"
 
-#other options 
+#other options
 download.button: True
 hide.selectors: False
 listen: False
 table.display: True
-hide.legend: True 
+hide.legend: True
 plot_height: 700
