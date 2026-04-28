@@ -1,0 +1,83 @@
+data.file: "data/topo_ready.csv"
+
+area_stack_toggle: true
+
+#define plot type
+gopts: "area"
+
+#define main plot variables
+axis_vars:
+  x_axis:
+    var: "year"
+    label: "Year"
+  y_axis:
+    var: "value"
+    label: "Value"
+
+color:
+  var: "d4_concept_lab"
+  label: "Concept"
+  style: "nationalparkcolors::Badlands"
+
+#Define main selectors
+fixed_selectors:
+  GEO_long:
+    label: "Country"
+    selected: "United States"
+  xrate_lab:
+    label: "Currency"
+    selected: "Euro (2023 prices)"
+  pop_lab:
+    label: "Unit"
+    selected: "Per capita"
+
+#Define reactive or 'loose' selectors (react to changes in main selectors)
+loose_selectors:
+  d4_concept_lab:
+    label: "Wealth type"
+    type: "checkbox"
+  legend:
+    label: "Source"
+    type: "checkbox"
+  d2_sector_lab:
+    label: "Sector"
+    selected:
+      - "Household Sector"
+    type: "selector"
+
+#facets
+facet_var: "legend"
+facet_var_lab: "Source"
+
+#Additional Variable Layer options
+extra_layer:
+   values: "Net Wealth"
+   type: "line"
+
+#define the columns of the data table widget
+dt.cols:
+  GEO: "Country code"
+  year: "Year"
+  GEO_long: "Country"
+  d4_concept_lab: "Asset or Debt type"
+  d2_sector_lab: "Sector"
+  value: "Value"
+  legend: "Source"
+  metadata: "Description"
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO_long: "Country:"
+  year: "Year:"
+  value: "Value:"
+  d4_concept_lab: "Wealth type:"
+  legend: "Source:"
+
+#other options
+download.button: True
+hide.selectors: False
+listen: False
+table.display: True
+hide.legend: False
+plot_height: 600
+

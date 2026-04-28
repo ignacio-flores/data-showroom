@@ -42,15 +42,15 @@ fixed_selectors:
   year:
     label: "Year"
     selected: 2022
-  d2_sector_lab:
-    label: "Type of Tax"
-    type: "checkbox" 
-    selected: "Gift Tax for Spouse" 
 
 loose_selectors:
   geo_long:
     label: "Country"
     type: "checkbox"
+  d2_sector_lab:
+    label: "Type of Tax"
+    type: "selector" 
+    selected: "Gift Tax for Spouse"   
 
 
 #define the columns of the data table widget

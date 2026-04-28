@@ -393,6 +393,7 @@ createViz <- function(graph = NULL,
           names(dt.cols),
           axis_vars$x_axis$var,
           selector_vars,
+          names(loose_selectors),
           y_candidates,
           if (!is.null(color_var)) color_var,
           names(tooltip_vars)
@@ -406,7 +407,7 @@ createViz <- function(graph = NULL,
         if (!is.null(facet_var) && facet_var %in% names(data_filtered)) {
           sort_vars <- c(sort_vars, facet_var)
         }
-        sort_vars <- c(sort_vars, selector_vars, axis_vars$x_axis$var)
+        sort_vars <- c(sort_vars, selector_vars, names(loose_selectors), axis_vars$x_axis$var)
         sort_vars <- unique(sort_vars[sort_vars %in% names(data_filtered)])
 
         if (length(sort_vars) > 0) {
@@ -467,7 +468,16 @@ createViz <- function(graph = NULL,
       )
     }
     
-    loose_filters <- reactiveValues()
+    initial_loose_filters <- list()
+    if (!is.null(loose_selectors)) {
+      for (var in names(loose_selectors)) {
+        info <- loose_selectors[[var]]
+        if ("selected" %in% names(info) && !is.null(info$selected) && length(info$selected) > 0) {
+          initial_loose_filters[[var]] <- info$selected
+        }
+      }
+    }
+    loose_filters <- do.call(reactiveValues, initial_loose_filters)
     loose_selector_updating <- reactiveVal(FALSE)
     last_valid_filtered_data <- reactiveVal(NULL)
     
