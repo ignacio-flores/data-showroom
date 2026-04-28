@@ -603,26 +603,83 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           if (n <= 1) return(list(list(0, pal[1]), list(1, pal[n])))
           lapply(seq_len(n), function(i) list((i-1)/(n-1), pal[i]))
         }
+
+        validate(need(color_var %in% names(df), paste0("color_var '", color_var, "' not in df")))
+        validate(need(y_var %in% names(df), paste0("y_var '", y_var, "' not in df")))
+
+        frame_var <- if ("animate" %in% gopts && "year" %in% names(df)) "year" else NULL
+        map_group_vars <- unique(c(color_var, frame_var))
+
+        df <- df %>%
+          dplyr::filter(!is.na(.data[[color_var]]))
+
+        if (any(duplicated(df[map_group_vars]))) {
+          df <- df %>%
+            dplyr::group_by(dplyr::across(dplyr::all_of(map_group_vars))) %>%
+            dplyr::arrange(
+              dplyr::desc(!is.na(.data[[y_var]])),
+              dplyr::desc(.data[[y_var]]),
+              .by_group = TRUE
+            ) %>%
+            dplyr::slice(1) %>%
+            dplyr::ungroup()
+        }
         
-        # 1) compute a global range across ALL frames (do this BEFORE any year filtering)
-        z_range <- range(df[[y_var]], na.rm = TRUE)
-        
-        pp <- plot_ly(
-          data         = df,
-          type         = "choropleth",
-          locations    = ~get(color_var),
-          locationmode = "ISO-3",
-          z            = ~get(y_var),
-          frame        = ~year,                
-          text         = ~tooltip_text,
-          hoverinfo    = "text",
-          colorscale   = make_colorscale(pal),      
-          zmin         = z_range[1],                
-          zmax         = z_range[2],
-          colorbar     = list(title = y_var_lab),
-          height       = plot_height,
-          source       = "map"
-        ) %>%
+        zero_color <- "#F28E8E"
+        zero_df <- df %>%
+          dplyr::filter(!is.na(.data[[y_var]]), .data[[y_var]] == 0) %>%
+          dplyr::mutate(.zero_value = 1)
+        nonzero_df <- df %>%
+          dplyr::filter(!is.na(.data[[y_var]]), .data[[y_var]] != 0)
+
+        validate(need(nrow(nonzero_df) > 0 || nrow(zero_df) > 0, "No data available for this map selection"))
+
+        pp <- plot_ly(height = plot_height, source = "map")
+
+        if (nrow(nonzero_df) > 0) {
+          z_range <- range(nonzero_df[[y_var]], na.rm = TRUE)
+          if (identical(z_range[1], z_range[2])) {
+            z_range <- z_range + c(-0.5, 0.5)
+          }
+
+          pp <- pp %>%
+            add_trace(
+              data         = nonzero_df,
+              type         = "choropleth",
+              locations    = ~get(color_var),
+              locationmode = "ISO-3",
+              z            = ~get(y_var),
+              frame        = if (!is.null(frame_var)) ~get(frame_var) else NULL,
+              text         = ~tooltip_text,
+              hoverinfo    = "text",
+              colorscale   = make_colorscale(pal),
+              zmin         = z_range[1],
+              zmax         = z_range[2],
+              colorbar     = list(title = y_var_lab),
+              name         = "Non-zero"
+            )
+        }
+
+        if (nrow(zero_df) > 0) {
+          pp <- pp %>%
+            add_trace(
+              data         = zero_df,
+              type         = "choropleth",
+              locations    = ~get(color_var),
+              locationmode = "ISO-3",
+              z            = ~.zero_value,
+              frame        = if (!is.null(frame_var)) ~get(frame_var) else NULL,
+              text         = ~tooltip_text,
+              hoverinfo    = "text",
+              colorscale   = list(list(0, zero_color), list(1, zero_color)),
+              zmin         = 0,
+              zmax         = 1,
+              showscale    = FALSE,
+              name         = "Zero"
+            )
+        }
+
+        pp <- pp %>%
           layout(
             geo = list(
               projection    = list(type = "mercator"),
@@ -630,17 +687,23 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               landcolor     = "rgb(240,240,240)",
               showcountries = TRUE,
               countrycolor  = "rgb(200,200,200)"
-            )) %>%
-          animation_opts(
-            frame      = 400,     # ms per frame (increase -> slower; decrease -> faster)
-            transition = 100,     # ms between frames
-            easing     = "linear",
-            redraw     = T
-          ) %>%
-          animation_slider(
-            currentvalue = list(prefix = "Year: "),
-            pad = list(t = 30)
-          ) %>%
+            ))
+
+        if (!is.null(frame_var)) {
+          pp <- pp %>%
+            animation_opts(
+              frame      = 400,     # ms per frame (increase -> slower; decrease -> faster)
+              transition = 100,     # ms between frames
+              easing     = "linear",
+              redraw     = T
+            ) %>%
+            animation_slider(
+              currentvalue = list(prefix = "Year: "),
+              pad = list(t = 30)
+            )
+        }
+
+        pp <- pp %>%
           config(
             displaylogo = FALSE,
             modeBarButtonsToRemove = list(

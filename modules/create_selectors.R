@@ -131,7 +131,9 @@ createSelectors <- function(data,
     type <- if ("type" %in% names(info)) info$type else "select"
     
     # Exclude extra_layer values when var matches
-    if (!is.null(extra_layer) && !is.null(extra_layer$var) && var == extra_layer$var && !is.null(extra_layer$values)) {
+    if ("choices" %in% names(info) && !is.null(info$choices)) {
+      choices <- parseChoices(info$choices)
+    } else if (!is.null(extra_layer) && !is.null(extra_layer$var) && var == extra_layer$var && !is.null(extra_layer$values)) {
       excl_vals <- unlist(extra_layer$values)
       choices <- sort(setdiff(unique(data[[var]]), excl_vals))
     } else {

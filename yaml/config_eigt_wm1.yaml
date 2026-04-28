@@ -1,6 +1,6 @@
 #define data source
 data.file: "data/eigt_warehouse_meta_v2.csv"
-data.wrangler: "custom_code/data_prep_eigt4.R" 
+data.wrangler: "custom_code/data_prep_eigt_wm1.R"
 
 #define plot type 
 gopts: "map"
@@ -19,14 +19,47 @@ axis_vars:
     
 #Define main selector 
 fixed_selectors:
-  d4_concept_lab: 
-    label: "Tax Features"
-    selected: "Total Revenue from Tax as % of Gross Domestic Product"
-    
-loose_selectors: 
-  d2_sector_lab: 
-    label: "Tax type"
+  GEO_long:
+    label: "Country"
     type: "checkbox"
+  d4_concept_lab: 
+    label: "Select Tax Feature"
+    selected: "Top Marginal Rate"
+    choices:
+      - "Tax Indicator"
+      - "Top Marginal Rate"
+      - "Exemption Threshold"
+      - "Total Revenue from Tax"
+      - "Total Revenue from Tax as % of Total Tax Revenue"
+      - "Total Revenue from Tax as % of Gross Domestic Product"
+  xrate_lab:
+    label: "Currency & Price Adjustment"
+    selected: Euro adjusting for inflation"
+    choices:
+      - "National Currency"
+      - "National Currency adjusting for inflation"
+      - "USD"
+      - "USD adjusting for inflation"
+      - "Euro"
+      - "Euro adjusting for inflation"
+      - "Yuan"
+      - "Yuan adjusting for inflation"
+      - "PPP USD"
+      - "PPP Euro"
+      - "PPP Yuan"
+  show_zero:
+    label: "Show Zero"
+    selected: "Yes"
+    choices:
+      - "Yes"
+      - "No"
+
+loose_selectors:
+  d2_sector_lab:
+    label: "Type of Tax"
+    type: "selector"
+
+  
   
 #define the columns of the data table widget 
 dt.cols: 
@@ -34,13 +67,16 @@ dt.cols:
   GEO: "Country code"
   year: "Year"
   d4_concept_lab: "Variable"
+  d2_sector_lab: "Type of tax"
+  xrate_lab: "Currency & price adjustment"
   value: "Value"
-  d2_sector_lab: "Tax type"
   
 tooltip_vars:
-  d4_concept_lab: "Tax type:"
+  d4_concept_lab: "Tax feature:"
+  d2_sector_lab: "Type of tax:"
   GEO_long: "Country:"
   year: "Year:"
+  xrate_lab: "Currency & price adjustment:"
   value: "Value: "
 
 #other options 
