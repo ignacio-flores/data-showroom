@@ -1,5 +1,5 @@
 #define data source
-data.file: "data/eigt_wm1_ready.qs"
+data.file: "data/eigt_wm_ready.qs"
 
 #define plot type 
 gopts: "map"
@@ -21,9 +21,12 @@ fixed_selectors:
   GEO_long:
     label: "Country"
     type: "checkbox"
+  year:
+    label: "Year"
+    selected: 2020
   d4_concept_lab: 
     label: "Select Tax Feature"
-    selected: "Top Marginal Rate"
+    selected: "Total Revenue from Tax as % of Gross Domestic Product"
     choices:
       - "Tax Indicator"
       - "Top Marginal Rate"
@@ -57,6 +60,7 @@ loose_selectors:
   d2_sector_lab:
     label: "Type of Tax"
     type: "selector"
+    selected: "Estate Tax for Everybody"
 
   
   

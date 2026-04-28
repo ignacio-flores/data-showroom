@@ -21,7 +21,10 @@ createSelectors <- function(data,
   }
   
   # Layout counts
-  baseCount     <- length(selector_info)
+  visibleSelectors <- names(selector_info)[vapply(selector_info, function(info) {
+    !isTRUE(info$hidden)
+  }, logical(1))]
+  baseCount     <- length(visibleSelectors)
   hasX          <- !is.null(axis_vars) && !is.null(axis_vars$x_axis$choices)
   hasY          <- !is.null(axis_vars) && !is.null(axis_vars$y_axis$choices)
   hasY2         <- !is.null(axis_vars) && !is.null(axis_vars$y2_axis$choices)
@@ -178,7 +181,11 @@ createSelectors <- function(data,
                      multiple = if ("multiple" %in% names(info)) info$multiple else FALSE
                    )
     )
-    column(width = colWidth, ctrl)
+    if (isTRUE(info$hidden)) {
+      tags$div(style = "display: none;", ctrl)
+    } else {
+      column(width = colWidth, ctrl)
+    }
   })
   inputs <- c(inputs, selectorCols)
   

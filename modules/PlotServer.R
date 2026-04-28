@@ -905,7 +905,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # 2) options
         horiz    <- "hbar" %in% gopts
         stacked  <- "stack" %in% gopts
-        use_anim <- ("animate" %in% gopts)
+        use_anim <- ("animate" %in% gopts) &&
+          "year" %in% names(df) &&
+          dplyr::n_distinct(df$year) > 1
         
         # Choose top-N size ----------------------------------------------------------- 
         top_k <- 20   # CHANGE
@@ -961,10 +963,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         
         # Per-year levels (from filtered df)
         if (use_anim) {
-          validate(
-            need("year" %in% names(df) && dplyr::n_distinct(df$year) > 1,
-                 "No frames to animate: 'year' missing or only one value")
-          )
           ord_by_year <- df %>%
             dplyr::group_by(year, .data[[x_var]]) %>%
             dplyr::summarise(.val = sum(.data[[y_var]], na.rm = TRUE), .groups = "drop") %>%

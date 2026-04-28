@@ -111,7 +111,7 @@ Examples:
 - `topo_source`: compare sources side by side
 - `topo_prev` and `ineq_prev`: compact embedded versions with hidden selectors and JS listening enabled
 - `eigt_wm1`: choropleth map
-- `eigt_wm2`: animated horizontal bar chart race
+- `eigt_wm2`: animated horizontal bar chart
 
 ## Data availability in this repo
 
@@ -122,11 +122,12 @@ The repo currently includes the data needed for the `topo_*` and `ineq_*` preset
 - `data/topo_meta.qs`
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
+- `data/eigt_wm_ready.qs`
 - `data/methodological_table.xlsx`
 - `data/dictionary.xlsx`
 - `data/supplementary_var_long.csv`
 
-The `eigt_*` configs reference additional files such as `data/eigt_wide_viz.csv` and `data/eigt_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
+The `eigt_wm*` configs use the prepared `data/eigt_wm_ready.qs` artifact. Other `eigt_*` configs reference additional files such as `data/eigt_wide_viz.csv` and `data/eigt_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
 
 ## How configuration works
 

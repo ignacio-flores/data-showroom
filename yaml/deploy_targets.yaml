@@ -46,7 +46,7 @@ targets:
     app_name: eigt-wm2
     profile: gregcull
     auth_script: auth/shiny_auth_gregcull.R
-    tags: [eigt, map]
+    tags: [eigt, wm]
     enabled: true
 
   - target_id: eigt-kf3
@@ -62,7 +62,7 @@ targets:
     app_name: eigt-wm1
     profile: gregcull
     auth_script: auth/shiny_auth_gregcull.R
-    tags: [eigt, map]
+    tags: [eigt, wm]
     enabled: true
 
   - target_id: inhe_single

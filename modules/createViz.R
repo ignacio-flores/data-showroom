@@ -502,10 +502,33 @@ createViz <- function(graph = NULL,
 
           choices <- sort(unique(choices_data[[var]]))
           choices <- choices[!is.na(choices)]
-          selchoices <- choices
+          selector_type <- if ("type" %in% names(loose_selectors[[var]])) {
+            loose_selectors[[var]]$type
+          } else {
+            "select"
+          }
+          current_selection <- isolate(input[[var]])
+          current_selection <- current_selection[current_selection %in% choices]
+          configured_selection <- if ("selected" %in% names(loose_selectors[[var]])) {
+            loose_selectors[[var]]$selected
+          } else {
+            NULL
+          }
+          configured_selection <- configured_selection[configured_selection %in% choices]
+          selchoices <- if (length(current_selection) > 0) {
+            current_selection
+          } else if (length(configured_selection) > 0) {
+            configured_selection
+          } else if (identical(selector_type, "checkbox")) {
+            choices
+          } else if (length(choices) > 0) {
+            choices[[1]]
+          } else {
+            NULL
+          }
           
         # check if the selector is random and has more than 5 choices
-        if (!is.null(loose_selectors[[var]]$select)) {
+        if (length(current_selection) == 0 && length(configured_selection) == 0 && !is.null(loose_selectors[[var]]$select)) {
           if (loose_selectors[[var]]$select == "random" & length(choices) > 5) {
             selchoices <- sample(choices, 5)
           }
@@ -517,6 +540,8 @@ createViz <- function(graph = NULL,
         if (length(choices) == 0) {
           choices <- character(0) 
           selchoices <- NULL
+        } else if (!identical(selector_type, "checkbox") && length(selchoices) > 1) {
+          selchoices <- selchoices[[1]]
         }
           loose_selector_updating(TRUE)
           freezeReactiveValue(input, var)
