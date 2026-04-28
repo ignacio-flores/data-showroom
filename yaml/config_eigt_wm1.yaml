@@ -34,7 +34,7 @@ fixed_selectors:
       - "Total Revenue from Tax as % of Gross Domestic Product"
   xrate_lab:
     label: "Currency & Price Adjustment"
-    selected: Euro adjusting for inflation"
+    selected: "Euro adjusting for inflation"
     choices:
       - "National Currency"
       - "National Currency adjusting for inflation"

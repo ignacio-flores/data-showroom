@@ -54,7 +54,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()
-      req(df)
+      req(df, cancelOutput = TRUE)
 
       resolveValue <- function(val) {
         if (is.reactive(val) || (is.function(val) && !is.null(environment(val)))) {

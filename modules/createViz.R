@@ -468,6 +468,8 @@ createViz <- function(graph = NULL,
     }
     
     loose_filters <- reactiveValues()
+    loose_selector_updating <- reactiveVal(FALSE)
+    last_valid_filtered_data <- reactiveVal(NULL)
     
     # update loose selectors individually
     if (!is.null(loose_selectors)) {
@@ -516,11 +518,19 @@ createViz <- function(graph = NULL,
           choices <- character(0) 
           selchoices <- NULL
         }
+          loose_selector_updating(TRUE)
+          freezeReactiveValue(input, var)
           updatePickerInput(
             session,
             inputId = var,
             choices = choices,
             selected = selchoices 
+          )
+          session$onFlushed(
+            function() {
+              loose_selector_updating(FALSE)
+            },
+            once = TRUE
           )
         })
         
@@ -537,16 +547,42 @@ createViz <- function(graph = NULL,
     
     # Apply only active filters
     final_filtered_data <- reactive({
-      req(filtered_data()) 
-      result <- filtered_data()  
+      req(filtered_data())
+
+      if (isTRUE(loose_selector_updating())) {
+        last_valid <- last_valid_filtered_data()
+        if (!is.null(last_valid)) {
+          return(last_valid)
+        }
+      }
+
+      result <- filtered_data()
       if (!is.null(loose_selectors)) {
         for (var in names(loose_selectors)) {
           if (!is.null(loose_filters[[var]]) && length(loose_filters[[var]]) > 0) {
-            result <- result %>% filter(get(var) %in% loose_filters[[var]])
-            
+            if (!var %in% names(result)) next
+
+            available_values <- unique(result[[var]])
+            active_values <- loose_filters[[var]][loose_filters[[var]] %in% available_values]
+
+            if (length(active_values) == 0) {
+              last_valid <- last_valid_filtered_data()
+              if (!is.null(last_valid)) {
+                return(last_valid)
+              }
+              return(NULL)
+            }
+
+            result <- result %>% filter(.data[[var]] %in% active_values)
           }
         }
       }
+
+      if (is.null(result) || nrow(result) == 0) {
+        return(NULL)
+      }
+
+      last_valid_filtered_data(result)
       result
     })
     
