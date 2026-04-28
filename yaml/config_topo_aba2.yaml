@@ -1,7 +1,5 @@
 #define data source
 data.file: "data/topo_ready_dp.qs"
-meta.file: "data/topo_meta.qs"
-meta.loc: "tab"
 
 #define plot type 
 gopts: 
