@@ -1,7 +1,11 @@
 library(countrycode)
 library(data.table)
 library(dplyr)
+library(qs)
 library(stringr)
+
+input_file <- "data/eigt_warehouse_meta_v2.csv"
+output_file <- "data/eigt_wm1_ready.qs"
 
 target_concepts <- c(
   "Tax Indicator",
@@ -35,6 +39,13 @@ summarise_map_value <- function(value, concept) {
 
   first_non_missing(vals)
 }
+
+data <- data.table::fread(
+  input_file,
+  select = c("GEO", "GEO_long", "year", "value", "d2_sector_lab", "d4_concept_lab"),
+  showProgress = FALSE
+) %>%
+  as.data.frame()
 
 data <- data %>%
   filter(
@@ -150,3 +161,6 @@ data <- bind_rows(
     mutate(show_zero = "No")
 ) %>%
   arrange(GEO_long, year, d4_concept_lab, d2_sector_lab, xrate_lab, show_zero)
+
+qs::qsave(data, output_file, preset = "fast")
+message("Saved ", nrow(data), " rows to ", output_file)
