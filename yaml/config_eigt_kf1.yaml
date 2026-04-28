@@ -32,6 +32,8 @@ fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
+
+loose_selectors:  
   d2_label:
     label: "Tax type"
     selected: "Gift Tax for Children"

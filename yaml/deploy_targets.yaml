@@ -94,7 +94,7 @@ targets:
     app_name: eigt-ft1
     profile: hubquin
     auth_script: auth/shiny_auth_hubquin.R
-    tags: [eigt, ft]
+    tags: [eigt, ft, dual]
     enabled: true
 
   - target_id: eigt-ft2
@@ -174,7 +174,7 @@ targets:
     app_name: eigt-prev
     profile: frolle
     auth_script: auth/shiny_auth_frolle.R
-    tags: [eigt, prev]
+    tags: [eigt, prev, dual]
     enabled: true
 
   - target_id: eigt-kf1
