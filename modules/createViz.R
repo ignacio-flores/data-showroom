@@ -7,6 +7,10 @@ createViz <- function(graph = NULL,
                       fixed_selectors, 
                       loose_selectors = NULL,
                       facet_var = NULL, facet_var_lab = NULL,
+                      facet_label_var = NULL,
+                      facet_label_truncate_after_dash = FALSE,
+                      facet_label_max_words = NULL,
+                      facet_label_size = NULL,
                       table.display = F, dt.cols = NULL,
                       value_scale = "normal", 
                       data.wrangler = NULL, 
@@ -475,7 +479,9 @@ createViz <- function(graph = NULL,
           names(loose_selectors),
           y_candidates,
           if (!is.null(color_var)) color_var,
-          names(tooltip_vars)
+          names(tooltip_vars),
+          facet_var,
+          facet_label_var
         ))
         cols_to_keep <- cols_to_keep[!is.na(cols_to_keep) & nzchar(cols_to_keep)]
         cols_to_keep <- intersect(cols_to_keep, names(data_filtered))
@@ -520,7 +526,9 @@ createViz <- function(graph = NULL,
           selector_vars,
           names(loose_selectors),
           if (!is.null(color_var)) color_var,
-          names(tooltip_vars)
+          names(tooltip_vars),
+          facet_var,
+          facet_label_var
         ))
         cols_to_keep <- cols_to_keep[!is.na(cols_to_keep) & nzchar(cols_to_keep)]
         cols_to_keep <- intersect(cols_to_keep, names(data_filtered))
@@ -543,7 +551,8 @@ createViz <- function(graph = NULL,
         color_var,
         selector_vars = names(fixed_selectors),
         dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal",
-        extra_layer = extra_layer
+        extra_layer = extra_layer,
+        extra_keep_vars = unique(c(facet_var, facet_label_var))
       )
     }
     
@@ -708,7 +717,11 @@ createViz <- function(graph = NULL,
                      y_var_lab = selected_y_lab,
                      y2_var = if (is_dual_mode) selected_y2_var else NULL,
                      y2_var_lab = if (is_dual_mode) selected_y2_lab else NULL,
-                     color_var, color_var_lab, facet_var, facet_var_lab, 
+                     color_var, color_var_lab, facet_var, facet_var_lab,
+                     facet_label_var,
+                     facet_label_truncate_after_dash,
+                     facet_label_max_words,
+                     facet_label_size,
                      tooltip_vars, hide.legend, gopts, 
                      xnum_breaks=axis_vars$x_axis$breaks, 
                      extra_layer, color_style, plot_height, groupvars,

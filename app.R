@@ -4,7 +4,7 @@ source("modules/libraries.R")
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
 
-default_graph <- "topo_aba1"
+default_graph <- "topo_ffba2"
 graph <- Sys.getenv("DATA_SHOWROOM_GRAPH", unset = "")
 if (!nzchar(graph) && file.exists("active_graph.txt")) {
   graph <- trimws(readLines("active_graph.txt", n = 1, warn = FALSE))
@@ -24,6 +24,10 @@ createViz(
   color = color, 
   facet_var = facet_var,
   facet_var_lab = facet_var_lab,
+  facet_label_var = facet_label_var,
+  facet_label_truncate_after_dash = facet_label_truncate_after_dash,
+  facet_label_max_words = facet_label_max_words,
+  facet_label_size = facet_label_size,
   fixed_selectors = fixed_selectors,
   loose_selectors = loose_selectors,
   tooltip_vars = tooltip_vars,

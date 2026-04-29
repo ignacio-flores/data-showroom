@@ -2,7 +2,7 @@
 dataFilter <- function(input, output, session,
                        data, x_var, y_var, color_var = NULL, selector_vars,
                        dt_cols, tooltip_vars, value_scale, num.conversion,
-                       extra_layer = NULL) {
+                       extra_layer = NULL, extra_keep_vars = NULL) {
   reactive({
     
     data_filtered <- if (is.function(data)) data() else data
@@ -22,11 +22,17 @@ dataFilter <- function(input, output, session,
       return(NULL)
     } else {
       
+      keep_vars <- unique(c(
+        dt_cols, x_var, selector_vars, y_var,
+        if (!is.null(color_var)) color_var,
+        names(tooltip_vars),
+        extra_keep_vars
+      ))
+      keep_vars <- keep_vars[!is.na(keep_vars) & nzchar(keep_vars)]
+      keep_vars <- intersect(keep_vars, names(data_filtered))
+
       data_filtered <- data_filtered %>%
-        select(all_of(c(dt_cols, x_var, selector_vars, y_var, 
-                        if (!is.null(color_var)) color_var,
-                        #color_var, 
-                        names(tooltip_vars))))
+        select(all_of(keep_vars))
       
       # Extract selected variable names
       sort_vars <- c()
@@ -39,10 +45,7 @@ dataFilter <- function(input, output, session,
       
       # Return filtered and sorted data
       data_sorted %>%
-        select(all_of(c(dt_cols, x_var, selector_vars, y_var, 
-                        if (!is.null(color_var)) color_var,    
-                        #color_var, 
-                        names(tooltip_vars))))
+        select(all_of(keep_vars))
     }
   })
 }

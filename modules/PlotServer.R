@@ -92,7 +92,10 @@ plotOutputUI <- function(id,
 # Server logic for the plot module
 plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_var_lab, 
                              y2_var = NULL, y2_var_lab = NULL,
-                             color_var = NULL, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
+                             color_var = NULL, color_var_lab, facet_var, facet_var_lab,
+                             facet_label_var = NULL, facet_label_truncate_after_dash = FALSE,
+                             facet_label_max_words = NULL, facet_label_size = NULL,
+                             tooltip_vars,
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE,
                              x_scale = NULL, scatter_options = NULL, show.grid = TRUE) {
@@ -524,6 +527,43 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       if (!is.null(facet_var) && facet_var != "null") {
         df <- df[!is.na(df[[facet_var]]), ]
         facet_levels <- unique(df[[facet_var]])
+        facet_labels <- facet_levels
+        if (!is.null(facet_label_var) && facet_label_var %in% names(df)) {
+          facet_labels <- vapply(facet_levels, function(facet_level) {
+            labels <- unique(df[df[[facet_var]] == facet_level, facet_label_var])
+            labels <- labels[!is.na(labels) & nzchar(labels)]
+            if (length(labels) > 0) return(as.character(labels[[1]]))
+            if ("source" %in% names(df)) {
+              fallback <- unique(df[df[[facet_var]] == facet_level, "source"])
+              fallback <- fallback[!is.na(fallback) & nzchar(fallback)]
+              if (length(fallback) > 0) return(as.character(fallback[[1]]))
+            }
+            as.character(facet_level)
+          }, character(1))
+        }
+        if (isTRUE(facet_label_truncate_after_dash)) {
+          facet_labels <- trimws(sub("\\s+-\\s+.*$", "", facet_labels))
+        }
+        if (!is.null(facet_label_max_words)) {
+          max_words <- suppressWarnings(as.integer(facet_label_max_words))
+          if (!is.na(max_words) && max_words > 0) {
+            facet_labels <- vapply(facet_labels, function(label) {
+              words <- unlist(strsplit(trimws(label), "\\s+"))
+              if (length(words) > max_words) {
+                paste(c(words[seq_len(max_words)], "..."), collapse = " ")
+              } else {
+                label
+              }
+            }, character(1))
+          }
+        }
+        facet_label_font_size <- suppressWarnings(as.numeric(facet_label_size))
+        if (is.null(facet_label_size) ||
+            length(facet_label_font_size) != 1 ||
+            is.na(facet_label_font_size) ||
+            facet_label_font_size <= 0) {
+          facet_label_font_size <- plot_text_style$facet_size
+        }
 
         plots <- lapply(facet_levels, function(facet_level) {
 
@@ -632,7 +672,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               list(
                 x = ((i - 1) %% ncols) / ncols + 0.5 / ncols,  
                 y = 1 - (floor((i - 1) / ncols) / nrows), #+ 0.05,  
-                text = facet_levels[i],  
+                text = facet_labels[i],
                 showarrow = FALSE,  
                 xanchor = "center",
                 xref = "paper",  
@@ -642,7 +682,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 traceorder = "grouped",
                 borderwidth = 1,  
                 opacity = 1,
-                font = plotly_font(plot_text_style$facet_size)
+                font = plotly_font(facet_label_font_size)
               )
             }),
             font = plotly_font(plot_text_style$legend_size),

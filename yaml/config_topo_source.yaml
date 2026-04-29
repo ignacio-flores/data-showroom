@@ -52,12 +52,16 @@ loose_selectors:
   d2_sector_lab:
     label: "Sector"
     selected:
-      - "Household Sector"
+      - "Households"
     type: "selector"
 
 #facets
 facet_var: "legend"
 facet_var_lab: "Source"
+facet_label_var: "legend"
+facet_label_truncate_after_dash: true
+facet_label_max_words: 3
+facet_label_size: 14
 
 #Additional Variable Layer options
 extra_layer:

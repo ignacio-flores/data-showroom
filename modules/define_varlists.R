@@ -30,6 +30,8 @@ if (!is.null(new.cols)) {
     names(fixed_selectors),
     names(dt.cols),
     names(tooltip_vars),
+    facet_var,
+    facet_label_var,
     "source"
   )
   all_vars <- setdiff(unique(unlist(all_varlists)), new_col_names)
@@ -40,6 +42,8 @@ if (!is.null(new.cols)) {
       names(fixed_selectors),
       names(dt.cols),
       names(tooltip_vars),
+      facet_var,
+      facet_label_var,
       color_var, "source"
     )
     all_vars <- unique(unlist(all_varlists))
@@ -48,6 +52,8 @@ if (!is.null(new.cols)) {
       axis_cols,
       names(fixed_selectors),
       names(dt.cols),
+      facet_var,
+      facet_label_var,
       color_var,
       "source")
     all_vars <- unique(unlist(all_varlists))
