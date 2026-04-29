@@ -4,7 +4,7 @@ source("modules/libraries.R")
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
 
-default_graph <- "topo_source"
+default_graph <- "topo_multi"
 graph <- Sys.getenv("DATA_SHOWROOM_GRAPH", unset = "")
 if (!nzchar(graph) && file.exists("active_graph.txt")) {
   graph <- trimws(readLines("active_graph.txt", n = 1, warn = FALSE))
@@ -41,7 +41,8 @@ createViz(
   area_stack_default = area_stack_default,
   scatter_options = scatter_options,
   value_transform = value_transform,
-  meta.layout = meta.layout
+  meta.layout = meta.layout,
+  show.grid = show.grid
 )
 
 #Comments: extra_layers work with faceted plots only (can be made independent)

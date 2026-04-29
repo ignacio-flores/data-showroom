@@ -23,9 +23,13 @@ plotly_font <- function(size = plot_text_style$legend_size,
 
 plotly_axis_style <- function(axis = list(),
                               title_color = plot_text_style$color,
-                              tick_color = title_color) {
+                              tick_color = title_color,
+                              show_grid = NULL) {
   axis$titlefont <- plotly_font(plot_text_style$axis_title_size, title_color)
   axis$tickfont <- plotly_font(plot_text_style$axis_tick_size, tick_color)
+  if (!is.null(show_grid)) {
+    axis$showgrid <- isTRUE(show_grid)
+  }
   axis
 }
 
@@ -53,10 +57,10 @@ plotly_colorbar_style <- function(title = NULL) {
   )
 }
 
-apply_plotly_axis_text_style <- function(pp) {
+apply_plotly_axis_text_style <- function(pp, show_grid = NULL) {
   axis_names <- names(pp$x$layout)[grepl("^[xy]axis[0-9]*$", names(pp$x$layout))]
   for (axis_name in axis_names) {
-    pp$x$layout[[axis_name]] <- plotly_axis_style(pp$x$layout[[axis_name]])
+    pp$x$layout[[axis_name]] <- plotly_axis_style(pp$x$layout[[axis_name]], show_grid = show_grid)
   }
   pp
 }
@@ -91,7 +95,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              color_var = NULL, color_var_lab, facet_var, facet_var_lab, tooltip_vars, 
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE,
-                             x_scale = NULL, scatter_options = NULL) {
+                             x_scale = NULL, scatter_options = NULL, show.grid = TRUE) {
   moduleServer(id, function(input, output, session) {
     
     stack_active <- reactive({
@@ -128,6 +132,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       y2_var_lab <- resolveValue(y2_var_lab)
       x_scale <- resolveValue(x_scale)
       if (is.null(x_scale)) x_scale <- "regular"
+      show.grid <- resolveValue(show.grid)
+      if (is.null(show.grid)) show.grid <- TRUE
+      axis_show_grid <- if (isTRUE(show.grid)) NULL else FALSE
       
       #make axes dynamic if necessary 
       # print(paste0("printing input x_axis", input, "!"))
@@ -661,7 +668,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             )) else list(),
             opacity = 1
           ) %>%
-          apply_plotly_axis_text_style() %>%
+          apply_plotly_axis_text_style(show_grid = axis_show_grid) %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
                    "autoScale2d", "resetScale2d", "hoverClosestCartesian",
@@ -1327,7 +1334,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               xanchor = "center",
               y = -0.3))
           ) %>%
-          apply_plotly_axis_text_style() %>%
+          apply_plotly_axis_text_style(show_grid = axis_show_grid) %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
                    "autoScale2d", "resetScale2d", "hoverClosestCartesian",

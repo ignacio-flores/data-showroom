@@ -89,4 +89,5 @@ hide.selectors: True
 listen: True
 table.display: False
 hide.legend: True
+show.grid: False
 plot_height: 400

@@ -24,7 +24,8 @@ createViz <- function(graph = NULL,
                       area_stack_default = TRUE,
                       scatter_options = NULL,
                       value_transform = NULL,
-                      meta.layout = NULL
+                      meta.layout = NULL,
+                      show.grid = TRUE
                       ) {
   
   tic("loading and preliminary work")
@@ -712,7 +713,8 @@ createViz <- function(graph = NULL,
                      xnum_breaks=axis_vars$x_axis$breaks, 
                      extra_layer, color_style, plot_height, groupvars,
                      x_scale = if (is_dynamic_scatter) selected_x_scale else NULL,
-                     scatter_options = if (is_dynamic_scatter) scatter_options else NULL)
+                     scatter_options = if (is_dynamic_scatter) scatter_options else NULL,
+                     show.grid = show.grid)
     
     # Render table
     output$tableOrMessageUI <- renderUI({
