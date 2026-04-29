@@ -4,6 +4,63 @@ require(viridis)
 require(paletteer)
 require(scales)
 
+plot_text_style <- list(
+  family = "Arial",
+  color = "#000",
+  axis_title_size = 16,
+  axis_tick_size = 16,
+  legend_size = 16,
+  hover_size = 18,
+  facet_size = 18,
+  data_label_size = 16
+)
+
+plotly_font <- function(size = plot_text_style$legend_size,
+                        color = plot_text_style$color,
+                        family = plot_text_style$family) {
+  list(family = family, size = size, color = color)
+}
+
+plotly_axis_style <- function(axis = list(),
+                              title_color = plot_text_style$color,
+                              tick_color = title_color) {
+  axis$titlefont <- plotly_font(plot_text_style$axis_title_size, title_color)
+  axis$tickfont <- plotly_font(plot_text_style$axis_tick_size, tick_color)
+  axis
+}
+
+plotly_hoverlabel_style <- function() {
+  list(font = plotly_font(plot_text_style$hover_size))
+}
+
+plotly_legend_style <- function(legend = list()) {
+  legend$font <- plotly_font(plot_text_style$legend_size)
+  if (is.null(legend$title)) {
+    legend$title <- list(font = plotly_font(plot_text_style$legend_size))
+  } else if (is.list(legend$title)) {
+    legend$title$font <- plotly_font(plot_text_style$legend_size)
+  }
+  legend
+}
+
+plotly_colorbar_style <- function(title = NULL) {
+  list(
+    title = list(
+      text = title,
+      font = plotly_font(plot_text_style$legend_size)
+    ),
+    tickfont = plotly_font(plot_text_style$legend_size)
+  )
+}
+
+apply_plotly_axis_text_style <- function(pp) {
+  axis_names <- names(pp$x$layout)[grepl("^[xy]axis[0-9]*$", names(pp$x$layout))]
+  for (axis_name in axis_names) {
+    pp$x$layout[[axis_name]] <- plotly_axis_style(pp$x$layout[[axis_name]])
+  }
+  pp
+}
+
 plotOutputUI <- function(id,
                          show_stack_toggle = FALSE,
                          stacked_default = FALSE,
@@ -293,37 +350,35 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             dragmode = "zoom",
             hovermode = "x unified",
             showlegend = !hide.legend,
-            xaxis = list(
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
+            xaxis = plotly_axis_style(list(
               title = x_var_lab,
               zeroline = FALSE,
               showgrid = FALSE,
               automargin = TRUE
-            ),
-            yaxis = list(
+            )),
+            yaxis = plotly_axis_style(list(
               title = left_name,
               zeroline = FALSE,
               showgrid = FALSE,
-              automargin = TRUE,
-              tickfont = list(color = axis_left_col),
-              titlefont = list(color = axis_left_col)
-            ),
-            yaxis2 = list(
+              automargin = TRUE
+            ), title_color = axis_left_col, tick_color = axis_left_col),
+            yaxis2 = plotly_axis_style(list(
               title = right_name,
               overlaying = "y",
               side = "right",
               zeroline = FALSE,
               showgrid = FALSE,
-              automargin = TRUE,
-              tickfont = list(color = axis_right_col),
-              titlefont = list(color = axis_right_col)
-            ),
+              automargin = TRUE
+            ), title_color = axis_right_col, tick_color = axis_right_col),
             margin = if (hide.legend) list(b = 12) else NULL,
-            legend = if (!hide.legend) list(
+            legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
               x = 0.5,
               xanchor = "center",
               y = -0.2
-            ) else list()
+            )) else list()
           ) %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
@@ -362,7 +417,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           paste0(formatC(value, format = "f", big.mark = ",", digits = 2), suffix)
         }
 
-        x_axis_layout <- list(
+        x_axis_layout <- plotly_axis_style(list(
           title = paste0(
             x_var_lab,
             if (identical(x_scale, "log")) " - Log Scale" else " - Regular Scale"
@@ -370,7 +425,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           type = if (identical(x_scale, "log")) "log" else NULL,
           zeroline = FALSE,
           automargin = TRUE
-        )
+        ))
         if (is_percent_axis(x_var)) {
           x_axis_layout$ticksuffix <- "%"
           x_axis_layout$tickformat <- ".2f"
@@ -394,11 +449,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           }
         }
 
-        y_axis_layout <- list(
+        y_axis_layout <- plotly_axis_style(list(
           title = y_var_lab,
           zeroline = FALSE,
           automargin = TRUE
-        )
+        ))
         if (is_percent_axis(y_var)) {
           y_axis_layout$ticksuffix <- "%"
           y_axis_layout$tickformat <- ".2f"
@@ -423,6 +478,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           type = "scatter",
           mode = if (!is.null(point_text)) "markers+text" else "markers",
           textposition = "bottom center",
+          textfont = plotly_font(plot_text_style$data_label_size),
           marker = list(size = 8, opacity = 0.85),
           showlegend = !hide.legend,
           height = plot_height
@@ -431,15 +487,17 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             dragmode = "zoom",
             hovermode = "closest",
             showlegend = !hide.legend,
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
             xaxis = x_axis_layout,
             yaxis = y_axis_layout,
             margin = if (hide.legend) list(b = 50, l = 70, r = 40, t = 20) else NULL,
-            legend = if (!hide.legend) list(
+            legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
               x = 0.5,
               xanchor = "center",
               y = -0.2
-            ) else list()
+            )) else list()
           ) %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
@@ -484,8 +542,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             showlegend = !hide.legend && (facet_level == facet_levels[1])
           ) %>% layout(
             dragmode = "zoom",
-            xaxis = list(title = x_var_lab), 
-            yaxis = list(title = y_var_lab) 
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
+            xaxis = plotly_axis_style(list(title = x_var_lab)),
+            yaxis = plotly_axis_style(list(title = y_var_lab))
           )
           
           # Add extra layer dynamically
@@ -575,20 +635,22 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 traceorder = "grouped",
                 borderwidth = 1,  
                 opacity = 1,
-                font = list(size = 18, color = "black", family = "Arial")  
+                font = plotly_font(plot_text_style$facet_size)
               )
             }),
-            xaxis = list(
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
+            xaxis = plotly_axis_style(list(
               range = x_range, 
               title = x_var_lab, 
               zeroline = FALSE 
-            ),  
-            yaxis = list(
+            )),
+            yaxis = plotly_axis_style(list(
               range = y_range,
               title = y_var_lab,
               zeroline = FALSE
-            ),
-            legend = if (!hide.legend) list(
+            )),
+            legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
               x = 0.5,
               xanchor = "center",
@@ -596,9 +658,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               yanchor = "top",
               itemclick = "toggleothers",
               itemdoubleclick = "exclusive"
-            ) else list(),
+            )) else list(),
             opacity = 1
           ) %>%
+          apply_plotly_axis_text_style() %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
                    "autoScale2d", "resetScale2d", "hoverClosestCartesian",
@@ -672,7 +735,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               colorscale   = make_colorscale(pal),
               zmin         = z_range[1],
               zmax         = z_range[2],
-              colorbar     = list(title = y_var_lab),
+              colorbar     = plotly_colorbar_style(y_var_lab),
               name         = "Non-zero"
             )
         }
@@ -698,6 +761,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         pp <- pp %>%
           layout(
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
             geo = list(
               projection    = list(type = "mercator"),
               showland      = TRUE,
@@ -715,7 +780,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               redraw     = T
             ) %>%
             animation_slider(
-              currentvalue = list(prefix = "Year: "),
+              currentvalue = list(
+                prefix = "Year: ",
+                font = plotly_font(plot_text_style$data_label_size)
+              ),
               pad = list(t = 30)
             )
         }
@@ -1005,6 +1073,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           text        = ~get(x_var),
           hovertext   = ~tooltip_text,
           textposition = "inside",
+          textfont    = plotly_font(plot_text_style$data_label_size),
           cliponaxis  = FALSE,
           orientation = if (horiz) "h" else "v",
           height      = dyn_height,
@@ -1013,39 +1082,41 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         ) %>%
           layout(
             barmode = if (stacked) "stack" else "group",
-            xaxis   = list(
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
+            xaxis   = plotly_axis_style(list(
               title = if (horiz) y_var_lab else x_var_lab,
               zeroline = FALSE,
               showticklabels = horiz,
               autorange = TRUE,
               rangemode = "tozero"
-            ),
-            yaxis   = list(
+            )),
+            yaxis   = plotly_axis_style(list(
               title = if (horiz) x_var_lab else y_var_lab,
               zeroline = FALSE,
               autorange = TRUE,
               automargin = TRUE,
               showticklabels = !horiz
-            ),
-            legend  = if (!hide.legend) list(
+            )),
+            legend  = if (!hide.legend) plotly_legend_style(list(
               orientation = "h", x = 0.5, xanchor = "center", y = -0.2
-            ) else list()
+            )) else list()
           )
         
         # Initial category order for first frame (reverse for horizontal so largest at top)
         if (use_anim) {
           if (horiz) {
-            pp <- pp %>% layout(yaxis = list(
+            pp <- pp %>% layout(yaxis = plotly_axis_style(list(
               categoryorder = "array",
               categoryarray = rev(levs_by_year[[first_year]]),
               automargin = TRUE
-            ))
+            )))
           } else {
-            pp <- pp %>% layout(xaxis = list(
+            pp <- pp %>% layout(xaxis = plotly_axis_style(list(
               categoryorder = "array",
               categoryarray = levs_by_year[[first_year]],
               automargin = TRUE
-            ))
+            )))
           }
         }
         
@@ -1053,7 +1124,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         if (use_anim) {
           pp <- pp %>%
             animation_opts(frame = 800, transition = 400, easing = "linear", redraw = TRUE) %>%
-            animation_slider(currentvalue = list(prefix = "Year: "), pad = list(t = 20))
+            animation_slider(
+              currentvalue = list(
+                prefix = "Year: ",
+                font = plotly_font(plot_text_style$data_label_size)
+              ),
+              pad = list(t = 20)
+            )
         }
         
         # Per-frame category order (on filtered top-N) + numeric autorange each frame
@@ -1063,19 +1140,19 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             levs <- levs_by_year[[as.character(yr)]]
             if (!is.null(levs)) {
               if (horiz) {
-                pp$x$frames[[i]]$layout$yaxis <- list(
+                pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(
                   categoryorder = "array",
                   categoryarray = rev(levs),
                   automargin = TRUE
-                )
-                pp$x$frames[[i]]$layout$xaxis <- list(autorange = TRUE, rangemode = "tozero")
+                ))
+                pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(autorange = TRUE, rangemode = "tozero"))
               } else {
-                pp$x$frames[[i]]$layout$xaxis <- list(
+                pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(
                   categoryorder = "array",
                   categoryarray = levs,
                   automargin = TRUE
-                )
-                pp$x$frames[[i]]$layout$yaxis <- list(autorange = TRUE, rangemode = "tozero")
+                ))
+                pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(autorange = TRUE, rangemode = "tozero"))
               }
             }
           }
@@ -1120,13 +1197,15 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           labs(title = "", x = "", y = "", color = color_var_lab) +
           guides(color = guide_legend(override.aes = list(alpha = 1))) +
           theme(panel.background = element_blank(), panel.grid.major = element_blank(),
-                axis.title.x = element_text(size = 16),
-                axis.title.y = element_text(size = 16),
-                axis.text.x = element_text(size = 16, angle = 40, hjust = 1),
-                axis.text.y = element_text(size = 16),
-                legend.title = element_text(size = 16, face = "bold"),
-                legend.text = element_text(size = 16),
+                text = element_text(family = plot_text_style$family, color = plot_text_style$color),
+                axis.title.x = element_text(size = plot_text_style$axis_title_size),
+                axis.title.y = element_text(size = plot_text_style$axis_title_size),
+                axis.text.x = element_text(size = plot_text_style$axis_tick_size, angle = 40, hjust = 1),
+                axis.text.y = element_text(size = plot_text_style$axis_tick_size),
+                legend.title = element_text(size = plot_text_style$legend_size, face = "bold"),
+                legend.text = element_text(size = plot_text_style$legend_size),
                 legend.position = if (hide.legend) "none" else "center",
+                strip.text = element_text(size = plot_text_style$facet_size),
                 plot.margin = margin(5.5, 5.5, 5.5, 5.5)
               )
 
@@ -1234,22 +1313,21 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           style(hoverinfo = "text") %>%
           layout(
             dragmode = "zoom",
-            font = list(family = "Arial", size = 18, color = "#000"),
-            hoverlabel = list(
-              font = list(size = 18)  
-            ),
+            font = plotly_font(plot_text_style$legend_size),
+            hoverlabel = plotly_hoverlabel_style(),
             autosize = TRUE,
-            xaxis = list(zeroline = FALSE),
-            yaxis = list(zeroline = FALSE),
-            legend = list(
+            xaxis = plotly_axis_style(list(zeroline = FALSE)),
+            yaxis = plotly_axis_style(list(zeroline = FALSE)),
+            legend = plotly_legend_style(list(
               title = list(text = ''),
               orientation = "h",
               x = 0.5,
               itemclick = "toggleothers",
               itemdoubleclick = "none",
               xanchor = "center",
-              y = -0.3)
+              y = -0.3))
           ) %>%
+          apply_plotly_axis_text_style() %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
                    "autoScale2d", "resetScale2d", "hoverClosestCartesian",
