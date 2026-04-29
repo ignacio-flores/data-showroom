@@ -62,6 +62,36 @@ plotly_colorbar_style <- function(title = NULL) {
   )
 }
 
+plotly_trace_legend_key <- function(trace) {
+  key <- trace$legendgroup
+  if (is.null(key) || length(key) == 0 || !nzchar(as.character(key[[1]]))) {
+    key <- trace$name
+  }
+  if (is.null(key) || length(key) == 0 || !nzchar(as.character(key[[1]]))) {
+    return(NULL)
+  }
+  as.character(key[[1]])
+}
+
+set_plotly_legend_once <- function(plot, legend_seen, show_legend = TRUE) {
+  if (is.null(plot$x$data) || length(plot$x$data) == 0) {
+    return(list(plot = plot, legend_seen = legend_seen))
+  }
+
+  for (trace_idx in seq_along(plot$x$data)) {
+    legend_key <- plotly_trace_legend_key(plot$x$data[[trace_idx]])
+    if (is.null(legend_key)) next
+
+    plot$x$data[[trace_idx]]$showlegend <- isTRUE(show_legend) &&
+      !legend_key %in% legend_seen
+    if (!legend_key %in% legend_seen) {
+      legend_seen <- c(legend_seen, legend_key)
+    }
+  }
+
+  list(plot = plot, legend_seen = legend_seen)
+}
+
 apply_plotly_axis_text_style <- function(pp, show_grid = NULL) {
   axis_names <- names(pp$x$layout)[grepl("^[xy]axis[0-9]*$", names(pp$x$layout))]
   for (axis_name in axis_names) {
@@ -570,7 +600,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           facet_label_font_size <- plot_text_style$facet_size
         }
 
-        plots <- lapply(facet_levels, function(facet_level) {
+        plots <- vector("list", length(facet_levels))
+        legend_seen <- character(0)
+
+        for (facet_idx in seq_along(facet_levels)) {
+          facet_level <- facet_levels[[facet_idx]]
 
           df_facet <- df[df[[facet_var]] == facet_level, ]
           
@@ -635,8 +669,14 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               }
             }
           }
-          plt
-        })
+          legend_result <- set_plotly_legend_once(
+            plotly_build(plt),
+            legend_seen,
+            show_legend = !hide.legend
+          )
+          plots[[facet_idx]] <- legend_result$plot
+          legend_seen <- legend_result$legend_seen
+        }
         
         # Compute grid layout for facets
         n_facets <- length(facet_levels)
