@@ -23,7 +23,8 @@ createViz <- function(graph = NULL,
                       area_stack_toggle = FALSE,  
                       area_stack_default = TRUE,
                       scatter_options = NULL,
-                      value_transform = NULL
+                      value_transform = NULL,
+                      meta.layout = NULL
                       ) {
   
   tic("loading and preliminary work")
@@ -72,6 +73,11 @@ createViz <- function(graph = NULL,
   is_dynamic_scatter <- isTRUE(scatter_options$enabled) &&
     ("point" %in% gopts) &&
     !is_dual_mode
+  metadata_tab_label <- if (isTRUE(substr(graph, 1, 4) == "topo")) {
+    "Metadata"
+  } else {
+    "Methodological table"
+  }
 
   parseAxisChoices <- function(ch) {
     if (is.character(ch) && length(ch) == 1 && grepl("^c\\(", ch)) {
@@ -261,7 +267,7 @@ createViz <- function(graph = NULL,
                                                  stacked_default       = area_stack_default,  
                                                  gopts                 = gopts)),
           tabPanel("Data", uiOutput("tableOrMessageUI")),
-          tabPanel("Methodological table", metaTableUI("metaModule"))
+          tabPanel(metadata_tab_label, metaTableUI("metaModule"))
         )))
         
       } else if (meta.loc == "below") {
@@ -724,7 +730,13 @@ createViz <- function(graph = NULL,
     
     # Render metadata table
     if (!is.null(meta.file)) {
-      metaTableServer("metaModule", reactive(final_filtered_data()), meta = meth, graph = graph)
+      metaTableServer(
+        "metaModule",
+        reactive(final_filtered_data()),
+        meta = meth,
+        graph = graph,
+        meta_layout = meta.layout
+      )
     }
     
     # Download button conditionally rendered

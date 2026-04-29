@@ -1,5 +1,8 @@
 #define data source
 data.file: "data/topo_base.qs"
+meta.file: "data/topo_metadata_bundle.qs"
+meta.loc: "tab"
+meta.layout: "topo_country_matrix"
 
 value_transform:
   type: "currency_unit"

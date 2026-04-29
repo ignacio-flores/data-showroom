@@ -14,17 +14,19 @@ if (!is.null(meta.file)) {
     stop("Unsupported meta.file type: use .xlsx/.xls or .qs")
   }
   
-  if (!inherits(meth, "data.frame")) {
-    stop("The metadata file does not contain a data.frame/tibble.")
+  if (!inherits(meth, "data.frame") && !is.list(meth)) {
+    stop("The metadata file does not contain a data.frame/tibble or metadata bundle.")
   }
-  
-  # Rename `country` -> `Country` only if present
-  if ("country" %in% names(meth)) {
-    meth <- dplyr::rename(meth, Country = .data$country)
+
+  if (inherits(meth, "data.frame")) {
+    # Rename `country` -> `Country` only if present
+    if ("country" %in% names(meth)) {
+      meth <- dplyr::rename(meth, Country = .data$country)
+    }
+
+    # Drop columns if they exist (won't error if missing)
+    meth <- dplyr::select(meth, -dplyr::any_of(c("area", "GEO3", "Source")))
   }
-  
-  # Drop columns if they exist (won't error if missing)
-  meth <- dplyr::select(meth, -dplyr::any_of(c("area", "GEO3", "Source")))
   
   toc()
 } else {

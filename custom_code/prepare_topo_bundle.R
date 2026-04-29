@@ -1,18 +1,25 @@
 library(data.table)
 library(qs)
+library(readxl)
 
 source("modules/value_transform.R")
+source("custom_code/topo_metadata_bundle.R")
 
 input_file <- "data/topo_warehouse_meta_v2.csv"
 supplementary_file <- "data/supplementary_var_long.csv"
+dictionary_file <- "data/dictionary.xlsx"
 base_output_file <- "data/topo_base.qs"
 bundle_output_file <- "data/topo_conversion_bundle.qs"
+metadata_output_file <- "data/topo_metadata_bundle.qs"
 
 if (!file.exists(input_file)) {
   stop("Missing topo warehouse file: ", input_file)
 }
 if (!file.exists(supplementary_file)) {
   stop("Missing supplementary variable file: ", supplementary_file)
+}
+if (!file.exists(dictionary_file)) {
+  stop("Missing dictionary file: ", dictionary_file)
 }
 
 base_cols <- c(
@@ -78,19 +85,12 @@ bundle <- list(
 
 qs::qsave(as.data.frame(base), base_output_file, preset = "fast")
 qs::qsave(bundle, bundle_output_file, preset = "fast")
+qs::qsave(
+  build_topo_metadata_bundle(input_file, dictionary_file),
+  metadata_output_file,
+  preset = "fast"
+)
 
 message("Saved ", nrow(base), " rows to ", base_output_file)
 message("Saved conversion bundle to ", bundle_output_file)
-
-warehouse_files <- Sys.glob("data/topo_warehouse_meta_*.csv")
-if (length(warehouse_files) > 0) {
-  removed <- file.remove(warehouse_files)
-  if (all(removed)) {
-    message("Removed raw topo warehouse CSV files: ", paste(warehouse_files, collapse = ", "))
-  } else {
-    warning(
-      "Some raw topo warehouse CSV files could not be removed: ",
-      paste(warehouse_files[!removed], collapse = ", ")
-    )
-  }
-}
+message("Saved topo metadata bundle to ", metadata_output_file)
