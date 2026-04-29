@@ -22,8 +22,7 @@ axis_vars:
     var: "year" 
     label: "Year"
   y_axis: 
-    var: "value" 
-    label: "Value" 
+    var: "value"  
 
 color:    
   var: "d4_concept_lab"

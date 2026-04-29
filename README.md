@@ -118,11 +118,9 @@ Examples:
 The app expects local data artifacts for the shipped presets. Depending on the
 checkout, large/generated files may be ignored and need to be rebuilt locally:
 
-- `data/topo_ready.qs`
-- `data/topo_ready_dp.qs`
 - `data/topo_base.qs`
 - `data/topo_conversion_bundle.qs`
-- `data/topo_meta.qs`
+- `data/topo_metadata_bundle.qs`
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
 - `data/eigt_wm_ready.qs`
@@ -230,9 +228,7 @@ download.button: true
 Dataset-specific transformations live in `custom_code/` and are sourced after the dataset is loaded into a `data` object. Current examples include:
 
 - [`custom_code/dictionary_loader_ineq.R`](custom_code/dictionary_loader_ineq.R): enriches inequality data with source metadata from the dictionary workbook
-- [`custom_code/prepare_topo_bundle.R`](custom_code/prepare_topo_bundle.R): builds the compact lazy topo base and conversion bundle used by `topo_*` presets
-- [`custom_code/data_prep_topo.R`](custom_code/data_prep_topo.R): legacy eager topo expansion that saves `data/topo_ready.qs`
-- [`custom_code/meta_prep_topo.R`](custom_code/meta_prep_topo.R): builds `data/topo_meta.qs`
+- [`custom_code/prepare_topo_bundle.R`](custom_code/prepare_topo_bundle.R): builds the compact lazy topo base, conversion bundle, and metadata bundle used by `topo_*` presets
 
 ### Supported data/model flow
 

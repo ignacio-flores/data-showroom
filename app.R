@@ -4,7 +4,7 @@ source("modules/libraries.R")
 #options(shiny.fullstacktrace = TRUE, shiny.trace = TRUE)
 #check color palettes: https://r-graph-gallery.com/color-palette-finder
 
-default_graph <- "eigt_prev"
+default_graph <- "topo_prev"
 graph <- Sys.getenv("DATA_SHOWROOM_GRAPH", unset = "")
 if (!nzchar(graph) && file.exists("active_graph.txt")) {
   graph <- trimws(readLines("active_graph.txt", n = 1, warn = FALSE))

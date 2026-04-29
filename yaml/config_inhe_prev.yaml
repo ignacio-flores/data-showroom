@@ -27,7 +27,6 @@ axis_vars:
     breaks: 10 
   y_axis:   
     var: "value" 
-    label: "Value"
 
 color:     
   var: "con_sou_val"

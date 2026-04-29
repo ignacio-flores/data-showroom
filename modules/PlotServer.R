@@ -885,6 +885,28 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         if (all(is.finite(y_range)) && identical(y_range[1], y_range[2])) {
           y_range <- y_range + c(-0.5, 0.5)
         }
+
+        facet_annotations <- if (n_facets > 1) {
+          lapply(seq_along(facet_levels), function(i) {
+            list(
+              x = ((i - 1) %% ncols) / ncols + 0.5 / ncols,
+              y = 1 - (floor((i - 1) / ncols) / nrows), #+ 0.05,
+              text = facet_labels[i],
+              showarrow = FALSE,
+              xanchor = "center",
+              xref = "paper",
+              yref = "paper",
+              bgcolor = "white",
+              bordercolor = "lightgrey",
+              traceorder = "grouped",
+              borderwidth = 1,
+              opacity = 1,
+              font = plotly_font(facet_label_font_size)
+            )
+          })
+        } else {
+          list()
+        }
         
         # Generate subplot with fixed axis ranges
         pp <- subplot(plots, nrows = nrows, shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>%
@@ -893,23 +915,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             hovermode = "closest",
             #xaxis = list(fixedrange = TRUE),
             #yaxis = list(fixedrange = TRUE),
-            annotations = lapply(seq_along(facet_levels), function(i) {
-              list(
-                x = ((i - 1) %% ncols) / ncols + 0.5 / ncols,  
-                y = 1 - (floor((i - 1) / ncols) / nrows), #+ 0.05,  
-                text = facet_labels[i],
-                showarrow = FALSE,  
-                xanchor = "center",
-                xref = "paper",  
-                yref = "paper",  
-                bgcolor = "white",  
-                bordercolor = "lightgrey",  
-                traceorder = "grouped",
-                borderwidth = 1,  
-                opacity = 1,
-                font = plotly_font(facet_label_font_size)
-              )
-            }),
+            annotations = facet_annotations,
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
             xaxis = plotly_axis_style(list(

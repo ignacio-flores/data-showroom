@@ -3,7 +3,7 @@ library(qs)
 library(readxl)
 
 source("modules/value_transform.R")
-source("custom_code/topo_metadata_bundle.R")
+source("custom_code/helpers/topo_metadata_bundle.R")
 
 input_file <- "data/topo_warehouse_meta_v2.csv"
 supplementary_file <- "data/supplementary_var_long.csv"
