@@ -1,5 +1,12 @@
 #define data source
-data.file: "data/topo_ready.qs"
+data.file: "data/topo_base.qs"
+
+value_transform:
+  type: "currency_unit"
+  bundle.file: "data/topo_conversion_bundle.qs"
+  currency_selector: "xrate_lab"
+  unit_selector: "pop_lab"
+  debt_negative: true
 
 area_stack_toggle: true     
 

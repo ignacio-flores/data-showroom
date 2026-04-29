@@ -5,7 +5,7 @@ dataFilter <- function(input, output, session,
                        extra_layer = NULL) {
   reactive({
     
-    data_filtered <- data
+    data_filtered <- if (is.function(data)) data() else data
     
     
     

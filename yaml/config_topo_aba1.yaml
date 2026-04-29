@@ -1,5 +1,12 @@
 #define data source
-data.file: "data/topo_ready_dp.qs"
+data.file: "data/topo_base.qs"
+
+value_transform:
+  type: "currency_unit"
+  bundle.file: "data/topo_conversion_bundle.qs"
+  currency_selector: "xrate_lab"
+  unit_selector: "pop_lab"
+  debt_negative: false
 
 #define plot type 
 gopts: 

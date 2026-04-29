@@ -22,16 +22,48 @@ createViz <- function(graph = NULL,
                       keep.col = NULL,
                       area_stack_toggle = FALSE,  
                       area_stack_default = TRUE,
-                      scatter_options = NULL
+                      scatter_options = NULL,
+                      value_transform = NULL
                       ) {
   
   tic("loading and preliminary work")
     require(data.table)
+    value_transform_types <- c("currency_unit", "topo_currency_unit")
+    is_currency_unit_transform <- !is.null(value_transform) &&
+      !is.null(value_transform$type) &&
+      value_transform$type %in% value_transform_types
+    if (is_currency_unit_transform) {
+      keep.col <- unique(c(keep.col, "GEO", "year", "value", "d4_concept_lab"))
+    }
     source("modules/preliminary_checks.R", local = TRUE)
     source("modules/define_varlists.R", local = TRUE)
     source("modules/read_dataset.R", local = TRUE)
     if (!is.null(data.wrangler)) {
       source(data.wrangler, local = TRUE)  
+    }
+    source("modules/value_transform.R", local = TRUE)
+    value_transform_state <- NULL
+    if (is_currency_unit_transform) {
+      value_transform_state <- list(
+        bundle = load_value_transform_bundle(value_transform$bundle.file),
+        currency_selector = value_transform$currency_selector %||% "xrate_lab",
+        unit_selector = value_transform$unit_selector %||% "pop_lab",
+        debt_negative = if (!is.null(value_transform$debt_negative)) {
+          isTRUE(value_transform$debt_negative)
+        } else {
+          TRUE
+        }
+      )
+      fixed_selectors <- inject_value_transform_selector_choices(
+        fixed_selectors,
+        value_transform,
+        value_transform_state$bundle
+      )
+      if (!is.null(loose_selectors)) {
+        all_selectors <- c(fixed_selectors, loose_selectors)
+      } else {
+        all_selectors <- fixed_selectors
+      }
     }
     source("modules/load_meta.R", local = TRUE)
   toc()  
@@ -288,6 +320,46 @@ createViz <- function(graph = NULL,
   
   ## Define Server
   server <- function(input, output, session) {
+    value_transform_cache <- new.env(parent = emptyenv())
+    active_data <- reactive({
+      if (is.null(value_transform_state)) {
+        return(data)
+      }
+
+      currency_label <- value_transform_selector_value(
+        input,
+        fixed_selectors,
+        value_transform_state$currency_selector,
+        fallback = value_transform_state$bundle$currency_choices[[1]]
+      )
+      unit_label <- value_transform_selector_value(
+        input,
+        fixed_selectors,
+        value_transform_state$unit_selector,
+        fallback = value_transform_state$bundle$unit_choices[[1]]
+      )
+      cache_key <- paste(
+        currency_label,
+        unit_label,
+        value_transform_state$debt_negative,
+        sep = "\r"
+      )
+
+      if (exists(cache_key, envir = value_transform_cache, inherits = FALSE)) {
+        return(get(cache_key, envir = value_transform_cache, inherits = FALSE))
+      }
+
+      materialized <- materialize_currency_unit(
+        data,
+        value_transform_state$bundle,
+        currency_label = currency_label,
+        unit_label = unit_label,
+        debt_negative = value_transform_state$debt_negative
+      )
+      assign(cache_key, materialized, envir = value_transform_cache)
+      materialized
+    })
+
     selected_x_var <- reactive({
       if (is_dynamic_scatter && !is.null(input$x_axis) && nzchar(input$x_axis)) {
         input$x_axis
@@ -369,7 +441,7 @@ createViz <- function(graph = NULL,
     # filter data with main selectors
     if (is_dual_mode) {
       filtered_data <- reactive({
-        data_filtered <- data
+        data_filtered <- active_data()
         selector_vars <- names(fixed_selectors)
 
         for (var in selector_vars) {
@@ -418,7 +490,7 @@ createViz <- function(graph = NULL,
       })
     } else if (is_dynamic_scatter) {
       filtered_data <- reactive({
-        data_filtered <- data
+        data_filtered <- active_data()
         selector_vars <- names(fixed_selectors)
 
         for (var in selector_vars) {
@@ -458,7 +530,7 @@ createViz <- function(graph = NULL,
       })
     } else {
       filtered_data <- dataFilter(input, output, session,
-        data,
+        active_data,
         x_var = axis_vars$x_axis$var,
         y_var = axis_vars$y_axis$var,
         color_var,

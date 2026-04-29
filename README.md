@@ -115,10 +115,13 @@ Examples:
 
 ## Data availability in this repo
 
-The repo currently includes the data needed for the `topo_*` and `ineq_*` presets, including:
+The app expects local data artifacts for the shipped presets. Depending on the
+checkout, large/generated files may be ignored and need to be rebuilt locally:
 
 - `data/topo_ready.qs`
 - `data/topo_ready_dp.qs`
+- `data/topo_base.qs`
+- `data/topo_conversion_bundle.qs`
 - `data/topo_meta.qs`
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
@@ -227,7 +230,8 @@ download.button: true
 Dataset-specific transformations live in `custom_code/` and are sourced after the dataset is loaded into a `data` object. Current examples include:
 
 - [`custom_code/dictionary_loader_ineq.R`](custom_code/dictionary_loader_ineq.R): enriches inequality data with source metadata from the dictionary workbook
-- [`custom_code/data_prep_topo.R`](custom_code/data_prep_topo.R): builds normalized top wealth datasets and saves `data/topo_ready.qs`
+- [`custom_code/prepare_topo_bundle.R`](custom_code/prepare_topo_bundle.R): builds the compact lazy topo base and conversion bundle used by `topo_*` presets
+- [`custom_code/data_prep_topo.R`](custom_code/data_prep_topo.R): legacy eager topo expansion that saves `data/topo_ready.qs`
 - [`custom_code/meta_prep_topo.R`](custom_code/meta_prep_topo.R): builds `data/topo_meta.qs`
 
 ### Supported data/model flow
@@ -237,9 +241,19 @@ At runtime, the app follows this pipeline:
 1. Load packages and source modules from `modules/`
 2. Read a YAML preset
 3. Load only the needed columns from the configured dataset
-4. Run optional custom wrangling
+4. Run optional custom wrangling or lazy value transforms
 5. Build selectors and reactive filters
 6. Render plotly charts, data tables, download handlers, and optional metadata tables
+
+Topo presets use `value_transform: currency_unit`, which reads
+`data/topo_base.qs` plus `data/topo_conversion_bundle.qs` and materializes only
+the selected currency/unit view at runtime. Rebuild those ignored deployment
+artifacts with:
+
+```bash
+Rscript custom_code/prepare_topo_bundle.R
+Rscript custom_code/tests/check_topo_lazy_equivalence.R
+```
 
 ## Deployment
 

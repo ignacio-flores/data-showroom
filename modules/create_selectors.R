@@ -139,6 +139,8 @@ createSelectors <- function(data,
     } else if (!is.null(extra_layer) && !is.null(extra_layer$var) && var == extra_layer$var && !is.null(extra_layer$values)) {
       excl_vals <- unlist(extra_layer$values)
       choices <- sort(setdiff(unique(data[[var]]), excl_vals))
+    } else if (!var %in% names(data)) {
+      choices <- character(0)
     } else {
       choices <- sort(unique(data[[var]]))
     }

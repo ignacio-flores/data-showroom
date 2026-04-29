@@ -530,11 +530,28 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Compute global axis limits
         x_range <- range(df[[x_var]], na.rm = TRUE)
         
-         if (!is.null(extra_layer)) {
-           combined_y <- c(df[[y_var]], extra_df[[y_var]])
-           y_range <- range(combined_y, na.rm = TRUE)
-         } else {
-            y_range <- range(df[[y_var]], na.rm = TRUE)
+        if (isTRUE(stack_active()) && "area" %in% gopts) {
+          stack_groups <- unique(c(facet_var, x_var))
+          stack_groups <- stack_groups[stack_groups %in% names(df)]
+          stacked_y <- df %>%
+            dplyr::group_by(dplyr::across(dplyr::all_of(stack_groups))) %>%
+            dplyr::summarise(
+              .positive_stack = sum(.data[[y_var]][.data[[y_var]] > 0], na.rm = TRUE),
+              .negative_stack = sum(.data[[y_var]][.data[[y_var]] < 0], na.rm = TRUE),
+              .groups = "drop"
+            )
+          combined_y <- c(stacked_y$.positive_stack, stacked_y$.negative_stack)
+        } else {
+          combined_y <- df[[y_var]]
+        }
+
+        if (!is.null(extra_layer)) {
+          combined_y <- c(combined_y, extra_df[[y_var]])
+        }
+
+        y_range <- range(combined_y, na.rm = TRUE)
+        if (all(is.finite(y_range)) && identical(y_range[1], y_range[2])) {
+          y_range <- y_range + c(-0.5, 0.5)
         }
         
         # Generate subplot with fixed axis ranges
