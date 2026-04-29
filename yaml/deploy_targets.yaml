@@ -30,7 +30,7 @@ targets:
     app_name: topo-country-comp
     profile: gcwealth
     auth_script: auth/shiny_auth_gcwealth.R
-    tags: [topo, multi]
+    tags: [topo, multi, supplementary-line]
     enabled: true
 
   - target_id: topo-country-view
@@ -38,7 +38,7 @@ targets:
     app_name: topo-country-view
     profile: gcwealth
     auth_script: auth/shiny_auth_gcwealth.R
-    tags: [topo, single]
+    tags: [topo, single, supplementary-line]
     enabled: true
 
   - target_id: eigt-wm2
@@ -118,7 +118,7 @@ targets:
     app_name: topo-ffba2
     profile: hubquin
     auth_script: auth/shiny_auth_hubquin.R
-    tags: [topo, ffba]
+    tags: [topo, ffba, supplementary-line]
     enabled: true
 
   - target_id: topo-ffba3
@@ -126,7 +126,7 @@ targets:
     app_name: topo-ffba3
     profile: hubquin
     auth_script: auth/shiny_auth_hubquin.R
-    tags: [topo, ffba]
+    tags: [topo, ffba, supplementary-line]
     enabled: true
 
   - target_id: topo-aba1
@@ -150,7 +150,7 @@ targets:
     app_name: topo-ffba1
     profile: ign-flores
     auth_script: auth/shiny_auth_ignflores.R
-    tags: [topo, ffba]
+    tags: [topo, ffba, supplementary-line]
     enabled: true
 
   - target_id: topo-prev
@@ -158,7 +158,7 @@ targets:
     app_name: topo-prev
     profile: ign-flores
     auth_script: auth/shiny_auth_ignflores.R
-    tags: [topo, preview]
+    tags: [topo, preview, supplementary-line]
     enabled: true
 
   - target_id: topo-source-comp
@@ -166,7 +166,7 @@ targets:
     app_name: topo-source-comp
     profile: ign-flores
     auth_script: auth/shiny_auth_ignflores.R
-    tags: [topo, source]
+    tags: [topo, source, supplementary-line]
     enabled: true
 
   - target_id: eigt-prev

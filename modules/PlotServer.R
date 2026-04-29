@@ -33,8 +33,13 @@ plotly_axis_style <- function(axis = list(),
   axis
 }
 
-plotly_hoverlabel_style <- function() {
-  list(font = plotly_font(plot_text_style$hover_size))
+plotly_hoverlabel_style <- function(font_color = plot_text_style$color,
+                                    bgcolor = NULL,
+                                    bordercolor = NULL) {
+  hoverlabel <- list(font = plotly_font(plot_text_style$hover_size, font_color))
+  if (!is.null(bgcolor)) hoverlabel$bgcolor <- bgcolor
+  if (!is.null(bordercolor)) hoverlabel$bordercolor <- bordercolor
+  hoverlabel
 }
 
 plotly_legend_style <- function(legend = list()) {
@@ -614,6 +619,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                     name = extra_layer$values,
                     text = ~tooltip_text,
                     hoverinfo = if (isTRUE(stack_active())) "skip" else "text", 
+                    hoverlabel = plotly_hoverlabel_style(
+                      font_color = "white",
+                      bgcolor = "black",
+                      bordercolor = "black"
+                    ),
                     color = I("black"), 
                     showlegend = !hide.legend && (facet_level == facet_levels[1]),
                     legendgroup = "extra_layer",
