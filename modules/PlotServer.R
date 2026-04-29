@@ -504,8 +504,183 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           y_axis_layout$tickformat <- ".2f"
         }
 
+        scatter_option_scalar <- function(name, default, coerce = identity) {
+          value <- scatter_options[[name]]
+          if (is.null(value) || length(value) != 1 || is.na(value)) return(default)
+          coerced <- suppressWarnings(coerce(value))
+          if (is.null(coerced) || length(coerced) != 1 || is.na(coerced)) return(default)
+          coerced
+        }
+
+        label_positions <- c(
+          "top center", "bottom center", "middle right", "middle left",
+          "top right", "top left", "bottom right", "bottom left"
+        )
+
+        scaled_axis <- function(values, use_log = FALSE) {
+          values <- as.numeric(values)
+          if (isTRUE(use_log)) values <- log10(values)
+          range_values <- range(values[is.finite(values)], na.rm = TRUE)
+          if (!all(is.finite(range_values)) || diff(range_values) == 0) {
+            return(rep(0.5, length(values)))
+          }
+          (values - range_values[1]) / diff(range_values)
+        }
+
+        label_bbox <- function(x, y, label, position, size) {
+          width <- min(0.24, max(0.035, nchar(label, type = "width") * size * 0.00042))
+          height <- max(0.022, size * 0.0016)
+          offset <- 0.016
+          cx <- x
+          cy <- y
+
+          if (grepl("right", position)) cx <- x + offset + width / 2
+          if (grepl("left", position)) cx <- x - offset - width / 2
+          if (grepl("top", position)) cy <- y + offset + height / 2
+          if (grepl("bottom", position)) cy <- y - offset - height / 2
+
+          list(
+            xmin = cx - width / 2,
+            xmax = cx + width / 2,
+            ymin = cy - height / 2,
+            ymax = cy + height / 2
+          )
+        }
+
+        bboxes_overlap <- function(a, b, padding = 0.006) {
+          !(a$xmax + padding < b$xmin ||
+              b$xmax + padding < a$xmin ||
+              a$ymax + padding < b$ymin ||
+              b$ymax + padding < a$ymin)
+        }
+
+        bbox_contains_other_point <- function(bbox, x_scaled, y_scaled, row_idx) {
+          point_padding <- 0.006
+          other_rows <- setdiff(seq_along(x_scaled), row_idx)
+          if (length(other_rows) == 0) return(FALSE)
+          any(
+            x_scaled[other_rows] >= bbox$xmin - point_padding &
+              x_scaled[other_rows] <= bbox$xmax + point_padding &
+              y_scaled[other_rows] >= bbox$ymin - point_padding &
+              y_scaled[other_rows] <= bbox$ymax + point_padding,
+            na.rm = TRUE
+          )
+        }
+
+        preferred_label_positions <- function(x, y) {
+          horizontal <- if (x < 0.2) {
+            c("right", "center", "left")
+          } else if (x > 0.8) {
+            c("left", "center", "right")
+          } else {
+            c("center", "right", "left")
+          }
+
+          vertical <- if (y < 0.25) {
+            c("top", "middle", "bottom")
+          } else if (y > 0.75) {
+            c("bottom", "middle", "top")
+          } else {
+            c("middle", "top", "bottom")
+          }
+
+          candidates <- character(0)
+          for (v in vertical) {
+            for (h in horizontal) {
+              if (identical(v, "middle") && identical(h, "center")) next
+              candidates <- c(candidates, trimws(paste(v, h)))
+            }
+          }
+          unique(c(candidates, label_positions))
+        }
+
+        choose_auto_labels <- function(labels, x_values, y_values, use_log_x,
+                                       max_labels, size) {
+          x_scaled <- scaled_axis(x_values, use_log_x)
+          y_scaled <- scaled_axis(y_values)
+
+          nearest_distance <- vapply(seq_along(x_scaled), function(i) {
+            other_rows <- setdiff(seq_along(x_scaled), i)
+            if (length(other_rows) == 0) return(Inf)
+            min(
+              sqrt((x_scaled[i] - x_scaled[other_rows])^2 +
+                     (y_scaled[i] - y_scaled[other_rows])^2),
+              na.rm = TRUE
+            )
+          }, numeric(1))
+          nearest_distance[!is.finite(nearest_distance)] <- 1
+
+          center_distance <- sqrt((x_scaled - 0.5)^2 + (y_scaled - 0.5)^2)
+          extrema_rows <- unique(c(
+            which.min(x_values), which.max(x_values),
+            which.min(y_values), which.max(y_values)
+          ))
+          priority <- nearest_distance * 3 + center_distance
+          priority[extrema_rows] <- priority[extrema_rows] + 0.25
+          row_order <- order(priority, decreasing = TRUE, na.last = NA)
+
+          selected_rows <- integer(0)
+          selected_positions <- rep("bottom center", length(labels))
+          placed_bboxes <- list()
+
+          for (row_idx in row_order) {
+            if (length(selected_rows) >= max_labels) break
+            if (!is.finite(x_scaled[row_idx]) || !is.finite(y_scaled[row_idx])) next
+
+            for (position in preferred_label_positions(x_scaled[row_idx], y_scaled[row_idx])) {
+              bbox <- label_bbox(x_scaled[row_idx], y_scaled[row_idx], labels[row_idx], position, size)
+              if (bbox$xmin < 0 || bbox$xmax > 1 || bbox$ymin < 0 || bbox$ymax > 1) next
+              if (bbox_contains_other_point(bbox, x_scaled, y_scaled, row_idx)) next
+              if (any(vapply(placed_bboxes, bboxes_overlap, logical(1), b = bbox))) next
+
+              selected_rows <- c(selected_rows, row_idx)
+              selected_positions[row_idx] <- position
+              placed_bboxes[[length(placed_bboxes) + 1]] <- bbox
+              break
+            }
+          }
+
+          list(rows = selected_rows, positions = selected_positions)
+        }
+
+        text_position <- "bottom center"
+        label_size <- scatter_option_scalar(
+          "label_size",
+          plot_text_style$data_label_size,
+          as.numeric
+        )
+
         point_text <- if (isTRUE(scatter_options$show_labels) && "geo_long" %in% names(df)) {
-          df$point_label <- df$geo_long
+          label_mode <- scatter_option_scalar("label_mode", "all", as.character)
+
+          if (identical(label_mode, "auto")) {
+            label_max_all <- scatter_option_scalar("label_max_all", 18L, as.integer)
+            label_max_auto <- scatter_option_scalar("label_max_auto", 12L, as.integer)
+            label_max_all <- max(label_max_all, 0L)
+            label_max_auto <- max(label_max_auto, 0L)
+
+            max_labels <- if (nrow(df) <= label_max_all) nrow(df) else label_max_auto
+            x_values <- as.numeric(df[[x_var]])
+            y_values <- as.numeric(df[[y_var]])
+            auto_labels <- choose_auto_labels(
+              df$geo_long,
+              x_values,
+              y_values,
+              identical(x_scale, "log"),
+              max_labels,
+              label_size
+            )
+            label_rows <- auto_labels$rows
+            text_position <- auto_labels$positions
+
+            df$point_label <- ""
+            if (length(label_rows) > 0) {
+              df$point_label[label_rows] <- df$geo_long[label_rows]
+            }
+          } else {
+            df$point_label <- df$geo_long
+          }
+
           ~point_label
         } else {
           NULL
@@ -522,8 +697,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           hoverinfo = "text",
           type = "scatter",
           mode = if (!is.null(point_text)) "markers+text" else "markers",
-          textposition = "bottom center",
-          textfont = plotly_font(plot_text_style$data_label_size),
+          textposition = text_position,
+          textfont = plotly_font(label_size),
           marker = list(size = 8, opacity = 0.85),
           showlegend = !hide.legend,
           height = plot_height

@@ -13,6 +13,10 @@ gopts: "point"
 scatter_options:
   enabled: true
   show_labels: true
+  label_mode: "auto"
+  label_max_all: 18
+  label_max_auto: 20
+  label_size: 12
   x_scale_selector: true
   monetary_axes_use_usd_2023: true
 
