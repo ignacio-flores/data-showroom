@@ -6,7 +6,7 @@ require(scales)
 
 plot_text_style <- list(
   family = "Arial",
-  color = "#000",
+  color = "black",
   axis_title_size = 16,
   axis_tick_size = 16,
   legend_size = 16,
