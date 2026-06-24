@@ -8,11 +8,13 @@ data/topo_warehouse_*
 data/ineq_warehouse_*
 data/eigt_warehouse_*
 data/eigt_wide*
+data/eigt_wm_ready.qs
 data/inhe_warehouse*
 data/eigt_wide_viz.csv
 data/methodological_table.xlsx
 data/topo_warehouse_meta_v1_2.csv
 data/topo_base.qs
 data/topo_conversion_bundle.qs
+data/topo_metadata_bundle.qs
 data/topo_ready*
 skills/

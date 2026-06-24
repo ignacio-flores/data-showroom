@@ -1,0 +1,63 @@
+version: 1
+
+source_roots:
+  gcwealth:
+    default: "~/Dropbox/gcwealth"
+    env: "DATA_SHOWROOM_GCWEALTH_ROOT"
+
+files:
+  data/inhe_warehouse_meta_v2.csv:
+    root: gcwealth
+    path: output/databases/dashboards/inhe_warehouse_meta_v2.csv
+  data/ineq_warehouse_meta_v2.csv:
+    root: gcwealth
+    path: output/databases/dashboards/ineq_warehouse_meta_v2.csv
+  data/eigt_warehouse_meta_v2.csv:
+    root: gcwealth
+    path: output/databases/dashboards/eigt_warehouse_meta_v2.csv
+  data/topo_warehouse_meta_v2.csv:
+    root: gcwealth
+    path: output/databases/dashboards/topo_warehouse_meta_v2.csv
+  data/supplementary_var_long.csv:
+    root: gcwealth
+    path: output/databases/supplementary_variables/supplementary_var_long.csv
+  data/methodological_table.xlsx:
+    root: gcwealth
+    path: output/databases/methodological_table/methodological_table.xlsx
+  data/dictionary.xlsx:
+    root: gcwealth
+    path: handmade_tables/dictionary.xlsx
+
+recipes:
+  topo_bundle:
+    script: custom_code/prepare_topo_bundle.R
+    inputs:
+      - data/topo_warehouse_meta_v2.csv
+      - data/supplementary_var_long.csv
+      - data/dictionary.xlsx
+    outputs:
+      - data/topo_base.qs
+      - data/topo_conversion_bundle.qs
+      - data/topo_metadata_bundle.qs
+  eigt_wm_ready:
+    script: custom_code/data_prep_eigt_wm.R
+    inputs:
+      - data/eigt_warehouse_meta_v2.csv
+      - data/supplementary_var_long.csv
+    outputs:
+      - data/eigt_wm_ready.qs
+  eigt_wide:
+    script: custom_code/data_prep_eigt_wide.R
+    inputs:
+      - data/eigt_warehouse_meta_v2.csv
+      - data/dictionary.xlsx
+    outputs:
+      - data/eigt_wide.qs
+
+runtime_dependencies:
+  custom_code/dictionary_loader_ineq.R:
+    - data/dictionary.xlsx
+  custom_code/data_prep_eigt_ft.R:
+    - data/supplementary_var_long.csv
+  custom_code/data_prep_eigt3.R:
+    - data/supplementary_var_long.csv

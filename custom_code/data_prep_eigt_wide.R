@@ -35,4 +35,3 @@ data <- pivot_wider(
 data <- data %>% mutate(d5_code = as.numeric(d5_code))
 
 qs::qsave(data, "data/eigt_wide.qs", preset = "fast")
-unlink("data/eigt_warehouse_meta_v2.csv")
