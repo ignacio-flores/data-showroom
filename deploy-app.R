@@ -70,6 +70,7 @@ usage <- function() {
   cat(
     paste(
       "Usage:",
+      "  Rscript deploy-app.R --list [--target <id>[,<id>...]] [--profile <profile>] [--tag <tag>]",
       "  Rscript deploy-app.R --target <id>[,<id>...] [--dry-run]",
       "  Rscript deploy-app.R --target <id>[,<id>...] --preview [--preview-port <port>] [--no-browser]",
       "  Rscript deploy-app.R --profile <profile>[,<profile>...] [--dry-run]",
@@ -77,10 +78,12 @@ usage <- function() {
       "  Rscript deploy-app.R --all [--dry-run]",
       "",
       "Options:",
+      "  --list                 Print deployment targets and exit without deploying.",
       "  --target <id>          Deploy one or more target IDs (comma-separated or repeated).",
       "  --profile <name>       Filter deployment targets by profile/account.",
       "  --tag <tag>            Filter deployment targets by one or more tags.",
       "  --all                  Select all enabled targets (can combine with --profile/--tag).",
+      "  --include-disabled     Include disabled targets when used with --list.",
       "  --registry <path>      Path to deployment registry YAML.",
       "  --data-sources <path>  Path to data-source manifest YAML.",
       "  --source-root <path>   Override the configured data source root for this run.",
@@ -93,6 +96,11 @@ usage <- function() {
       "  --no-browser           Do not open preview URLs in browser tabs.",
       "  --yes                  Skip the confirmation prompt for large bulk previews.",
       "  --help                 Show this message.",
+      "",
+      "Examples:",
+      "  Rscript deploy-app.R --list",
+      "  Rscript deploy-app.R --list --profile gregcull",
+      "  Rscript deploy-app.R --list --tag eigt",
       sep = "\n"
     )
   )
@@ -103,7 +111,9 @@ parse_args <- function(args) {
     target = character(),
     profile = character(),
     tag = character(),
+    list = FALSE,
     all = FALSE,
+    include_disabled = FALSE,
     dry_run = FALSE,
     preview = FALSE,
     preview_host = "127.0.0.1",
@@ -113,6 +123,8 @@ parse_args <- function(args) {
     registry = "yaml/deploy_targets.yaml",
     data_sources = "yaml/deploy_data_sources.yaml",
     source_root = NULL,
+    data_sources_supplied = FALSE,
+    source_root_supplied = FALSE,
     refresh_data = FALSE,
     use_cache = FALSE,
     help = FALSE
@@ -126,8 +138,16 @@ parse_args <- function(args) {
       opts$help <- TRUE
       i <- i + 1
       next
+    } else if (arg == "--list") {
+      opts$list <- TRUE
+      i <- i + 1
+      next
     } else if (arg == "--all") {
       opts$all <- TRUE
+      i <- i + 1
+      next
+    } else if (arg == "--include-disabled") {
+      opts$include_disabled <- TRUE
       i <- i + 1
       next
     } else if (arg == "--dry-run") {
@@ -200,6 +220,7 @@ parse_args <- function(args) {
     data_sources_value <- consume_value("--data-sources")
     if (!is.null(data_sources_value)) {
       opts$data_sources <- data_sources_value
+      opts$data_sources_supplied <- TRUE
       i <- i + ifelse(arg == "--data-sources", 2, 1)
       next
     }
@@ -207,6 +228,7 @@ parse_args <- function(args) {
     source_root_value <- consume_value("--source-root")
     if (!is.null(source_root_value)) {
       opts$source_root <- source_root_value
+      opts$source_root_supplied <- TRUE
       i <- i + ifelse(arg == "--source-root", 2, 1)
       next
     }
@@ -239,7 +261,27 @@ parse_args <- function(args) {
     !is.null(opts$preview_port) ||
     !isTRUE(opts$launch_browser) ||
     isTRUE(opts$yes)
-  if (!isTRUE(opts$preview) && isTRUE(preview_option_used)) {
+
+  if (isTRUE(opts$include_disabled) && !isTRUE(opts$list)) {
+    usage_error("--include-disabled requires --list.")
+  }
+
+  if (isTRUE(opts$list)) {
+    list_conflicts <- character()
+    if (isTRUE(opts$dry_run)) list_conflicts <- c(list_conflicts, "--dry-run")
+    if (isTRUE(opts$preview)) list_conflicts <- c(list_conflicts, "--preview")
+    if (!identical(opts$preview_host, "127.0.0.1")) list_conflicts <- c(list_conflicts, "--preview-host")
+    if (!is.null(opts$preview_port)) list_conflicts <- c(list_conflicts, "--preview-port")
+    if (!isTRUE(opts$launch_browser)) list_conflicts <- c(list_conflicts, "--no-browser")
+    if (isTRUE(opts$yes)) list_conflicts <- c(list_conflicts, "--yes")
+    if (isTRUE(opts$refresh_data)) list_conflicts <- c(list_conflicts, "--refresh-data")
+    if (isTRUE(opts$use_cache)) list_conflicts <- c(list_conflicts, "--use-cache")
+    if (isTRUE(opts$data_sources_supplied)) list_conflicts <- c(list_conflicts, "--data-sources")
+    if (isTRUE(opts$source_root_supplied)) list_conflicts <- c(list_conflicts, "--source-root")
+    if (length(list_conflicts)) {
+      usage_error(sprintf("--list cannot be used with: %s", paste(list_conflicts, collapse = ", ")))
+    }
+  } else if (!isTRUE(opts$preview) && isTRUE(preview_option_used)) {
     usage_error("--preview-host, --preview-port, --no-browser, and --yes require --preview.")
   }
 
@@ -407,17 +449,17 @@ validate_selectors <- function(targets, opts) {
 
   unknown_ids <- setdiff(opts$target, known_ids)
   if (length(unknown_ids)) {
-    stop(sprintf("Unknown target ID(s): %s", paste(unknown_ids, collapse = ", ")))
+    usage_error(sprintf("Unknown target ID(s): %s", paste(unknown_ids, collapse = ", ")))
   }
 
   unknown_profiles <- setdiff(opts$profile, known_profiles)
   if (length(unknown_profiles)) {
-    stop(sprintf("Unknown profile(s): %s", paste(unknown_profiles, collapse = ", ")))
+    usage_error(sprintf("Unknown profile(s): %s", paste(unknown_profiles, collapse = ", ")))
   }
 
   unknown_tags <- setdiff(opts$tag, known_tags)
   if (length(unknown_tags)) {
-    stop(sprintf("Unknown tag(s): %s", paste(unknown_tags, collapse = ", ")))
+    usage_error(sprintf("Unknown tag(s): %s", paste(unknown_tags, collapse = ", ")))
   }
 }
 
@@ -1449,16 +1491,24 @@ preview_targets <- function(selected, data_sources, opts, quiet = FALSE) {
 }
 
 list_deploy_targets <- function(registry = "yaml/deploy_targets.yaml",
+                                target = NULL,
                                 profile = NULL,
                                 tag = NULL,
-                                include_disabled = FALSE) {
-  targets <- load_registry(registry)
+                                include_disabled = FALSE,
+                                targets = NULL) {
+  if (is.null(targets)) {
+    targets <- load_registry(registry, require_auth = FALSE)
+  }
 
-  if (!is.null(profile)) {
+  if (length(target)) {
+    targets <- Filter(function(entry) entry$target_id %in% target, targets)
+  }
+
+  if (length(profile)) {
     targets <- Filter(function(entry) entry$profile %in% profile, targets)
   }
 
-  if (!is.null(tag)) {
+  if (length(tag)) {
     targets <- Filter(function(entry) any(tag %in% entry$tags), targets)
   }
 
@@ -1491,6 +1541,20 @@ main <- function(args = commandArgs(trailingOnly = TRUE), quiet = FALSE) {
   if (isTRUE(opts$help)) {
     usage()
     return(invisible(list(status = 0L, selected = list(), results = list())))
+  }
+
+  if (isTRUE(opts$list)) {
+    targets <- load_registry(opts$registry, require_auth = FALSE)
+    validate_selectors(targets, opts)
+    table <- list_deploy_targets(
+      registry = opts$registry,
+      target = opts$target,
+      profile = opts$profile,
+      tag = opts$tag,
+      include_disabled = opts$include_disabled,
+      targets = targets
+    )
+    return(invisible(list(status = 0L, targets = table, results = list())))
   }
 
   targets <- load_registry(opts$registry, require_auth = !isTRUE(opts$preview))

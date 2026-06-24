@@ -552,7 +552,7 @@ createViz <- function(graph = NULL,
         selector_vars = names(fixed_selectors),
         dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal",
         extra_layer = extra_layer,
-        extra_keep_vars = unique(c(facet_var, facet_label_var))
+        extra_keep_vars = unique(c(facet_var, facet_label_var, names(loose_selectors)))
       )
     }
     

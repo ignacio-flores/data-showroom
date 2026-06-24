@@ -28,6 +28,7 @@ if (!is.null(new.cols)) {
     new_col_groups,
     axis_cols,
     names(fixed_selectors),
+    names(loose_selectors),
     names(dt.cols),
     names(tooltip_vars),
     facet_var,
@@ -40,6 +41,7 @@ if (!is.null(new.cols)) {
     all_varlists <- list(
       axis_cols,
       names(fixed_selectors),
+      names(loose_selectors),
       names(dt.cols),
       names(tooltip_vars),
       facet_var,
@@ -51,6 +53,7 @@ if (!is.null(new.cols)) {
     all_varlists <- list(
       axis_cols,
       names(fixed_selectors),
+      names(loose_selectors),
       names(dt.cols),
       facet_var,
       facet_label_var,
