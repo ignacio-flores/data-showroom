@@ -814,7 +814,7 @@ print_preparation_plan <- function(prep_plan, data_sources, dry_run = FALSE) {
 
   stale <- stale_items(prep_plan)
   if (dry_run && (length(stale$direct) || length(stale$recipes))) {
-    cat("  stale cache note: actual deploy will prompt unless --refresh-data or --use-cache is supplied.\n")
+    cat("  stale cache note: preview/deploy will prompt unless --refresh-data or --use-cache is supplied.\n")
   }
 }
 
@@ -838,18 +838,31 @@ stale_detail_recipe <- function(item) {
   )
 }
 
-prompt_refresh <- function(label, detail = NULL) {
+operation_verb <- function(operation) {
+  if (identical(operation, "deployment")) "deploy" else operation
+}
+
+prompt_refresh <- function(label, detail = NULL, operation = "deployment") {
   if (!is.null(detail) && nzchar(detail)) {
     cat(detail, "\n", sep = "")
   }
+  verb <- operation_verb(operation)
+  if (!isatty(stdin())) {
+    stop(sprintf(
+      "Stale %s needs a refresh decision before %s. Re-run with --refresh-data or --use-cache.",
+      label,
+      verb
+    ))
+  }
   repeat {
-    cat(sprintf("Refresh stale %s? [y/N] ", label))
+    cat(sprintf("Refresh stale %s before %s? [y/N] ", label, verb))
     flush.console()
     answer <- readLines(file("stdin"), n = 1, warn = FALSE)
     if (!length(answer)) {
       stop(sprintf(
-        "No stdin input available to decide stale %s. Re-run with --refresh-data or --use-cache.",
-        label
+        "No stdin input available to decide stale %s before %s. Re-run with --refresh-data or --use-cache.",
+        label,
+        verb
       ))
     }
     normalized <- tolower(trimws(answer[[1]]))
@@ -859,10 +872,25 @@ prompt_refresh <- function(label, detail = NULL) {
   }
 }
 
-resolve_stale_decision <- function(label, opts, detail = NULL) {
-  if (isTRUE(opts$refresh_data)) return(TRUE)
-  if (isTRUE(opts$use_cache)) return(FALSE)
-  prompt_refresh(label, detail = detail)
+resolve_stale_decision <- function(label,
+                                   opts,
+                                   detail = NULL,
+                                   operation = "deployment",
+                                   quiet = FALSE) {
+  verb <- operation_verb(operation)
+  if (isTRUE(opts$refresh_data)) {
+    if (!isTRUE(quiet)) {
+      cat(sprintf("Refreshing stale %s before %s (--refresh-data).\n", label, verb))
+    }
+    return(TRUE)
+  }
+  if (isTRUE(opts$use_cache)) {
+    if (!isTRUE(quiet)) {
+      cat(sprintf("Using cached stale %s for %s (--use-cache).\n", label, verb))
+    }
+    return(FALSE)
+  }
+  prompt_refresh(label, detail = detail, operation = operation)
 }
 
 copy_source_file <- function(item, data_sources) {
@@ -885,7 +913,11 @@ run_recipe <- function(recipe) {
   sys.source(recipe$script, envir = env)
 }
 
-prepare_deployment_data <- function(selected, data_sources, opts, quiet = FALSE) {
+prepare_deployment_data <- function(selected,
+                                    data_sources,
+                                    opts,
+                                    quiet = FALSE,
+                                    operation = "deployment") {
   prep_plan <- build_preparation_plan(selected, data_sources, planned = TRUE)
   errors <- prep_errors(prep_plan)
   if (length(errors)) {
@@ -901,7 +933,9 @@ prepare_deployment_data <- function(selected, data_sources, opts, quiet = FALSE)
       direct_refresh_decisions[[item$path]] <- resolve_stale_decision(
         item$path,
         opts,
-        detail = stale_detail_direct(item)
+        detail = stale_detail_direct(item),
+        operation = operation,
+        quiet = quiet
       )
     }
   }
@@ -912,7 +946,9 @@ prepare_deployment_data <- function(selected, data_sources, opts, quiet = FALSE)
       recipe_refresh_decisions[[item$name]] <- resolve_stale_decision(
         item$name,
         opts,
-        detail = stale_detail_recipe(item)
+        detail = stale_detail_recipe(item),
+        operation = operation,
+        quiet = quiet
       )
     }
   }
@@ -945,7 +981,13 @@ prepare_deployment_data <- function(selected, data_sources, opts, quiet = FALSE)
     if (identical(status$status, "stale-output")) {
       should_run <- recipe_refresh_decisions[[recipe$name]]
       if (is.null(should_run)) {
-        should_run <- resolve_stale_decision(recipe$name, opts, detail = stale_detail_recipe(status))
+        should_run <- resolve_stale_decision(
+          recipe$name,
+          opts,
+          detail = stale_detail_recipe(status),
+          operation = operation,
+          quiet = quiet
+        )
       }
     }
     if (isTRUE(should_run)) {
@@ -1342,7 +1384,7 @@ preview_targets <- function(selected, data_sources, opts, quiet = FALSE) {
   require_namespace("shiny", "run local previews")
 
   confirm_large_preview(selected, opts)
-  prepare_deployment_data(selected, data_sources, opts, quiet = quiet)
+  prepare_deployment_data(selected, data_sources, opts, quiet = quiet, operation = "preview")
 
   ports <- choose_preview_ports(length(selected), opts$preview_host, opts$preview_port)
   items <- list()
@@ -1503,7 +1545,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE), quiet = FALSE) {
     )))
   }
 
-  prepare_deployment_data(selected, data_sources, opts, quiet = quiet)
+  prepare_deployment_data(selected, data_sources, opts, quiet = quiet, operation = "deployment")
 
   results <- vector("list", length(selected))
   temp_dirs <- character()

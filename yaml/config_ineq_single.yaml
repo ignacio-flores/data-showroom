@@ -60,7 +60,7 @@ fixed_selectors:
 loose_selectors:
   Data_Type:
     label: "Data type"
-    type: "checkbox"
+    type: "checkbox"  
   legend:
     label: "Source"
     type: "checkbox"
