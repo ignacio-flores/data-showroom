@@ -43,6 +43,13 @@ format_bytes <- function(bytes) {
   }
 }
 
+format_time <- function(time) {
+  if (is.null(time) || length(time) == 0 || is.na(time)) {
+    return("missing")
+  }
+  format(time, "%Y-%m-%d %H:%M:%S %Z")
+}
+
 usage <- function() {
   cat(
     paste(
@@ -503,11 +510,14 @@ newer_than <- function(left, right) {
 analyze_direct_file <- function(path, data_sources) {
   mapping <- data_sources$files[[path]]
   exists_local <- file.exists(path)
+  local_mtime <- file_mtime(path)
 
   if (is.null(mapping)) {
     return(list(
       path = path,
       source = NA_character_,
+      local_mtime = local_mtime,
+      source_mtime = as.POSIXct(NA),
       status = if (exists_local) "local-only" else "missing",
       action = if (exists_local) "use local" else "missing source mapping",
       error = !exists_local
@@ -515,10 +525,13 @@ analyze_direct_file <- function(path, data_sources) {
   }
 
   source_exists <- file.exists(mapping$source)
+  source_mtime <- file_mtime(mapping$source)
   if (!source_exists) {
     return(list(
       path = path,
       source = mapping$source,
+      local_mtime = local_mtime,
+      source_mtime = source_mtime,
       status = "missing-source",
       action = "cannot prepare",
       error = TRUE
@@ -529,18 +542,20 @@ analyze_direct_file <- function(path, data_sources) {
     return(list(
       path = path,
       source = mapping$source,
+      local_mtime = local_mtime,
+      source_mtime = source_mtime,
       status = "missing-cache",
       action = "copy source",
       error = FALSE
     ))
   }
 
-  source_mtime <- file_mtime(mapping$source)
-  local_mtime <- file_mtime(path)
   if (newer_than(source_mtime, local_mtime)) {
     return(list(
       path = path,
       source = mapping$source,
+      local_mtime = local_mtime,
+      source_mtime = source_mtime,
       status = "stale-cache",
       action = "needs refresh decision",
       error = FALSE
@@ -550,6 +565,8 @@ analyze_direct_file <- function(path, data_sources) {
   list(
     path = path,
     source = mapping$source,
+    local_mtime = local_mtime,
+    source_mtime = source_mtime,
     status = "up-to-date",
     action = "reuse cache",
     error = FALSE
@@ -567,6 +584,14 @@ input_mtime_for_recipe <- function(path, data_sources, planned = FALSE) {
 analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
   outputs_exist <- file.exists(recipe$outputs)
   missing_outputs <- recipe$outputs[!outputs_exist]
+  input_mtimes <- vapply(
+    recipe$inputs,
+    function(path) input_mtime_for_recipe(path, data_sources, planned = planned),
+    as.POSIXct(NA)
+  )
+  output_mtimes <- vapply(recipe$outputs, file_mtime, as.POSIXct(NA))
+  newest_input <- if (all(is.na(input_mtimes))) as.POSIXct(NA) else max(input_mtimes, na.rm = TRUE)
+  oldest_output <- if (all(is.na(output_mtimes))) as.POSIXct(NA) else min(output_mtimes, na.rm = TRUE)
   input_missing <- recipe$inputs[!vapply(recipe$inputs, function(path) {
     mapping <- data_sources$files[[path]]
     file.exists(path) || (!is.null(mapping) && file.exists(mapping$source))
@@ -581,7 +606,9 @@ analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
       status = "blocked",
       action = "missing recipe input",
       error = TRUE,
-      missing_inputs = input_missing
+      missing_inputs = input_missing,
+      newest_input_mtime = newest_input,
+      oldest_output_mtime = oldest_output
     ))
   }
 
@@ -594,18 +621,11 @@ analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
       status = "missing-output",
       action = "run recipe",
       error = FALSE,
-      missing_inputs = character()
+      missing_inputs = character(),
+      newest_input_mtime = newest_input,
+      oldest_output_mtime = oldest_output
     ))
   }
-
-  input_mtimes <- vapply(
-    recipe$inputs,
-    function(path) input_mtime_for_recipe(path, data_sources, planned = planned),
-    as.POSIXct(NA)
-  )
-  output_mtimes <- vapply(recipe$outputs, file_mtime, as.POSIXct(NA))
-  newest_input <- max(input_mtimes, na.rm = TRUE)
-  oldest_output <- min(output_mtimes, na.rm = TRUE)
 
   if (newer_than(newest_input, oldest_output)) {
     return(list(
@@ -616,7 +636,9 @@ analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
       status = "stale-output",
       action = "needs rebuild decision",
       error = FALSE,
-      missing_inputs = character()
+      missing_inputs = character(),
+      newest_input_mtime = newest_input,
+      oldest_output_mtime = oldest_output
     ))
   }
 
@@ -628,7 +650,9 @@ analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
     status = "up-to-date",
     action = "reuse artifacts",
     error = FALSE,
-    missing_inputs = character()
+    missing_inputs = character(),
+    newest_input_mtime = newest_input,
+    oldest_output_mtime = oldest_output
   )
 }
 
@@ -722,23 +746,55 @@ print_preparation_plan <- function(prep_plan, data_sources, dry_run = FALSE) {
 
   stale <- stale_items(prep_plan)
   if (dry_run && (length(stale$direct) || length(stale$recipes))) {
-    cat("  stale cache note: actual non-interactive deploy requires --refresh-data or --use-cache.\n")
+    cat("  stale cache note: actual deploy will prompt unless --refresh-data or --use-cache is supplied.\n")
   }
 }
 
-prompt_refresh <- function(label) {
-  answer <- readline(sprintf("Refresh stale %s? [y/N] ", label))
-  tolower(trimws(answer)) %in% c("y", "yes")
+stale_detail_direct <- function(item) {
+  sprintf(
+    "  local:  %s (%s)\n  source: %s (%s)",
+    item$path,
+    format_time(item$local_mtime),
+    item$source,
+    format_time(item$source_mtime)
+  )
 }
 
-resolve_stale_decision <- function(label, opts) {
+stale_detail_recipe <- function(item) {
+  sprintf(
+    "  outputs: %s (oldest %s)\n  inputs:  %s (newest %s)",
+    paste(item$outputs, collapse = ", "),
+    format_time(item$oldest_output_mtime),
+    paste(item$inputs, collapse = ", "),
+    format_time(item$newest_input_mtime)
+  )
+}
+
+prompt_refresh <- function(label, detail = NULL) {
+  if (!is.null(detail) && nzchar(detail)) {
+    cat(detail, "\n", sep = "")
+  }
+  repeat {
+    cat(sprintf("Refresh stale %s? [y/N] ", label))
+    flush.console()
+    answer <- readLines(file("stdin"), n = 1, warn = FALSE)
+    if (!length(answer)) {
+      stop(sprintf(
+        "No stdin input available to decide stale %s. Re-run with --refresh-data or --use-cache.",
+        label
+      ))
+    }
+    normalized <- tolower(trimws(answer[[1]]))
+    if (normalized %in% c("y", "yes")) return(TRUE)
+    if (normalized %in% c("", "n", "no")) return(FALSE)
+    cat("Please answer y or n.\n")
+  }
+}
+
+resolve_stale_decision <- function(label, opts, detail = NULL) {
   if (isTRUE(opts$refresh_data)) return(TRUE)
   if (isTRUE(opts$use_cache)) return(FALSE)
-  if (interactive()) return(prompt_refresh(label))
-  stop(sprintf(
-    "Stale cached data requires a decision for %s. Re-run with --refresh-data or --use-cache.",
-    label
-  ))
+  prompt_refresh(label, detail = detail)
 }
 
 copy_source_file <- function(item, data_sources) {
@@ -774,14 +830,22 @@ prepare_deployment_data <- function(selected, data_sources, opts, quiet = FALSE)
   direct_refresh_decisions <- list()
   for (item in prep_plan$direct) {
     if (identical(item$status, "stale-cache")) {
-      direct_refresh_decisions[[item$path]] <- resolve_stale_decision(item$path, opts)
+      direct_refresh_decisions[[item$path]] <- resolve_stale_decision(
+        item$path,
+        opts,
+        detail = stale_detail_direct(item)
+      )
     }
   }
 
   recipe_refresh_decisions <- list()
   for (item in prep_plan$recipes) {
     if (identical(item$status, "stale-output")) {
-      recipe_refresh_decisions[[item$name]] <- resolve_stale_decision(item$name, opts)
+      recipe_refresh_decisions[[item$name]] <- resolve_stale_decision(
+        item$name,
+        opts,
+        detail = stale_detail_recipe(item)
+      )
     }
   }
 
@@ -813,7 +877,7 @@ prepare_deployment_data <- function(selected, data_sources, opts, quiet = FALSE)
     if (identical(status$status, "stale-output")) {
       should_run <- recipe_refresh_decisions[[recipe$name]]
       if (is.null(should_run)) {
-        should_run <- resolve_stale_decision(recipe$name, opts)
+        should_run <- resolve_stale_decision(recipe$name, opts, detail = stale_detail_recipe(status))
       }
     }
     if (isTRUE(should_run)) {
