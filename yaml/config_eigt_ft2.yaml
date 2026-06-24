@@ -2,6 +2,14 @@
 data.file: "data/eigt_wide.qs"
 data.wrangler: "custom_code/data_prep_eigt_ft.R"
 
+value_transform:
+  type: "currency_columns"
+  bundle.file: "data/currency_conversion_bundle.qs"
+  currency_selector: "xrate_lab"
+  columns:
+    - "adjlbo"
+  scale_divisor: 1000000
+
 #define plot type 
 gopts: "step"
  
@@ -9,7 +17,7 @@ gopts: "step"
 axis_vars: 
   x_axis: 
     var: "adjlbo"
-    label: "Bracket's Lower bound (2023 USD Million, inflation adjusted)"
+    label: "Bracket's lower bound (millions, selected currency)"
     breaks: 10 
   y_axis: 
     var: "adjmrt"
@@ -41,6 +49,9 @@ fixed_selectors:
     label: "Tax type"
     selected: "Inheritance Tax for Spouse"
     type: "checkbox"  
+  xrate_lab:
+    label: "Currency"
+    selected: "USD (2023 prices)"
 
 
 #define the columns of the data table widget 
@@ -51,7 +62,8 @@ dt.cols:
   d2_label: "Tax type"
   d5_code: "Bracket"
   adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted 2023 USD Millions"
+  xrate_lab: "Currency"
+  adjlbo: "Lower bound (millions, selected currency)"
 
 #define the information shown in the tooltip
 tooltip_vars:
@@ -59,7 +71,8 @@ tooltip_vars:
   year: "Year:"
   d2_label: "Tax type:"
   adjmrt: "Marginal tax rate"
-  adjlbo: "Lower bound in adjusted 2023 USD Millions"
+  xrate_lab: "Currency:"
+  adjlbo: "Lower bound (millions):"
 
 #other options 
 download.button: True

@@ -34,12 +34,20 @@ createViz <- function(graph = NULL,
   
   tic("loading and preliminary work")
     require(data.table)
-    value_transform_types <- c("currency_unit", "topo_currency_unit")
-    is_currency_unit_transform <- !is.null(value_transform) &&
-      !is.null(value_transform$type) &&
-      value_transform$type %in% value_transform_types
+    value_transform_type <- if (!is.null(value_transform) &&
+        !is.null(value_transform$type)) value_transform$type else NULL
+    currency_unit_transform_types <- c("currency_unit", "topo_currency_unit")
+    currency_columns_transform_types <- c("currency_columns")
+    is_currency_unit_transform <- !is.null(value_transform_type) &&
+      value_transform_type %in% currency_unit_transform_types
+    is_currency_columns_transform <- !is.null(value_transform_type) &&
+      value_transform_type %in% currency_columns_transform_types
     if (is_currency_unit_transform) {
       keep.col <- unique(c(keep.col, "GEO", "year", "value", "d4_concept_lab"))
+    } else if (is_currency_columns_transform) {
+      transform_columns <- unique(as.character(unlist(value_transform$columns, use.names = FALSE)))
+      transform_columns <- transform_columns[nzchar(transform_columns)]
+      keep.col <- unique(c(keep.col, "GEO", "year", transform_columns))
     }
     source("modules/preliminary_checks.R", local = TRUE)
     source("modules/define_varlists.R", local = TRUE)
@@ -51,6 +59,7 @@ createViz <- function(graph = NULL,
     value_transform_state <- NULL
     if (is_currency_unit_transform) {
       value_transform_state <- list(
+        type = value_transform_type,
         bundle = load_value_transform_bundle(value_transform$bundle.file),
         currency_selector = value_transform$currency_selector %||% "xrate_lab",
         unit_selector = value_transform$unit_selector %||% "pop_lab",
@@ -65,6 +74,24 @@ createViz <- function(graph = NULL,
         value_transform,
         value_transform_state$bundle
       )
+    } else if (is_currency_columns_transform) {
+      value_transform_state <- list(
+        type = value_transform_type,
+        bundle = load_value_transform_bundle(
+          value_transform$bundle.file,
+          require_units = FALSE
+        ),
+        currency_selector = value_transform$currency_selector %||% "xrate_lab",
+        columns = value_transform$columns,
+        scale_divisor = value_transform$scale_divisor %||% 1
+      )
+      fixed_selectors <- inject_currency_selector_choices(
+        fixed_selectors,
+        value_transform,
+        value_transform_state$bundle
+      )
+    }
+    if (!is.null(value_transform_state)) {
       if (!is.null(loose_selectors)) {
         all_selectors <- c(fixed_selectors, loose_selectors)
       } else {
@@ -343,30 +370,51 @@ createViz <- function(graph = NULL,
         value_transform_state$currency_selector,
         fallback = value_transform_state$bundle$currency_choices[[1]]
       )
-      unit_label <- value_transform_selector_value(
-        input,
-        fixed_selectors,
-        value_transform_state$unit_selector,
-        fallback = value_transform_state$bundle$unit_choices[[1]]
-      )
-      cache_key <- paste(
-        currency_label,
-        unit_label,
-        value_transform_state$debt_negative,
-        sep = "\r"
-      )
+      if (identical(value_transform_state$type, "currency_columns")) {
+        cache_key <- paste(
+          value_transform_state$type,
+          currency_label,
+          paste(unlist(value_transform_state$columns, use.names = FALSE), collapse = "\v"),
+          value_transform_state$scale_divisor,
+          sep = "\r"
+        )
+      } else {
+        unit_label <- value_transform_selector_value(
+          input,
+          fixed_selectors,
+          value_transform_state$unit_selector,
+          fallback = value_transform_state$bundle$unit_choices[[1]]
+        )
+        cache_key <- paste(
+          currency_label,
+          unit_label,
+          value_transform_state$debt_negative,
+          sep = "\r"
+        )
+      }
 
       if (exists(cache_key, envir = value_transform_cache, inherits = FALSE)) {
         return(get(cache_key, envir = value_transform_cache, inherits = FALSE))
       }
 
-      materialized <- materialize_currency_unit(
-        data,
-        value_transform_state$bundle,
-        currency_label = currency_label,
-        unit_label = unit_label,
-        debt_negative = value_transform_state$debt_negative
-      )
+      materialized <- if (identical(value_transform_state$type, "currency_columns")) {
+        materialize_currency_columns(
+          data,
+          value_transform_state$bundle,
+          currency_label = currency_label,
+          columns = value_transform_state$columns,
+          scale_divisor = value_transform_state$scale_divisor,
+          currency_selector = value_transform_state$currency_selector
+        )
+      } else {
+        materialize_currency_unit(
+          data,
+          value_transform_state$bundle,
+          currency_label = currency_label,
+          unit_label = unit_label,
+          debt_negative = value_transform_state$debt_negative
+        )
+      }
       assign(cache_key, materialized, envir = value_transform_cache)
       materialized
     })

@@ -122,6 +122,7 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/topo_base.qs`
 - `data/topo_conversion_bundle.qs`
 - `data/topo_metadata_bundle.qs`
+- `data/currency_conversion_bundle.qs`
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
 - `data/eigt_wm_ready.qs`
@@ -230,6 +231,7 @@ Dataset-specific transformations live in `custom_code/` and are sourced after th
 
 - [`custom_code/dictionary_loader_ineq.R`](custom_code/dictionary_loader_ineq.R): enriches inequality data with source metadata from the dictionary workbook
 - [`custom_code/prepare_topo_bundle.R`](custom_code/prepare_topo_bundle.R): builds the compact lazy topo base, conversion bundle, and metadata bundle used by `topo_*` presets
+- [`custom_code/prepare_currency_bundle.R`](custom_code/prepare_currency_bundle.R): builds the shared CPI/exchange-rate bundle used by lazy currency-column transforms
 
 ### Supported data/model flow
 
@@ -250,6 +252,16 @@ artifacts with:
 ```bash
 Rscript custom_code/prepare_topo_bundle.R
 Rscript custom_code/tests/check_topo_lazy_equivalence.R
+```
+
+EIGT fiscal-threshold presets use `value_transform: currency_columns` to
+materialize selected-currency bracket bounds at runtime from
+`data/currency_conversion_bundle.qs`. Rebuild and check that ignored artifact
+with:
+
+```bash
+Rscript custom_code/prepare_currency_bundle.R
+Rscript custom_code/tests/check_eigt_ft_currency_equivalence.R
 ```
 
 ## Deployment

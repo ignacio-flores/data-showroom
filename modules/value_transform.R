@@ -65,9 +65,16 @@ currency_unit_required_supplementary_vars <- function() {
   ))
 }
 
-load_value_transform_bundle <- function(bundle_file) {
+currency_columns_required_supplementary_vars <- function() {
+  unique(c(
+    "inyixx",
+    stats::na.omit(currency_unit_currency_specs()$xrate_var)
+  ))
+}
+
+load_value_transform_bundle <- function(bundle_file, require_units = TRUE) {
   if (is.null(bundle_file) || !nzchar(bundle_file)) {
-    stop("value_transform$bundle.file is required for currency_unit transforms.")
+    stop("value_transform$bundle.file is required for currency transforms.")
   }
   if (!file.exists(bundle_file)) {
     stop(
@@ -76,8 +83,10 @@ load_value_transform_bundle <- function(bundle_file) {
     )
   }
   bundle <- qs::qread(bundle_file)
-  required <- c("currency_choices", "unit_choices", "cpi", "xrates_current",
-                "xrates_2023", "denominators")
+  required <- c("currency_choices", "cpi", "xrates_current", "xrates_2023")
+  if (isTRUE(require_units)) {
+    required <- c(required, "unit_choices", "denominators")
+  }
   missing <- setdiff(required, names(bundle))
   if (length(missing) > 0) {
     stop("Value transform bundle is missing: ", paste(missing, collapse = ", "))
@@ -85,18 +94,30 @@ load_value_transform_bundle <- function(bundle_file) {
   bundle
 }
 
-inject_value_transform_selector_choices <- function(fixed_selectors, value_transform, bundle) {
+inject_currency_selector_choices <- function(fixed_selectors, value_transform, bundle) {
   currency_selector <- value_transform$currency_selector %||% "xrate_lab"
-  unit_selector <- value_transform$unit_selector %||% "pop_lab"
 
   if (!currency_selector %in% names(fixed_selectors)) {
     fixed_selectors[[currency_selector]] <- list(label = "Currency")
   }
+
+  fixed_selectors[[currency_selector]]$choices <- bundle$currency_choices
+  fixed_selectors
+}
+
+inject_value_transform_selector_choices <- function(fixed_selectors, value_transform, bundle) {
+  fixed_selectors <- inject_currency_selector_choices(
+    fixed_selectors,
+    value_transform,
+    bundle
+  )
+
+  unit_selector <- value_transform$unit_selector %||% "pop_lab"
+
   if (!unit_selector %in% names(fixed_selectors)) {
     fixed_selectors[[unit_selector]] <- list(label = "Unit")
   }
 
-  fixed_selectors[[currency_selector]]$choices <- bundle$currency_choices
   fixed_selectors[[unit_selector]]$choices <- bundle$unit_choices
   fixed_selectors
 }
@@ -192,6 +213,91 @@ materialize_currency_unit <- function(data, bundle, currency_label, unit_label,
   as.data.frame(dt)
 }
 
+materialize_currency_columns <- function(data, bundle, currency_label, columns,
+                                         scale_divisor = 1,
+                                         currency_selector = "xrate_lab") {
+  currency_specs <- currency_unit_currency_specs()
+  currency_spec <- currency_specs[currency_specs$label == currency_label, , drop = FALSE]
+  if (nrow(currency_spec) != 1) {
+    stop("Unknown currency label: ", currency_label)
+  }
+
+  columns <- unique(as.character(unlist(columns, use.names = FALSE)))
+  columns <- columns[nzchar(columns)]
+  if (length(columns) == 0) {
+    stop("value_transform$columns must list at least one monetary column.")
+  }
+
+  missing_columns <- setdiff(columns, names(data))
+  if (length(missing_columns) > 0) {
+    stop("Currency transform columns not found: ", paste(missing_columns, collapse = ", "))
+  }
+
+  missing_keys <- setdiff(c("GEO", "year"), names(data))
+  if (length(missing_keys) > 0) {
+    stop("Currency column transforms require columns: ", paste(missing_keys, collapse = ", "))
+  }
+
+  scale_divisor <- if (is.null(scale_divisor)) 1 else as.numeric(scale_divisor)
+  if (length(scale_divisor) != 1 || is.na(scale_divisor) || scale_divisor <= 0) {
+    stop("value_transform$scale_divisor must be a positive number.")
+  }
+
+  dt <- data.table::as.data.table(data.table::copy(data))
+  dt[, .currency_row_order := .I]
+  dt[, .currency_year := suppressWarnings(as.numeric(year))]
+  dt[, (columns) := lapply(.SD, function(x) suppressWarnings(as.numeric(x))),
+     .SDcols = columns]
+  dt[, (currency_selector) := currency_label]
+
+  if (identical(currency_spec$price[[1]], "real")) {
+    cpi <- data.table::as.data.table(bundle$cpi)
+    cpi[, .currency_year := suppressWarnings(as.numeric(year))]
+    cpi <- cpi[, .(GEO, .currency_year, cpi)]
+    dt <- merge(dt, cpi, by = c("GEO", ".currency_year"), all.x = TRUE, sort = FALSE)
+    dt[, (columns) := lapply(.SD, function(x) {
+      data.table::fifelse(!is.na(x) & !is.na(cpi) & cpi > 0, x / cpi, NA_real_)
+    }), .SDcols = columns]
+    dt[, cpi := NULL]
+  }
+
+  xrate_var <- currency_spec$xrate_var[[1]]
+  xrate_lookup <- currency_spec$xrate_lookup[[1]]
+  if (!is.na(xrate_var) && !identical(xrate_lookup, "none")) {
+    selected_xrate_var <- xrate_var
+    xrates <- if (identical(xrate_lookup, "current")) {
+      data.table::as.data.table(bundle$xrates_current)
+    } else {
+      data.table::as.data.table(bundle$xrates_2023)
+    }
+    xrates <- xrates[xrate_var == selected_xrate_var]
+    xrates[, xrate_var := NULL]
+
+    if (identical(xrate_lookup, "current")) {
+      xrates[, .currency_year := suppressWarnings(as.numeric(year))]
+      xrates[, year := NULL]
+      dt <- merge(dt, xrates, by = c("GEO", ".currency_year"), all.x = TRUE, sort = FALSE)
+    } else {
+      dt <- merge(dt, xrates, by = "GEO", all.x = TRUE, sort = FALSE)
+    }
+
+    dt[, (columns) := lapply(.SD, function(x) {
+      data.table::fifelse(!is.na(x) & !is.na(xrate) & xrate > 0, x / xrate, NA_real_)
+    }), .SDcols = columns]
+    dt[, xrate := NULL]
+  }
+
+  if (!identical(scale_divisor, 1)) {
+    dt[, (columns) := lapply(.SD, function(x) x / scale_divisor),
+       .SDcols = columns]
+  }
+
+  data.table::setorderv(dt, ".currency_row_order")
+  dt[, c(".currency_row_order", ".currency_year") := NULL]
+
+  as.data.frame(dt)
+}
+
 `%||%` <- function(x, y) {
   if (is.null(x)) y else x
 }
@@ -200,6 +306,7 @@ materialize_currency_unit <- function(data, bundle, currency_label, unit_label,
 topo_currency_specs <- currency_unit_currency_specs
 topo_unit_specs <- currency_unit_unit_specs
 topo_required_supplementary_vars <- currency_unit_required_supplementary_vars
+topo_currency_columns_required_supplementary_vars <- currency_columns_required_supplementary_vars
 topo_load_conversion_bundle <- load_value_transform_bundle
 topo_inject_value_selector_choices <- inject_value_transform_selector_choices
 topo_selector_value <- value_transform_selector_value
