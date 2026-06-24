@@ -4,6 +4,8 @@ library(dplyr)
 library(qs)
 library(stringr)
 
+source("custom_code/helpers/eigt_tax_kinship.R")
+
 input_file <- "data/eigt_warehouse_meta_v2.csv"
 output_file <- "data/eigt_wm_ready.qs"
 
@@ -141,6 +143,7 @@ data <- data %>%
     value = summarise_map_value(value, d4_concept_lab),
     .groups = "drop"
   ) %>%
+  add_eigt_tax_kinship("d2_sector_lab") %>%
   mutate(
     iso3 = countrycode(
       dplyr::recode(GEO, UK = "GB", XK = NA_character_),

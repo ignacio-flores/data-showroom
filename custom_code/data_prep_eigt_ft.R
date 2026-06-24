@@ -1,6 +1,8 @@
 library(dplyr)
 library(zoo)
 
+source("custom_code/helpers/eigt_tax_kinship.R")
+
 # Fill step schedules, remove zero-rate schedules, and keep year selector-friendly.
 # Currency conversion for bracket bounds is handled by value_transform at runtime.
 # Right-end horizontal extension is handled in PlotServer step logic.
@@ -14,4 +16,5 @@ data <- data %>%
   mutate(`_sum_rate` = sum(adjmrt, na.rm = TRUE)) %>%
   filter(`_sum_rate` != 0) %>%
   ungroup() %>%
+  add_eigt_tax_kinship("d2_label") %>%
   select(-`_sum_rate`)

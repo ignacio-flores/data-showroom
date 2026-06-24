@@ -1,5 +1,7 @@
 library(dplyr)
 
+source("custom_code/helpers/eigt_tax_kinship.R")
+
 first_non_na <- function(x) {
   vals <- x[!is.na(x)]
   if (length(vals) == 0) {
@@ -29,4 +31,5 @@ tax_df <- data %>%
 
 data <- tax_df %>%
   left_join(revenue_df, by = join_keys) %>%
+  add_eigt_tax_kinship("d2_label") %>%
   arrange(GEO_long, d2_label, year)

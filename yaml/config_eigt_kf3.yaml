@@ -4,6 +4,7 @@ data.wrangler: "custom_code/data_prep_eigt3.R"
 keep.col:
   - "GEO"
   - "GEO_long"
+  - "d2_sector_lab"
   - "d4_concept_lab"
   - "value"
 
@@ -46,22 +47,30 @@ fixed_selectors:
   year:
     label: "Year"
     selected: 2022
+  tax_type:
+    label: "Type of Tax"
+    selected: "Gift tax"
+    choices:
+      - "Gift tax"
+      - "Inheritance tax"
+      - "Estate tax"
 
 loose_selectors:
   geo_long:
     label: "Country"
     type: "checkbox"
-  d2_sector_lab:
-    label: "Type of Tax"
-    type: "selector" 
-    selected: "Gift Tax for Spouse"   
+  kinship:
+    label: "Kinship"
+    type: "selector"
+    selected: "Spouse"
 
 
 #define the columns of the data table widget
 dt.cols:
   geo_long: "Country"
   year: "Year"
-  d2_sector_lab: "Type of Tax"
+  tax_type: "Type of Tax"
+  kinship: "Kinship"
   top_marginal_rate: "Top Marginal Rates"
   exemption_threshold: "Exemption Thresholds (2023 USD millions)"
   total_revenue_from_tax: "EIG Tax Revenue (2023 USD millions)"
@@ -72,7 +81,8 @@ dt.cols:
 tooltip_vars:
   geo_long: "Country:"
   year: "Year:"
-  d2_sector_lab: "Type of Tax:"
+  tax_type: "Type of Tax:"
+  kinship: "Kinship:"
   top_marginal_rate: "Top Marginal Rates:"
   exemption_threshold: "Exemption Thresholds (2023 USD millions):"
   total_revenue_from_tax: "EIG Tax Revenue (2023 USD millions):"

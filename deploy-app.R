@@ -43,6 +43,12 @@ require_namespace <- function(package, purpose) {
   }
 }
 
+read_stdin_line <- function() {
+  con <- file("stdin")
+  on.exit(close(con), add = TRUE)
+  readLines(con, n = 1, warn = FALSE)
+}
+
 format_bytes <- function(bytes) {
   if (is.na(bytes)) return("unknown")
   units <- c("B", "KB", "MB", "GB")
@@ -63,7 +69,7 @@ format_time <- function(time) {
   if (is.null(time) || length(time) == 0 || is.na(time)) {
     return("missing")
   }
-  format(time, "%Y-%m-%d %H:%M:%S %Z")
+  format(as.POSIXct(time, origin = "1970-01-01"), "%Y-%m-%d %H:%M:%S %Z")
 }
 
 usage <- function() {
@@ -694,12 +700,11 @@ input_mtime_for_recipe <- function(path, data_sources, planned = FALSE) {
 analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
   outputs_exist <- file.exists(recipe$outputs)
   missing_outputs <- recipe$outputs[!outputs_exist]
-  input_mtimes <- vapply(
+  input_mtimes <- do.call(c, lapply(
     recipe$inputs,
-    function(path) input_mtime_for_recipe(path, data_sources, planned = planned),
-    as.POSIXct(NA)
-  )
-  output_mtimes <- vapply(recipe$outputs, file_mtime, as.POSIXct(NA))
+    function(path) input_mtime_for_recipe(path, data_sources, planned = planned)
+  ))
+  output_mtimes <- do.call(c, lapply(recipe$outputs, file_mtime))
   newest_input <- if (all(is.na(input_mtimes))) as.POSIXct(NA) else max(input_mtimes, na.rm = TRUE)
   oldest_output <- if (all(is.na(output_mtimes))) as.POSIXct(NA) else min(output_mtimes, na.rm = TRUE)
   input_missing <- recipe$inputs[!vapply(recipe$inputs, function(path) {
@@ -899,7 +904,7 @@ prompt_refresh <- function(label, detail = NULL, operation = "deployment") {
   repeat {
     cat(sprintf("Refresh stale %s before %s? [y/N] ", label, verb))
     flush.console()
-    answer <- readLines(file("stdin"), n = 1, warn = FALSE)
+    answer <- read_stdin_line()
     if (!length(answer)) {
       stop(sprintf(
         "No stdin input available to decide stale %s before %s. Re-run with --refresh-data or --use-cache.",
@@ -1367,23 +1372,33 @@ confirm_large_preview <- function(selected, opts, threshold = 5L) {
     return(invisible(TRUE))
   }
 
-  if (!interactive()) {
+  if (!isatty(stdin())) {
     usage_error(sprintf(
-      "--preview matched %s targets. Re-run with --yes to open them all, or narrow the selector.",
+      "--preview matched %s targets. Re-run with --yes to start them all, or narrow the selector.",
       count
     ))
   }
 
+  prompt <- if (isTRUE(opts$launch_browser)) {
+    sprintf("Start %s preview apps and open browser tabs? [y/N] ", count)
+  } else {
+    sprintf("Start %s preview apps? [y/N] ", count)
+  }
+
   repeat {
-    cat(sprintf("Open %s preview apps in browser tabs? [y/N] ", count))
+    cat(prompt)
     flush.console()
-    answer <- readLines(file("stdin"), n = 1, warn = FALSE)
+    answer <- read_stdin_line()
     if (!length(answer)) {
-      stop("Preview cancelled.")
+      cat("Preview cancelled. No preview apps were started.\n")
+      return(invisible(FALSE))
     }
     normalized <- tolower(trimws(answer[[1]]))
     if (normalized %in% c("y", "yes")) return(invisible(TRUE))
-    if (normalized %in% c("", "n", "no")) stop("Preview cancelled.")
+    if (normalized %in% c("", "n", "no")) {
+      cat("Preview cancelled. No preview apps were started.\n")
+      return(invisible(FALSE))
+    }
     cat("Please answer y or n.\n")
   }
 }
@@ -1422,10 +1437,16 @@ wait_for_preview_processes <- function(items) {
 }
 
 preview_targets <- function(selected, data_sources, opts, quiet = FALSE) {
+  if (!isTRUE(confirm_large_preview(selected, opts))) {
+    return(invisible(list(
+      status = 0L,
+      previews = list(),
+      cancelled = TRUE
+    )))
+  }
+
   require_namespace("processx", "run local previews")
   require_namespace("shiny", "run local previews")
-
-  confirm_large_preview(selected, opts)
   prepare_deployment_data(selected, data_sources, opts, quiet = quiet, operation = "preview")
 
   ports <- choose_preview_ports(length(selected), opts$preview_host, opts$preview_port)

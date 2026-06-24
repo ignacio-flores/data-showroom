@@ -19,7 +19,7 @@ config <- yaml::read_yaml(config_path)
 env <- new.env(parent = globalenv())
 invisible(list2env(config, envir = env))
 
-for (name in c("facet_var", "facet_label_var", "loose_selectors")) {
+for (name in c("facet_var", "facet_label_var", "loose_selectors", "new.cols")) {
   if (!exists(name, envir = env, inherits = FALSE)) {
     assign(name, NULL, envir = env)
   }

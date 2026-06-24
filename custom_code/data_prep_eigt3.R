@@ -2,6 +2,8 @@ library(dplyr)
 library(janitor)
 library(tidyr)
 
+source("custom_code/helpers/eigt_tax_kinship.R")
+
 first_non_na <- function(x) {
   vals <- x[!is.na(x)]
   if (length(vals) == 0) {
@@ -91,4 +93,5 @@ if (length(monetary_cols) > 0) {
 }
 
 data <- data %>%
+  add_eigt_tax_kinship("d2_sector_lab") %>%
   arrange(year, geo_long, d2_sector_lab)

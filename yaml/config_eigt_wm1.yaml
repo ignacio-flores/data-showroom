@@ -10,7 +10,8 @@ color:
   style: "rcartocolor::BluGrn"
   group: 
     - "iso3"
-    - "d2_sector_lab"
+    - "tax_type"
+    - "kinship"
     
 axis_vars:
   y_axis: 
@@ -26,7 +27,7 @@ fixed_selectors:
     selected: 2020
   d4_concept_lab: 
     label: "Select Tax Feature"
-    selected: "Total Revenue from Tax as % of Gross Domestic Product"
+    selected: "Top Marginal Rate"
     choices:
       - "Tax Indicator"
       - "Top Marginal Rate"
@@ -55,12 +56,19 @@ fixed_selectors:
     choices:
       - "Yes"
       - "No"
+  tax_type:
+    label: "Type of tax"
+    selected: "Estate tax"
+    choices:
+      - "Gift tax"
+      - "Inheritance tax"
+      - "Estate tax"
 
 loose_selectors:
-  d2_sector_lab:
-    label: "Type of Tax"
+  kinship:
+    label: "Kinship"
     type: "selector"
-    selected: "Estate Tax for Everybody"
+    selected: "Everybody"
 
   
   
@@ -70,13 +78,15 @@ dt.cols:
   GEO: "Country code"
   year: "Year"
   d4_concept_lab: "Variable"
-  d2_sector_lab: "Type of tax"
+  tax_type: "Type of tax"
+  kinship: "Kinship"
   xrate_lab: "Currency & price adjustment"
   value: "Value"
   
 tooltip_vars:
   d4_concept_lab: "Tax feature:"
-  d2_sector_lab: "Type of tax:"
+  tax_type: "Type of tax:"
+  kinship: "Kinship:"
   GEO_long: "Country:"
   year: "Year:"
   xrate_lab: "Currency & price adjustment:"

@@ -32,17 +32,26 @@ fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
+  tax_type:
+    label: "Tax type"
+    selected: "Gift tax"
+    choices:
+      - "Gift tax"
+      - "Inheritance tax"
+      - "Estate tax"
 
 loose_selectors:  
-  d2_label:
-    label: "Tax type"
-    selected: "Gift Tax for Children"
+  kinship:
+    label: "Kinship"
+    type: "selector"
+    selected: "Children"
 
 #define the columns of the data table widget
 dt.cols:
   GEO_long: "Country"
   year: "Year"
-  d2_label: "Tax type"
+  tax_type: "Tax type"
+  kinship: "Kinship"
   prorev: "EIG Tax % Total Tax Revenue"
   revgdp: "EIG Tax % GDP"
   toprat: "Top Marginal Rate"
