@@ -38,7 +38,7 @@ It is especially geared toward the GC Wealth Data Warehouse ecosystem, but the a
 
 ### 1. Install R packages
 
-There is no `renv` or package manifest in this repo yet, so dependencies are managed manually. For the app itself, install at least:
+There is no `renv` or package manifest in this repo yet, so dependencies are managed manually. For the app and local preview tooling, install at least:
 
 ```r
 install.packages(c(
@@ -50,6 +50,7 @@ install.packages(c(
   "magrittr",
   "paletteer",
   "plotly",
+  "processx",
   "qs",
   "readxl",
   "rlang",
@@ -271,12 +272,15 @@ Rscript deploy-app.R --profile gregcull
 Rscript deploy-app.R --tag topo
 Rscript deploy-app.R --all
 Rscript deploy-app.R --profile hubquin --tag eigt --dry-run
+Rscript deploy-app.R --target inhe_multi --preview
+Rscript deploy-app.R --tag topo --preview --yes
 ```
 
 Deployments run sequentially and continue on errors. The script prints a final success/failure summary.
 Deploy calls use `forceUpdate = TRUE`, so existing apps with the same `app_name` are updated in place.
+Use `--dry-run` to inspect the selected targets, data actions, and bundle contents without copying, generating, or deploying files. Use `--preview` to prepare the same bundles that would be deployed and run them locally in Shiny. Bulk preview works with the same selectors as deployment; if more than five targets match, use `--yes` or narrow the selector. Add `--preview-port 8767` to choose the first local port, or `--no-browser` to print URLs without opening browser tabs.
 
-Credential files in `auth/` are not committed, so each profile used in the registry must exist locally.
+Credential files in `auth/` are not committed, so each profile used in the registry must exist locally for deployment. Local preview does not require credential files.
 
 ### Deploy from RStudio Console
 
@@ -296,6 +300,13 @@ deploy_by_target(c("inhe_single", "inhe_multi"))
 
 # Preview selection without deploying
 deploy_by_target("inhe_multi", dry_run = TRUE)
+
+# Render deployment bundles locally without deploying
+preview_by_target("inhe_multi")
+preview_by_target(c("inhe_single", "inhe_multi"))
+
+# Or through the deploy helper
+deploy_by_target("inhe_multi", preview = TRUE, preview_port = 8767)
 ```
 
 ## Current limitations
