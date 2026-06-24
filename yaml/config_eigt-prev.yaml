@@ -1,6 +1,8 @@
 #define data source
 data.file: "data/eigt_wide.qs"
 data.wrangler: "custom_code/data_prep_eigt_kf1_dual.R"
+keep.col:
+  - "d2_label"
 
 #define plot type
 gopts: "dual_axis_line"
@@ -32,18 +34,26 @@ fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
+  tax_type:
+    label: "Tax type"
+    selected: "Gift tax"
+    choices:
+      - "Gift tax"
+      - "Inheritance tax"
+      - "Estate tax"
 
 loose_selectors:
-  d2_label:
-    label: "Tax type"
-    selected: "Gift Tax for Children"
+  kinship:
+    label: "Kinship"
+    selected: "Children"
     type: "selector"
 
 #define the columns of the data table widget
 dt.cols:
   GEO_long: "Country"
   year: "Year"
-  d2_label: "Tax type"
+  tax_type: "Tax type"
+  kinship: "Kinship"
   prorev: "EIG Tax % Total Tax Revenue"
   revgdp: "EIG Tax % GDP"
   toprat: "Top Marginal Rate"
@@ -52,7 +62,8 @@ dt.cols:
 tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
-  d2_label: "Tax type:"
+  tax_type: "Tax type:"
+  kinship: "Kinship:"
   prorev: "EIG Tax % Total Tax Revenue:"
   revgdp: "EIG Tax % GDP:"
   toprat: "Top Marginal Rate:"

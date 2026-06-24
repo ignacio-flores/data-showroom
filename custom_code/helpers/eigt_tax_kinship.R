@@ -9,6 +9,7 @@ eigt_kinship_choices <- c(
   "Applies to unknown",
   "General government level"
 )
+eigt_visible_kinship_choices <- c("Children", "Everybody")
 
 split_eigt_tax_kinship <- function(labels) {
   labels <- as.character(labels)
@@ -46,4 +47,12 @@ add_eigt_tax_kinship <- function(data, label_col) {
   data$tax_type <- split_values$tax_type
   data$kinship <- split_values$kinship
   data
+}
+
+filter_eigt_visible_kinships <- function(data) {
+  if (!"kinship" %in% names(data)) {
+    stop("Missing EIGT kinship column.", call. = FALSE)
+  }
+
+  data[data$kinship %in% eigt_visible_kinship_choices, , drop = FALSE]
 }

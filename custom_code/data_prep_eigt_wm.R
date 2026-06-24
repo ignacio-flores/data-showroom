@@ -144,6 +144,7 @@ data <- data %>%
     .groups = "drop"
   ) %>%
   add_eigt_tax_kinship("d2_sector_lab") %>%
+  filter_eigt_visible_kinships() %>%
   mutate(
     iso3 = countrycode(
       dplyr::recode(GEO, UK = "GB", XK = NA_character_),

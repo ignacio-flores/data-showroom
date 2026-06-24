@@ -38,4 +38,11 @@ expect_identical(
   "Kinship split mismatch."
 )
 
+filtered <- filter_eigt_visible_kinships(split_values)
+expect_identical(
+  filtered$kinship,
+  c("Children", "Everybody"),
+  "Visible kinship filter mismatch."
+)
+
 message("OK: EIGT tax/kinship split parser handles expected label patterns.")

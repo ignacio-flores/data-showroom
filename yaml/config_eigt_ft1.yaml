@@ -62,7 +62,7 @@ loose_selectors:
   kinship:
     label: "Kinship"
     type: "selector"
-    selected: "Spouse"
+    selected: "Children"
   year:
     label: "Years"
     type: "checkbox"

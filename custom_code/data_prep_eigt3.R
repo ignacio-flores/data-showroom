@@ -94,4 +94,5 @@ if (length(monetary_cols) > 0) {
 
 data <- data %>%
   add_eigt_tax_kinship("d2_sector_lab") %>%
+  filter_eigt_visible_kinships() %>%
   arrange(year, geo_long, d2_sector_lab)

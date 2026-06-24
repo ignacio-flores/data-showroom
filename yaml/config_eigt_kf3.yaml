@@ -62,7 +62,7 @@ loose_selectors:
   kinship:
     label: "Kinship"
     type: "selector"
-    selected: "Spouse"
+    selected: "Children"
 
 
 #define the columns of the data table widget

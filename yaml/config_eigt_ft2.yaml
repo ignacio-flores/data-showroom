@@ -62,9 +62,8 @@ fixed_selectors:
 loose_selectors:
   kinship:
     label: "Kinship"
-    type: "checkbox"
-    selected:
-      - "Spouse"
+    type: "selector"
+    selected: "Everybody"
 
 #define the columns of the data table widget 
 dt.cols: 

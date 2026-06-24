@@ -32,4 +32,5 @@ tax_df <- data %>%
 data <- tax_df %>%
   left_join(revenue_df, by = join_keys) %>%
   add_eigt_tax_kinship("d2_label") %>%
+  filter_eigt_visible_kinships() %>%
   arrange(GEO_long, d2_label, year)
