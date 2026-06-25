@@ -33,13 +33,158 @@ plotly_axis_style <- function(axis = list(),
   axis
 }
 
-plotly_hoverlabel_style <- function(font_color = plot_text_style$color,
-                                    bgcolor = NULL,
+plotly_neutral_hover_bg <- "#FFFFFF"
+plotly_neutral_hover_fg <- "#000000"
+plotly_neutral_hover_border <- "#D0D0D0"
+
+plotly_scalar_color <- function(color) {
+  if (is.null(color) || length(color) == 0) return(NULL)
+  if (is.list(color) && !is.data.frame(color)) {
+    color <- unlist(color, use.names = FALSE)
+  }
+  if (length(color) == 0) return(NULL)
+
+  color <- as.character(color)
+  color <- color[!is.na(color) & nzchar(color)]
+  if (length(color) == 0) return(NULL)
+  color[[1]]
+}
+
+plotly_rgb_color <- function(color) {
+  color <- plotly_scalar_color(color)
+  if (is.null(color)) return(NULL)
+
+  color <- trimws(color)
+  if (identical(tolower(color), "transparent")) return(NULL)
+
+  rgb_match <- regexec(
+    "^rgba?\\s*\\(\\s*([0-9.]+)\\s*,\\s*([0-9.]+)\\s*,\\s*([0-9.]+)",
+    color,
+    ignore.case = TRUE
+  )
+  rgb_parts <- regmatches(color, rgb_match)[[1]]
+  if (length(rgb_parts) == 4) {
+    rgb <- suppressWarnings(as.numeric(rgb_parts[2:4]))
+    if (all(is.finite(rgb))) {
+      return(pmax(0, pmin(255, rgb)))
+    }
+  }
+
+  rgb <- tryCatch(
+    grDevices::col2rgb(color, alpha = FALSE),
+    error = function(e) NULL
+  )
+  if (is.null(rgb)) return(NULL)
+
+  as.numeric(rgb[, 1])
+}
+
+plotly_opaque_color <- function(color) {
+  rgb <- plotly_rgb_color(color)
+  if (is.null(rgb)) return(NULL)
+
+  grDevices::rgb(rgb[[1]], rgb[[2]], rgb[[3]], maxColorValue = 255)
+}
+
+plotly_relative_luminance <- function(color) {
+  rgb <- plotly_rgb_color(color)
+  if (is.null(rgb)) return(NULL)
+
+  channel <- rgb / 255
+  channel <- ifelse(
+    channel <= 0.03928,
+    channel / 12.92,
+    ((channel + 0.055) / 1.055) ^ 2.4
+  )
+  sum(c(0.2126, 0.7152, 0.0722) * channel)
+}
+
+plotly_contrast_ratio <- function(color_a, color_b) {
+  lum_a <- plotly_relative_luminance(color_a)
+  lum_b <- plotly_relative_luminance(color_b)
+  if (is.null(lum_a) || is.null(lum_b)) return(NA_real_)
+
+  lighter <- max(lum_a, lum_b)
+  darker <- min(lum_a, lum_b)
+  (lighter + 0.05) / (darker + 0.05)
+}
+
+plotly_contrast_text_color <- function(bgcolor) {
+  black_contrast <- plotly_contrast_ratio(bgcolor, "#000000")
+  white_contrast <- plotly_contrast_ratio(bgcolor, "#FFFFFF")
+  if (is.na(black_contrast) || is.na(white_contrast)) {
+    return(plotly_neutral_hover_fg)
+  }
+  if (white_contrast > black_contrast) "#FFFFFF" else "#000000"
+}
+
+plotly_hoverlabel_style <- function(font_color = NULL,
+                                    bgcolor = plotly_neutral_hover_bg,
                                     bordercolor = NULL) {
-  hoverlabel <- list(font = plotly_font(plot_text_style$hover_size, font_color))
-  if (!is.null(bgcolor)) hoverlabel$bgcolor <- bgcolor
-  if (!is.null(bordercolor)) hoverlabel$bordercolor <- bordercolor
+  if (is.null(bgcolor)) bgcolor <- plotly_neutral_hover_bg
+  normalized_bgcolor <- plotly_opaque_color(bgcolor)
+  if (!is.null(normalized_bgcolor)) {
+    bgcolor <- normalized_bgcolor
+  }
+  if (is.null(font_color)) {
+    font_color <- plotly_contrast_text_color(bgcolor)
+  }
+  if (is.null(bordercolor)) {
+    bordercolor <- if (identical(bgcolor, plotly_neutral_hover_bg)) {
+      plotly_neutral_hover_border
+    } else {
+      bgcolor
+    }
+  }
+
+  hoverlabel <- list(
+    font = plotly_font(plot_text_style$hover_size, font_color),
+    bgcolor = bgcolor,
+    bordercolor = bordercolor
+  )
   hoverlabel
+}
+
+plotly_trace_hover_color <- function(trace) {
+  if (identical(trace$type, "choropleth")) return(NULL)
+
+  mode <- if (is.null(trace$mode)) "" else as.character(trace$mode[[1]])
+  fill <- if (is.null(trace$fill)) "" else as.character(trace$fill[[1]])
+
+  candidates <- list(trace$hoverlabel$bgcolor)
+  if (identical(trace$type, "bar") ||
+      (grepl("markers", mode, fixed = TRUE) && !grepl("lines", mode, fixed = TRUE))) {
+    candidates <- c(candidates, list(trace$marker$color, trace$line$color, trace$fillcolor))
+  } else if (nzchar(fill) && !identical(fill, "none")) {
+    candidates <- c(candidates, list(trace$fillcolor, trace$line$color, trace$marker$color))
+  } else {
+    candidates <- c(candidates, list(trace$line$color, trace$marker$color, trace$fillcolor))
+  }
+
+  for (candidate in candidates) {
+    color <- plotly_scalar_color(candidate)
+    normalized_color <- plotly_opaque_color(color)
+    if (!is.null(normalized_color)) {
+      return(normalized_color)
+    }
+  }
+
+  NULL
+}
+
+apply_plotly_contrast_hoverlabels <- function(pp, neutral_fallback = TRUE) {
+  if (is.null(pp$x$data) || length(pp$x$data) == 0) return(pp)
+
+  for (trace_idx in seq_along(pp$x$data)) {
+    trace <- pp$x$data[[trace_idx]]
+    bgcolor <- plotly_trace_hover_color(trace)
+    if (is.null(bgcolor) && isTRUE(neutral_fallback)) {
+      bgcolor <- plotly_neutral_hover_bg
+    }
+    pp$x$data[[trace_idx]]$hoverlabel <- plotly_hoverlabel_style(bgcolor = bgcolor)
+  }
+
+  pp
 }
 
 plotly_legend_style <- function(legend = list()) {
@@ -546,6 +691,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                  )
           )
 
+        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
         return(pp)
       }
 
@@ -845,6 +991,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                  )
           )
 
+        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
         return(pp)
       }
 
@@ -969,7 +1116,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             legend_seen,
             show_legend = !hide.legend
           )
-          plots[[facet_idx]] <- legend_result$plot
+          plots[[facet_idx]] <- apply_plotly_contrast_hoverlabels(legend_result$plot)
           legend_seen <- legend_result$legend_seen
         }
         
@@ -1075,7 +1222,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                    "resetViewMapbox", "select2d", "zoom"
                  )
           )
-        
+
+        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
         pp
 
       } else if ("map" %in% gopts) {
@@ -1202,6 +1350,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               "resetViews","resetViewMapbox","pan", "select2d"
             )
           )
+        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
         pp
         
       } else if ("bar" %in% gopts) {
@@ -1574,7 +1723,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               "resetViewMapbox","select2d","zoom"
             )
           )
-        
+
+        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
         pp
         
         
@@ -1745,6 +1895,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                  )
           )
 
+        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
         pp
 
       }
