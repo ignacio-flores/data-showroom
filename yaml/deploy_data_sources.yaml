@@ -59,6 +59,7 @@ recipes:
       - data/dictionary.xlsx
     outputs:
       - data/eigt_wide.qs
+      - data/eigt_ft_wide.qs
 
 runtime_dependencies:
   custom_code/dictionary_loader_ineq.R:

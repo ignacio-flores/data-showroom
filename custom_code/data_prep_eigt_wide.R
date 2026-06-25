@@ -4,6 +4,20 @@ library(dplyr)
 library(readr)
 library(tidyr)
 
+wide_output_file <- "data/eigt_wide.qs"
+ft_output_file <- "data/eigt_ft_wide.qs"
+
+first_schedule_typtax <- function(x) {
+  values <- unique(x[!is.na(x)])
+  if (length(values) == 0) {
+    return(NA_real_)
+  }
+  if (length(values) > 1) {
+    stop("Multiple typtax values found for one EIGT FT schedule.", call. = FALSE)
+  }
+  as.numeric(values[[1]])
+}
+
 data <- read_csv("data/eigt_warehouse_meta_v2.csv")
 
 remind_dictionary(
@@ -34,4 +48,12 @@ data <- pivot_wider(
 
 data <- data %>% mutate(d5_code = as.numeric(d5_code))
 
-qs::qsave(data, "data/eigt_wide.qs", preset = "fast")
+ft_data <- data %>%
+  group_by(GEO, year, d2_label) %>%
+  mutate(.schedule_typtax = first_schedule_typtax(typtax)) %>%
+  ungroup() %>%
+  filter(.schedule_typtax %in% c(2, 4)) %>%
+  select(-.schedule_typtax)
+
+qs::qsave(data, wide_output_file, preset = "fast")
+qs::qsave(ft_data, ft_output_file, preset = "fast")

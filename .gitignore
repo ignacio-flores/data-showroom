@@ -8,6 +8,7 @@ data/topo_warehouse_*
 data/ineq_warehouse_*
 data/eigt_warehouse_*
 data/eigt_wide*
+data/eigt_ft_wide.qs
 data/eigt_wm_ready.qs
 data/inhe_warehouse*
 data/eigt_wide_viz.csv

@@ -4,11 +4,43 @@ library(zoo)
 
 source("modules/value_transform.R")
 
-base_file <- "data/eigt_wide.qs"
+base_file <- "data/eigt_ft_wide.qs"
 bundle_file <- "data/currency_conversion_bundle.qs"
 
 if (!file.exists(base_file) || !file.exists(bundle_file)) {
   stop("Run custom_code/data_prep_eigt_wide.R and custom_code/prepare_currency_bundle.R before checking EIGT ft currency conversion.")
+}
+
+assert_ft_typtax_filter <- function(data) {
+  dt <- data.table::as.data.table(data.table::copy(data))
+  if (!"typtax" %in% names(dt)) {
+    stop("FT data is missing typtax.")
+  }
+
+  schedule_typtax <- dt[
+    ,
+    .(typtax_values = list(unique(typtax[!is.na(typtax)]))),
+    by = .(GEO, year, d2_label)
+  ]
+  invalid_multi <- schedule_typtax[lengths(typtax_values) > 1]
+  if (nrow(invalid_multi) > 0) {
+    stop("FT data contains schedules with multiple typtax values.")
+  }
+
+  schedule_typtax[
+    ,
+    schedule_typtax := vapply(
+      typtax_values,
+      function(values) if (length(values) == 0) NA_real_ else as.numeric(values[[1]]),
+      numeric(1)
+    )
+  ]
+  invalid <- schedule_typtax[
+    is.na(schedule_typtax) | !schedule_typtax %in% c(2, 4)
+  ]
+  if (nrow(invalid) > 0) {
+    stop("FT data contains schedules outside typtax values 2 and 4.")
+  }
 }
 
 prepare_ft_schedule <- function(data) {
@@ -52,6 +84,7 @@ compare_columns <- function(left, right, cols, label) {
 }
 
 base <- qs::qread(base_file)
+assert_ft_typtax_filter(base)
 bundle <- load_value_transform_bundle(bundle_file, require_units = FALSE)
 
 prepared <- prepare_ft_schedule(base)

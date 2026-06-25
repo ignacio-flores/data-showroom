@@ -123,6 +123,8 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/topo_conversion_bundle.qs`
 - `data/topo_metadata_bundle.qs`
 - `data/currency_conversion_bundle.qs`
+- `data/eigt_wide.qs`
+- `data/eigt_ft_wide.qs`
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
 - `data/eigt_wm_ready.qs`
@@ -254,12 +256,14 @@ Rscript custom_code/prepare_topo_bundle.R
 Rscript custom_code/tests/check_topo_lazy_equivalence.R
 ```
 
-EIGT fiscal-threshold presets use `value_transform: currency_columns` to
-materialize selected-currency bracket bounds at runtime from
-`data/currency_conversion_bundle.qs`. Rebuild and check that ignored artifact
-with:
+EIGT fiscal-threshold presets use the filtered `data/eigt_ft_wide.qs`
+artifact and `value_transform: currency_columns` to materialize
+selected-currency bracket bounds at runtime from
+`data/currency_conversion_bundle.qs`. Rebuild and check those ignored
+artifacts with:
 
 ```bash
+Rscript custom_code/data_prep_eigt_wide.R
 Rscript custom_code/prepare_currency_bundle.R
 Rscript custom_code/tests/check_eigt_ft_currency_equivalence.R
 ```
