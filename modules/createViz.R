@@ -718,7 +718,7 @@ createViz <- function(graph = NULL,
     
     # Apply only active filters
     final_filtered_data <- reactive({
-      req(filtered_data())
+      result <- filtered_data()
 
       if (isTRUE(loose_selector_updating())) {
         last_valid <- last_valid_filtered_data()
@@ -727,7 +727,10 @@ createViz <- function(graph = NULL,
         }
       }
 
-      result <- filtered_data()
+      if (is.null(result) || nrow(result) == 0) {
+        return(NULL)
+      }
+
       if (!is.null(loose_selectors)) {
         for (var in names(loose_selectors)) {
           if (!is.null(loose_filters[[var]]) && length(loose_filters[[var]]) > 0) {
@@ -737,10 +740,6 @@ createViz <- function(graph = NULL,
             active_values <- loose_filters[[var]][loose_filters[[var]] %in% available_values]
 
             if (length(active_values) == 0) {
-              last_valid <- last_valid_filtered_data()
-              if (!is.null(last_valid)) {
-                return(last_valid)
-              }
               return(NULL)
             }
 

@@ -245,6 +245,89 @@ apply_plotly_axis_text_style <- function(pp, show_grid = NULL) {
   pp
 }
 
+no_data_plotly <- function(message = "No data available", height = NULL) {
+  height <- suppressWarnings(as.numeric(height))
+  if (length(height) != 1 || is.na(height) || height <= 0) {
+    height <- 400
+  }
+
+  plot_ly(
+    x = numeric(0),
+    y = numeric(0),
+    type = "scatter",
+    mode = "markers",
+    hoverinfo = "skip",
+    showlegend = FALSE,
+    height = height
+  ) %>%
+    layout(
+      xaxis = list(
+        visible = FALSE,
+        zeroline = FALSE,
+        showgrid = FALSE,
+        showticklabels = FALSE
+      ),
+      yaxis = list(
+        visible = FALSE,
+        zeroline = FALSE,
+        showgrid = FALSE,
+        showticklabels = FALSE
+      ),
+      annotations = list(list(
+        text = message,
+        x = 0.5,
+        y = 0.5,
+        xref = "paper",
+        yref = "paper",
+        showarrow = FALSE,
+        xanchor = "center",
+        yanchor = "middle",
+        font = plotly_font(plot_text_style$facet_size)
+      )),
+      margin = list(l = 20, r = 20, t = 20, b = 20),
+      hovermode = FALSE
+    ) %>%
+    config(displayModeBar = FALSE, displaylogo = FALSE)
+}
+
+has_plot_rows <- function(df) {
+  !is.null(df) && is.data.frame(df) && nrow(df) > 0
+}
+
+has_drawable_values <- function(df,
+                                required_vars = NULL,
+                                value_vars = NULL,
+                                require_nonzero = FALSE) {
+  if (!has_plot_rows(df)) return(FALSE)
+
+  required_vars <- unique(required_vars[!is.na(required_vars) & nzchar(required_vars)])
+  value_vars <- unique(value_vars[!is.na(value_vars) & nzchar(value_vars)])
+  all_vars <- unique(c(required_vars, value_vars))
+  if (length(setdiff(all_vars, names(df))) > 0) return(FALSE)
+
+  valid_rows <- rep(TRUE, nrow(df))
+  for (var in required_vars) {
+    valid_rows <- valid_rows & !is.na(df[[var]])
+  }
+
+  if (length(value_vars) == 0) {
+    return(any(valid_rows))
+  }
+
+  value_rows <- rep(FALSE, nrow(df))
+  for (var in value_vars) {
+    values <- df[[var]]
+    present <- !is.na(values)
+    if (isTRUE(require_nonzero)) {
+      numeric_values <- suppressWarnings(as.numeric(values))
+      present <- !is.na(numeric_values) & numeric_values != 0
+    }
+    value_rows <- value_rows | present
+  }
+
+  any(valid_rows & value_rows)
+}
+
 is_year_axis_var <- function(var_name) {
   if (is.null(var_name) || length(var_name) != 1) return(FALSE)
   identical(tolower(as.character(var_name)), "year")
@@ -377,19 +460,15 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       if (is.null(val)) isTRUE(stacked_default) else isTRUE(val)
     })
 
-    #display message if data not available
     output$messageDisplay <- renderUI({
-      df <- filtered_data_func()
-      if (is.null(df)) {
-        h3("No data available for this selection", align = "center")
-      } else {
-        NULL  # Don't show message if data is present
-      }
+      NULL
     })
 
     output$valuePlot <- renderPlotly({
       df <- filtered_data_func()
-      req(df, cancelOutput = TRUE)
+      if (!has_plot_rows(df)) {
+        return(no_data_plotly(height = plot_height))
+      }
 
       resolveValue <- function(val) {
         if (is.reactive(val) || (is.function(val) && !is.null(environment(val)))) {
@@ -426,6 +505,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
       # Extend last point in step plot
       if ("step" %in% gopts) {
+        validate(need(x_var %in% names(df), paste0("x_var '", x_var, "' not in df")))
+        validate(need(!is.null(color_var) && color_var %in% names(df), paste0("color_var '", color_var, "' not in df")))
+
         # Keep only rows with valid x/color for the extension computation
         step_df <- df[!is.na(df[[x_var]]) & !is.na(df[[color_var]]), , drop = FALSE]
 
@@ -477,6 +559,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # NA x rows (for example bracket code 0 rows) break the path and can hide
         # the visual tail extension, so remove them here.
         df <- df[!is.na(df[[color_var]]) & !is.na(df[[x_var]]), ]
+        if (!has_plot_rows(df)) {
+          return(no_data_plotly(height = plot_height))
+        }
 
         # Keep deterministic order within groups for path-based geoms.
         if (!is.null(groupvars) && length(groupvars) > 0) {
@@ -543,14 +628,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         df <- df %>%
           filter(!(!!sym(color_var) %in% extra_layer$values))
       }
-      
-      #choose color palette 
-      if (!is.null(color_var)) {
-        n_grp <- length(unique(df[[color_var]]))  
+
+      if (!has_plot_rows(df)) {
+        return(no_data_plotly(height = plot_height))
       }
       
       pal_name <- color_style   
       if (!is.null(color_style) && !"bar" %in% gopts) {
+        color_var_name <- if (is.null(color_var)) "NULL" else color_var
+        validate(need(!is.null(color_var) && color_var %in% names(df), paste0("color_var '", color_var_name, "' not in df")))
+        n_grp <- length(unique(df[[color_var]]))
         pal <- as.vector(                         
           paletteer_d(
             palette   = pal_name,  
@@ -572,7 +659,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         left_ok <- any(!is.na(df[[y_var]]))
         right_ok <- any(!is.na(df[[y2_var]]))
-        validate(need(left_ok || right_ok, "No data available for the selected axes"))
+        if (!has_drawable_values(df, value_vars = c(y_var, y2_var))) {
+          return(no_data_plotly(height = plot_height))
+        }
 
         left_name <- if (!is.null(y_var_lab) && nzchar(y_var_lab)) y_var_lab else y_var
         right_name <- if (!is.null(y2_var_lab) && nzchar(y2_var_lab)) y2_var_lab else y2_var
@@ -707,7 +796,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           df <- df %>% dplyr::filter(.data[[x_var]] > 0)
         }
 
-        validate(need(nrow(df) > 0, "No data available for the selected axes"))
+        if (!has_plot_rows(df)) {
+          return(no_data_plotly(height = plot_height))
+        }
 
         is_percent_axis <- function(var_name) {
           grepl("percent|rate", var_name, ignore.case = TRUE)
@@ -997,7 +1088,20 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
       #use plotly directly if dealing with facets
       if (!is.null(facet_var) && facet_var != "null") {
+        validate(need(x_var %in% names(df), paste0("x_var '", x_var, "' not in df")))
+        validate(need(y_var %in% names(df), paste0("y_var '", y_var, "' not in df")))
+        validate(need(!is.null(color_var) && color_var %in% names(df), paste0("color_var '", color_var, "' not in df")))
+        validate(need(facet_var %in% names(df), paste0("facet_var '", facet_var, "' not in df")))
+
         df <- df[!is.na(df[[facet_var]]), ]
+        if (!has_drawable_values(
+          df,
+          required_vars = c(x_var, color_var, facet_var),
+          value_vars = y_var
+        )) {
+          return(no_data_plotly(height = plot_height))
+        }
+
         facet_levels <- unique(df[[facet_var]])
         facet_labels <- facet_levels
         if (!is.null(facet_label_var) && facet_label_var %in% names(df)) {
@@ -1244,6 +1348,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         df <- df %>%
           dplyr::filter(!is.na(.data[[color_var]]))
 
+        if (!has_drawable_values(df, required_vars = color_var, value_vars = y_var)) {
+          return(no_data_plotly(height = plot_height))
+        }
+
         if (any(duplicated(df[map_group_vars]))) {
           df <- df %>%
             dplyr::group_by(dplyr::across(dplyr::all_of(map_group_vars))) %>%
@@ -1263,7 +1371,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         nonzero_df <- df %>%
           dplyr::filter(!is.na(.data[[y_var]]), .data[[y_var]] != 0)
 
-        validate(need(nrow(nonzero_df) > 0 || nrow(zero_df) > 0, "No data available for this map selection"))
+        if (!has_plot_rows(nonzero_df) && !has_plot_rows(zero_df)) {
+          return(no_data_plotly(height = plot_height))
+        }
 
         pp <- plot_ly(height = plot_height, source = "map")
 
@@ -1537,7 +1647,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Drop NA / zero rows ---------------------------------------------------------
         df <- df %>%
           dplyr::filter(!is.na(.data[[y_var]]), .data[[y_var]] != 0)
-        validate(need(nrow(df) > 0, "No non-zero data to plot"))
+        if (!has_plot_rows(df)) {
+          return(no_data_plotly(height = plot_height))
+        }
         
         # 2) options
         horiz    <- "hbar" %in% gopts
@@ -1569,7 +1681,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           df <- dplyr::semi_join(df, top_global, by = x_var)
         }
         
-        validate(need(nrow(df) > 0, paste0("No data after top-", top_k, " filter")))   # CHANGE
+        if (!has_plot_rows(df)) {
+          return(no_data_plotly(height = plot_height))
+        }
         
         # 3) compute ordering (now based on the filtered df) --------------------------
         ord_df <- df %>%
@@ -1729,6 +1843,17 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         
         
       } else {
+        validate(need(x_var %in% names(df), paste0("x_var '", x_var, "' not in df")))
+        validate(need(y_var %in% names(df), paste0("y_var '", y_var, "' not in df")))
+        validate(need(!is.null(color_var) && color_var %in% names(df), paste0("color_var '", color_var, "' not in df")))
+
+        if (!has_drawable_values(
+          df,
+          required_vars = c(x_var, color_var),
+          value_vars = y_var
+        )) {
+          return(no_data_plotly(height = plot_height))
+        }
         
         #define grouping variable 
         group_expr <- if (!is.null(groupvars) && length(groupvars) > 0) {
