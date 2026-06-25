@@ -84,8 +84,8 @@ targets:
   - target_id: inhe_dual
     graph: inhe_dual
     app_name: inhe_dual
-    profile: gregcull
-    auth_script: auth/shiny_auth_gregcull.R
+    profile: frolle
+    auth_script: auth/shiny_auth_frolle.R
     tags: [inhe, dual]
     enabled: true
 
