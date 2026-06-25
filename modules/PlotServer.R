@@ -254,10 +254,261 @@ set_plotly_legend_once <- function(plot, legend_seen, show_legend = TRUE) {
   list(plot = plot, legend_seen = legend_seen)
 }
 
+plotly_complete_font <- function(font = NULL,
+                                 size = plot_text_style$legend_size,
+                                 color = plot_text_style$color,
+                                 preserve_size = FALSE,
+                                 preserve_color = TRUE) {
+  if (is.null(font) || !is.list(font)) {
+    font <- list()
+  }
+
+  font$family <- plot_text_style$family
+  if (!isTRUE(preserve_size) || is.null(font$size)) {
+    font$size <- size
+  }
+  if (isTRUE(preserve_color)) {
+    if (is.null(font$color)) font$color <- color
+  } else {
+    font$color <- color
+  }
+
+  font
+}
+
+plotly_typography_axis <- function(axis = list(), show_grid = NULL) {
+  if (is.null(axis) || !is.list(axis)) axis <- list()
+
+  axis$titlefont <- plotly_complete_font(
+    axis$titlefont,
+    size = plot_text_style$axis_title_size,
+    preserve_color = TRUE
+  )
+  axis$tickfont <- plotly_complete_font(
+    axis$tickfont,
+    size = plot_text_style$axis_tick_size,
+    preserve_color = TRUE
+  )
+
+  if (!is.null(axis$title) && is.list(axis$title)) {
+    axis$title$font <- plotly_complete_font(
+      axis$title$font,
+      size = plot_text_style$axis_title_size,
+      preserve_color = TRUE
+    )
+  }
+  if (!is.null(show_grid)) {
+    axis$showgrid <- isTRUE(show_grid)
+  }
+
+  axis
+}
+
+plotly_typography_legend <- function(legend = list()) {
+  if (is.null(legend) || !is.list(legend)) legend <- list()
+
+  legend$font <- plotly_complete_font(
+    legend$font,
+    size = plot_text_style$legend_size,
+    preserve_color = FALSE
+  )
+  if (is.null(legend$title)) {
+    legend$title <- list()
+  }
+  if (is.list(legend$title)) {
+    legend$title$font <- plotly_complete_font(
+      legend$title$font,
+      size = plot_text_style$legend_size,
+      preserve_color = FALSE
+    )
+  }
+
+  legend
+}
+
+plotly_typography_colorbar <- function(colorbar = NULL) {
+  if (is.null(colorbar) || !is.list(colorbar)) return(colorbar)
+
+  colorbar$tickfont <- plotly_complete_font(
+    colorbar$tickfont,
+    size = plot_text_style$legend_size,
+    preserve_color = FALSE
+  )
+  if (!is.null(colorbar$title) && is.list(colorbar$title)) {
+    colorbar$title$font <- plotly_complete_font(
+      colorbar$title$font,
+      size = plot_text_style$legend_size,
+      preserve_color = FALSE
+    )
+  }
+
+  colorbar
+}
+
+plotly_typography_annotation <- function(annotation = list()) {
+  if (is.null(annotation) || !is.list(annotation)) return(annotation)
+
+  annotation$font <- plotly_complete_font(
+    annotation$font,
+    size = plot_text_style$facet_size,
+    preserve_size = TRUE,
+    preserve_color = TRUE
+  )
+
+  annotation
+}
+
+plotly_typography_slider <- function(slider = list()) {
+  if (is.null(slider) || !is.list(slider)) return(slider)
+
+  slider$font <- plotly_complete_font(
+    slider$font,
+    size = plot_text_style$data_label_size,
+    preserve_color = FALSE
+  )
+  if (is.null(slider$currentvalue) || !is.list(slider$currentvalue)) {
+    slider$currentvalue <- list()
+  }
+  slider$currentvalue$font <- plotly_complete_font(
+    slider$currentvalue$font,
+    size = plot_text_style$data_label_size,
+    preserve_color = FALSE
+  )
+
+  slider
+}
+
+plotly_typography_updatemenu <- function(updatemenu = list()) {
+  if (is.null(updatemenu) || !is.list(updatemenu)) return(updatemenu)
+
+  updatemenu$font <- plotly_complete_font(
+    updatemenu$font,
+    size = plot_text_style$data_label_size,
+    preserve_color = FALSE
+  )
+
+  updatemenu
+}
+
+plotly_typography_trace <- function(trace = list()) {
+  if (is.null(trace) || !is.list(trace)) return(trace)
+
+  trace$textfont <- plotly_complete_font(
+    trace$textfont,
+    size = plot_text_style$data_label_size,
+    preserve_size = TRUE,
+    preserve_color = TRUE
+  )
+  if (!is.null(trace$hoverlabel) && is.list(trace$hoverlabel)) {
+    trace$hoverlabel$font <- plotly_complete_font(
+      trace$hoverlabel$font,
+      size = plot_text_style$hover_size,
+      preserve_color = TRUE
+    )
+  }
+  trace$colorbar <- plotly_typography_colorbar(trace$colorbar)
+  if (!is.null(trace$marker) && is.list(trace$marker)) {
+    trace$marker$colorbar <- plotly_typography_colorbar(trace$marker$colorbar)
+  }
+
+  trace
+}
+
+plotly_typography_layout <- function(layout = list(), show_grid = NULL) {
+  if (is.null(layout) || !is.list(layout)) layout <- list()
+
+  layout$font <- plotly_complete_font(
+    layout$font,
+    size = plot_text_style$legend_size,
+    preserve_color = FALSE
+  )
+
+  axis_names <- names(layout)[grepl("^[xy]axis[0-9]*$", names(layout))]
+  for (axis_name in axis_names) {
+    layout[[axis_name]] <- plotly_typography_axis(layout[[axis_name]], show_grid = show_grid)
+  }
+
+  layout$legend <- plotly_typography_legend(layout$legend)
+
+  if (!is.null(layout$annotations) && length(layout$annotations) > 0) {
+    layout$annotations <- lapply(layout$annotations, plotly_typography_annotation)
+  }
+  if (!is.null(layout$sliders) && length(layout$sliders) > 0) {
+    layout$sliders <- lapply(layout$sliders, plotly_typography_slider)
+  }
+  if (!is.null(layout$updatemenus) && length(layout$updatemenus) > 0) {
+    layout$updatemenus <- lapply(layout$updatemenus, plotly_typography_updatemenu)
+  }
+
+  layout
+}
+
+apply_plotly_typography <- function(pp, show_grid = NULL) {
+  if (is.null(pp$x)) return(pp)
+
+  pp$x$layout <- plotly_typography_layout(pp$x$layout, show_grid = show_grid)
+
+  if (!is.null(pp$x$data) && length(pp$x$data) > 0) {
+    pp$x$data <- lapply(pp$x$data, plotly_typography_trace)
+  }
+  if (!is.null(pp$x$frames) && length(pp$x$frames) > 0) {
+    pp$x$frames <- lapply(pp$x$frames, function(frame) {
+      if (!is.null(frame$data) && length(frame$data) > 0) {
+        frame$data <- lapply(frame$data, plotly_typography_trace)
+      }
+      if (!is.null(frame$layout)) {
+        frame$layout <- plotly_typography_layout(frame$layout, show_grid = show_grid)
+      }
+      frame
+    })
+  }
+
+  pp
+}
+
+build_plotly_for_display <- function(pp, show_grid = NULL, neutral_fallback = TRUE) {
+  pp <- plotly_build(pp)
+  pp <- apply_plotly_contrast_hoverlabels(pp, neutral_fallback = neutral_fallback)
+  apply_plotly_typography(pp, show_grid = show_grid)
+}
+
+plotly_modebar_reset_buttons <- c("autoScale2d", "resetScale2d", "resetGeo", "resetViews")
+
+plotly_modebar_buttons_to_remove <- function(extra_remove = NULL) {
+  buttons <- c(
+    "hoverClosestCartesian",
+    "toggleSpikelines",
+    "lasso2d",
+    "hoverCompareCartesian",
+    "zoomInGeo",
+    "zoomOutGeo",
+    "hoverClosestGeo",
+    "toImage",
+    "sendDataToCloud",
+    "hoverClosestGl2d",
+    "hoverClosestPie",
+    "toggleHover",
+    "resetViewMapbox",
+    "select2d",
+    "zoom",
+    extra_remove
+  )
+
+  unique(setdiff(buttons, plotly_modebar_reset_buttons))
+}
+
+plotly_modebar_config <- function(pp, extra_remove = NULL) {
+  config(
+    pp,
+    displaylogo = FALSE,
+    modeBarButtonsToRemove = list(plotly_modebar_buttons_to_remove(extra_remove))
+  )
+}
+
 apply_plotly_axis_text_style <- function(pp, show_grid = NULL) {
   axis_names <- names(pp$x$layout)[grepl("^[xy]axis[0-9]*$", names(pp$x$layout))]
   for (axis_name in axis_names) {
-    pp$x$layout[[axis_name]] <- plotly_axis_style(pp$x$layout[[axis_name]], show_grid = show_grid)
+    pp$x$layout[[axis_name]] <- plotly_typography_axis(pp$x$layout[[axis_name]], show_grid = show_grid)
   }
   pp
 }
@@ -1032,18 +1283,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             n = xnum_breaks,
             enabled = is_year_x_axis
           ) %>%
-          config(displaylogo = FALSE,
-                 modeBarButtonsToRemove = list(
-                   "autoScale2d", "resetScale2d", "hoverClosestCartesian",
-                   "toggleSpikelines", "lasso2d", "hoverCompareCartesian",
-                   "zoomInGeo", "zoomOutGeo", "resetGeo", "hoverClosestGeo",
-                   "toImage", "sendDataToCloud", "hoverClosestGl2d",
-                   "hoverClosestPie", "toggleHover", "resetViews",
-                   "resetViewMapbox", "select2d", "zoom"
-                 )
-          )
+          plotly_modebar_config()
 
-        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
+        pp <- build_plotly_for_display(pp, show_grid = axis_show_grid)
         return(pp)
       }
 
@@ -1326,18 +1568,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             n = xnum_breaks,
             enabled = is_year_x_axis && !identical(x_scale, "log")
           ) %>%
-          config(displaylogo = FALSE,
-                 modeBarButtonsToRemove = list(
-                   "autoScale2d", "resetScale2d", "hoverClosestCartesian",
-                   "toggleSpikelines", "lasso2d", "hoverCompareCartesian",
-                   "zoomInGeo", "zoomOutGeo", "resetGeo", "hoverClosestGeo",
-                   "toImage", "sendDataToCloud", "hoverClosestGl2d",
-                   "hoverClosestPie", "toggleHover", "resetViews",
-                   "resetViewMapbox", "select2d", "zoom"
-                 )
-          )
+          plotly_modebar_config()
 
-        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
+        pp <- build_plotly_for_display(pp, show_grid = axis_show_grid)
         return(pp)
       }
 
@@ -1481,7 +1714,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             legend_seen,
             show_legend = !hide.legend
           )
-          plots[[facet_idx]] <- apply_plotly_contrast_hoverlabels(legend_result$plot)
+          plots[[facet_idx]] <- apply_plotly_typography(
+            apply_plotly_contrast_hoverlabels(legend_result$plot),
+            show_grid = axis_show_grid
+          )
           legend_seen <- legend_result$legend_seen
         }
         
@@ -1582,19 +1818,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             n = xnum_breaks,
             enabled = is_year_x_axis
           ) %>%
-          apply_plotly_axis_text_style(show_grid = axis_show_grid) %>%
-          config(displaylogo = FALSE,
-                 modeBarButtonsToRemove = list(
-                   "autoScale2d", "resetScale2d", "hoverClosestCartesian",
-                   "toggleSpikelines", "lasso2d", "hoverCompareCartesian",
-                   "zoomInGeo", "zoomOutGeo", "resetGeo", "hoverClosestGeo",
-                   "toImage", "sendDataToCloud", "hoverClosestGl2d",
-                   "hoverClosestPie", "toggleHover", "resetViews",
-                   "resetViewMapbox", "select2d", "zoom"
-                 )
-          )
+          plotly_modebar_config()
 
-        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
+        pp <- build_plotly_for_display(pp, show_grid = axis_show_grid)
         pp
 
       } else if ("map" %in% gopts) {
@@ -1723,17 +1949,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         }
 
         pp <- pp %>%
-          config(
-            displaylogo = FALSE,
-            modeBarButtonsToRemove = list(
-              "autoScale2d","resetScale2d","hoverClosestCartesian",
-              "toggleSpikelines","lasso2d","hoverCompareCartesian",
-              "hoverClosestGeo","toImage","sendDataToCloud",
-              "hoverClosestGl2d","hoverClosestPie","toggleHover",
-              "resetViews","resetViewMapbox","pan", "select2d"
-            )
-          )
-        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
+          plotly_modebar_config(extra_remove = "pan")
+        pp <- build_plotly_for_display(pp, show_grid = axis_show_grid)
         pp
         
       } else if ("bar" %in% gopts) {
@@ -2154,19 +2371,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         
         # Toolbar
         pp <- pp %>%
-          config(
-            displaylogo = FALSE,
-            modeBarButtonsToRemove = list(
-              "autoScale2d","resetScale2d","hoverClosestCartesian",
-              "toggleSpikelines","lasso2d","hoverCompareCartesian",
-              "zoomInGeo","zoomOutGeo","resetGeo","hoverClosestGeo",
-              "toImage","sendDataToCloud","hoverClosestGl2d",
-              "hoverClosestPie","toggleHover","resetViews",
-              "resetViewMapbox","select2d","zoom"
-            )
-          )
+          plotly_modebar_config()
 
-        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
+        pp <- build_plotly_for_display(pp, show_grid = axis_show_grid)
         pp
         
         
@@ -2350,19 +2557,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             n = xnum_breaks,
             enabled = is_year_x_axis
           ) %>%
-          apply_plotly_axis_text_style(show_grid = axis_show_grid) %>%
-          config(displaylogo = FALSE,
-                 modeBarButtonsToRemove = list(
-                   "autoScale2d", "resetScale2d", "hoverClosestCartesian",
-                   "toggleSpikelines", "lasso2d", "hoverCompareCartesian",
-                   "zoomInGeo", "zoomOutGeo", "resetGeo", "hoverClosestGeo",
-                   "toImage", "sendDataToCloud", "hoverClosestGl2d",
-                   "hoverClosestPie", "toggleHover", "resetViews",
-                   "resetViewMapbox", "select2d", "zoom"
-                 )
-          )
+          plotly_modebar_config()
 
-        pp <- apply_plotly_contrast_hoverlabels(plotly_build(pp))
+        pp <- build_plotly_for_display(pp, show_grid = axis_show_grid)
         pp
 
       }
