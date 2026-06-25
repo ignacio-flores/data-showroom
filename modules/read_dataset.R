@@ -4,8 +4,17 @@ library(magrittr)
 ext <- tolower(tools::file_ext(data.file))
 
 if (ext == "csv") {
+  if (!exists("data.encoding", inherits = TRUE) ||
+      is.null(data.encoding) ||
+      length(data.encoding) == 0 ||
+      is.na(data.encoding[[1]]) ||
+      !nzchar(as.character(data.encoding[[1]]))) {
+    data.encoding <- "UTF-8"
+  }
+  data.encoding <- as.character(data.encoding[[1]])
+
   # get column names quickly without loading data
-  data_cols <- fread(data.file, sep = ",", nrows = 0) %>% colnames()
+  data_cols <- fread(data.file, sep = ",", nrows = 0, encoding = data.encoding) %>% colnames()
   
 } else if (ext == "rds") {
   # load the object to inspect its columns
@@ -32,7 +41,7 @@ all_vars <- intersect(unique(unlist(all_varlists)), data_cols)
 # read/select data
 if (ext == "csv") {
   sel <- if (!is.null(keep.col)) unique(c(all_vars, keep.col)) else all_vars
-  data <- fread(data.file, sep = ",", select = sel)
+  data <- fread(data.file, sep = ",", select = sel, encoding = data.encoding)
 } else { # rds or qs path (tmp_obj already loaded)
   sel <- if (!is.null(keep.col)) unique(c(all_vars, keep.col)) else all_vars
   data <- tmp_obj[, sel, drop = FALSE]

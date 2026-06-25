@@ -143,6 +143,7 @@ Common keys:
 | Key | Purpose |
 | --- | --- |
 | `data.file` | Main dataset (`.csv`, `.rds`, or `.qs`) |
+| `data.encoding` | Optional CSV text encoding passed to `fread`; defaults to `UTF-8` |
 | `meta.file` | Optional metadata table (`.xlsx`, `.xls`, or `.qs`) |
 | `data.wrangler` | Optional R script that mutates `data` after load |
 | `gopts` | Plot mode(s), for example `line`, `point`, `area`, `map`, `bar`, `hbar`, `animate`, `step` |

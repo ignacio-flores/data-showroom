@@ -16,6 +16,7 @@ load_config(paste0("yaml/config_", graph, ".yaml"), func = createViz)
 createViz(
   graph = graph, 
   data.file = data.file,
+  data.encoding = data.encoding,
   meta.file = meta.file,
   data.wrangler = data.wrangler,
   new.cols = new.cols,

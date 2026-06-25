@@ -1,5 +1,6 @@
 createViz <- function(graph = NULL, 
                       data.file, meta.file = NULL,
+                      data.encoding = "UTF-8",
                       axis_vars = NULL, 
                       new.cols = NULL,
                       tooltip_vars = NULL,
