@@ -280,6 +280,9 @@ Use [`deploy-app.R`](deploy-app.R) with selectors:
 
 ```bash
 Rscript deploy-app.R --target inhe_multi
+Rscript deploy-app.R --target eigt-kf2,eigt-wm2
+Rscript deploy-app.R --target eigt-kf2, eigt-wm2
+Rscript deploy-app.R --target eigt-kf2 --target eigt-wm2
 Rscript deploy-app.R --profile gregcull
 Rscript deploy-app.R --tag topo
 Rscript deploy-app.R --all
@@ -289,8 +292,10 @@ Rscript deploy-app.R --tag topo --preview --yes
 ```
 
 Deployments run sequentially and continue on errors. The script prints a final success/failure summary.
+For bulk deployments, failed target IDs and errors are summarized after each attempt. In an interactive terminal, the script asks whether to retry only the failed targets; answering `y` retries them, while `n` or an empty answer exits with failure status.
 Deploy calls use `forceUpdate = TRUE`, so existing apps with the same `app_name` are updated in place.
-Use `--dry-run` to inspect the selected targets, data actions, and bundle contents without copying, generating, or deploying files. Use `--preview` to prepare the same bundles that would be deployed and run them locally in Shiny. Preview and deploy prompt before stale cached files/artifacts are reused; pass `--refresh-data` to refresh all stale dependencies or `--use-cache` to reuse them without prompting. Bulk preview works with the same selectors as deployment; if more than five targets match, the CLI prompts before starting them, and `--yes` skips that prompt. Add `--preview-port 8767` to choose the first local port, or `--no-browser` to print URLs without opening browser tabs.
+Selector options (`--target`, `--profile`, and `--tag`) accept comma-separated values with or without spaces, or repeated flags. Bulk selectors (`--all`, `--profile`, and `--tag`) only select enabled targets; an explicit `--target` can still name a disabled target for intentional one-off deploys.
+Use `--dry-run` to inspect the selected targets, data actions, and bundle contents without copying, generating, or deploying files. Use `--preview` to prepare the same bundles that would be deployed and run them locally in Shiny. Preview and deploy prompt before stale cached files/artifacts are reused; pass `--refresh-data` to refresh all stale dependencies or `--use-cache` to reuse them without prompting. Refresh/cache flags apply to preview/deploy runs, not dry runs. Bulk preview works with the same selectors as deployment; if more than five targets match, the CLI prompts before starting them, and `--yes` skips that prompt. Add `--preview-port 8767` to choose the first local port, or `--no-browser` to print URLs without opening browser tabs.
 
 Credential files in `auth/` are not committed, so each profile used in the registry must exist locally for deployment. Local preview does not require credential files.
 
@@ -309,6 +314,7 @@ deploy_by_target("inhe_multi")
 
 # Deploy multiple by name
 deploy_by_target(c("inhe_single", "inhe_multi"))
+deploy_by_target("eigt-kf2, eigt-wm2")
 
 # Preview selection without deploying
 deploy_by_target("inhe_multi", dry_run = TRUE)

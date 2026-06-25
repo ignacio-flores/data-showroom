@@ -21,9 +21,63 @@ normalize_rel_path <- function(path) {
   path[nzchar(path)]
 }
 
-split_csv <- function(value) {
-  parts <- trimws(unlist(strsplit(value, ",")))
-  parts[nzchar(parts)]
+is_option_token <- function(value) {
+  startsWith(as.character(value), "--")
+}
+
+selector_error_name <- function(option) {
+  if (startsWith(option, "--")) option else sprintf("`%s`", option)
+}
+
+normalize_selector_values <- function(value, option, allow_vector = TRUE) {
+  if (is.null(value) || !length(value)) {
+    return(character())
+  }
+
+  tokens <- as.character(value)
+  if (any(is.na(tokens)) || any(!nzchar(trimws(tokens)))) {
+    usage_error(sprintf("Missing value for %s", selector_error_name(option)))
+  }
+  tokens <- trimws(tokens)
+
+  combined <- tokens[[1]]
+  if (length(tokens) > 1L) {
+    for (idx in 2:length(tokens)) {
+      previous <- tokens[[idx - 1L]]
+      current <- tokens[[idx]]
+      has_boundary_comma <- grepl(",\\s*$", previous) || grepl("^\\s*,", current)
+      if (!has_boundary_comma && !isTRUE(allow_vector)) {
+        usage_error(sprintf(
+          "Unexpected value for %s: %s. Separate multiple values with commas or repeat %s.",
+          selector_error_name(option),
+          current,
+          option
+        ))
+      }
+      separator <- if (has_boundary_comma) " " else ","
+      combined <- paste(combined, current, sep = separator)
+    }
+  }
+
+  combined <- trimws(combined)
+  if (!nzchar(combined)) {
+    usage_error(sprintf("Missing value for %s", selector_error_name(option)))
+  }
+  if (grepl("^,", combined) || grepl(",$", combined) || grepl(",\\s*,", combined)) {
+    usage_error(sprintf(
+      "Empty value in %s; remove leading, trailing, or repeated commas.",
+      selector_error_name(option)
+    ))
+  }
+
+  parts <- trimws(unlist(strsplit(combined, ",", fixed = TRUE)))
+  if (any(!nzchar(parts))) {
+    usage_error(sprintf(
+      "Empty value in %s; remove leading, trailing, or repeated commas.",
+      selector_error_name(option)
+    ))
+  }
+  unique(parts)
 }
 
 parse_port <- function(value, option = "--preview-port") {
@@ -76,18 +130,18 @@ usage <- function() {
   cat(
     paste(
       "Usage:",
-      "  Rscript deploy-app.R --list [--target <id>[,<id>...]] [--profile <profile>] [--tag <tag>]",
-      "  Rscript deploy-app.R --target <id>[,<id>...] [--dry-run]",
-      "  Rscript deploy-app.R --target <id>[,<id>...] --preview [--preview-port <port>] [--no-browser]",
-      "  Rscript deploy-app.R --profile <profile>[,<profile>...] [--dry-run]",
-      "  Rscript deploy-app.R --tag <tag>[,<tag>...] [--dry-run]",
+      "  Rscript deploy-app.R --list [--target <id>[, <id>...]] [--profile <profile>] [--tag <tag>]",
+      "  Rscript deploy-app.R --target <id>[, <id>...] [--dry-run]",
+      "  Rscript deploy-app.R (--target <id>[, <id>...] | --profile <profile>[, <profile>...] | --tag <tag>[, <tag>...] | --all) --preview [--preview-port <port>] [--no-browser]",
+      "  Rscript deploy-app.R --profile <profile>[, <profile>...] [--dry-run]",
+      "  Rscript deploy-app.R --tag <tag>[, <tag>...] [--dry-run]",
       "  Rscript deploy-app.R --all [--dry-run]",
       "",
       "Options:",
       "  --list                 Print deployment targets and exit without deploying.",
-      "  --target <id>          Deploy one or more target IDs (comma-separated or repeated).",
-      "  --profile <name>       Filter deployment targets by profile/account.",
-      "  --tag <tag>            Filter deployment targets by one or more tags.",
+      "  --target <id>          Deploy target IDs (comma-separated, optional spaces, or repeated).",
+      "  --profile <name>       Filter targets by profile/account (comma-separated or repeated).",
+      "  --tag <tag>            Filter targets by tags (comma-separated or repeated).",
       "  --all                  Select all enabled targets (can combine with --profile/--tag).",
       "  --include-disabled     Include disabled targets when used with --list.",
       "  --registry <path>      Path to deployment registry YAML.",
@@ -107,8 +161,13 @@ usage <- function() {
       "  Rscript deploy-app.R --list",
       "  Rscript deploy-app.R --list --profile gregcull",
       "  Rscript deploy-app.R --list --tag eigt",
+      "  Rscript deploy-app.R --target eigt-kf2,eigt-wm2",
+      "  Rscript deploy-app.R --target eigt-kf2, eigt-wm2",
+      "  Rscript deploy-app.R --target eigt-kf2 --target eigt-wm2",
       sep = "\n"
-    )
+    ),
+    "\n",
+    sep = ""
   )
 }
 
@@ -135,6 +194,11 @@ parse_args <- function(args) {
     use_cache = FALSE,
     help = FALSE
   )
+
+  if ("--help" %in% args) {
+    opts$help <- TRUE
+    return(opts)
+  }
 
   i <- 1
   while (i <= length(args)) {
@@ -184,75 +248,105 @@ parse_args <- function(args) {
 
     consume_value <- function(name) {
       if (startsWith(arg, paste0(name, "="))) {
-        return(sub(paste0("^", name, "="), "", arg))
-      }
-      if (arg == name) {
-        if (i == length(args)) {
+        value <- sub(paste0("^", name, "="), "", arg)
+        if (!nzchar(trimws(value))) {
           usage_error(sprintf("Missing value for %s", name))
         }
-        return(args[[i + 1]])
+        return(list(value = trimws(value), next_i = i + 1L))
+      }
+      if (arg == name) {
+        if (i == length(args) || is_option_token(args[[i + 1L]])) {
+          usage_error(sprintf("Missing value for %s", name))
+        }
+        value <- args[[i + 1L]]
+        if (!nzchar(trimws(value))) {
+          usage_error(sprintf("Missing value for %s", name))
+        }
+        return(list(value = trimws(value), next_i = i + 2L))
       }
       NULL
     }
 
-    target_value <- consume_value("--target")
+    consume_selector <- function(name) {
+      if (startsWith(arg, paste0(name, "="))) {
+        tokens <- sub(paste0("^", name, "="), "", arg)
+        next_i <- i + 1L
+      } else if (arg == name) {
+        if (i == length(args) || is_option_token(args[[i + 1L]])) {
+          usage_error(sprintf("Missing value for %s", name))
+        }
+        tokens <- args[[i + 1L]]
+        next_i <- i + 2L
+      } else {
+        return(NULL)
+      }
+
+      while (next_i <= length(args) && !is_option_token(args[[next_i]])) {
+        tokens <- c(tokens, args[[next_i]])
+        next_i <- next_i + 1L
+      }
+
+      list(
+        value = normalize_selector_values(tokens, name, allow_vector = FALSE),
+        next_i = next_i
+      )
+    }
+
+    target_value <- consume_selector("--target")
     if (!is.null(target_value)) {
-      opts$target <- c(opts$target, split_csv(target_value))
-      i <- i + ifelse(arg == "--target", 2, 1)
+      opts$target <- c(opts$target, target_value$value)
+      i <- target_value$next_i
       next
     }
 
-    profile_value <- consume_value("--profile")
+    profile_value <- consume_selector("--profile")
     if (!is.null(profile_value)) {
-      opts$profile <- c(opts$profile, split_csv(profile_value))
-      i <- i + ifelse(arg == "--profile", 2, 1)
+      opts$profile <- c(opts$profile, profile_value$value)
+      i <- profile_value$next_i
       next
     }
 
-    tag_value <- consume_value("--tag")
+    tag_value <- consume_selector("--tag")
     if (!is.null(tag_value)) {
-      opts$tag <- c(opts$tag, split_csv(tag_value))
-      i <- i + ifelse(arg == "--tag", 2, 1)
+      opts$tag <- c(opts$tag, tag_value$value)
+      i <- tag_value$next_i
       next
     }
 
     registry_value <- consume_value("--registry")
     if (!is.null(registry_value)) {
-      opts$registry <- registry_value
-      i <- i + ifelse(arg == "--registry", 2, 1)
+      opts$registry <- registry_value$value
+      i <- registry_value$next_i
       next
     }
 
     data_sources_value <- consume_value("--data-sources")
     if (!is.null(data_sources_value)) {
-      opts$data_sources <- data_sources_value
+      opts$data_sources <- data_sources_value$value
       opts$data_sources_supplied <- TRUE
-      i <- i + ifelse(arg == "--data-sources", 2, 1)
+      i <- data_sources_value$next_i
       next
     }
 
     source_root_value <- consume_value("--source-root")
     if (!is.null(source_root_value)) {
-      opts$source_root <- source_root_value
+      opts$source_root <- source_root_value$value
       opts$source_root_supplied <- TRUE
-      i <- i + ifelse(arg == "--source-root", 2, 1)
+      i <- source_root_value$next_i
       next
     }
 
     preview_host_value <- consume_value("--preview-host")
     if (!is.null(preview_host_value)) {
-      if (!nzchar(trimws(preview_host_value))) {
-        usage_error("Missing value for --preview-host")
-      }
-      opts$preview_host <- trimws(preview_host_value)
-      i <- i + ifelse(arg == "--preview-host", 2, 1)
+      opts$preview_host <- preview_host_value$value
+      i <- preview_host_value$next_i
       next
     }
 
     preview_port_value <- consume_value("--preview-port")
     if (!is.null(preview_port_value)) {
-      opts$preview_port <- parse_port(preview_port_value)
-      i <- i + ifelse(arg == "--preview-port", 2, 1)
+      opts$preview_port <- parse_port(preview_port_value$value)
+      i <- preview_port_value$next_i
       next
     }
 
@@ -261,6 +355,14 @@ parse_args <- function(args) {
 
   if (isTRUE(opts$dry_run) && isTRUE(opts$preview)) {
     usage_error("--dry-run and --preview cannot be used together.")
+  }
+
+  if (isTRUE(opts$dry_run) && (isTRUE(opts$refresh_data) || isTRUE(opts$use_cache))) {
+    usage_error("--dry-run cannot be used with --refresh-data or --use-cache.")
+  }
+
+  if (isTRUE(opts$all) && length(opts$target)) {
+    usage_error("--all cannot be used with --target. Use --all with --profile/--tag, or remove --all.")
   }
 
   preview_option_used <- !identical(opts$preview_host, "127.0.0.1") ||
@@ -469,6 +571,15 @@ validate_selectors <- function(targets, opts) {
   }
 }
 
+selector_summary <- function(opts) {
+  parts <- character()
+  if (length(opts$target)) parts <- c(parts, sprintf("target=%s", paste(opts$target, collapse = ",")))
+  if (length(opts$profile)) parts <- c(parts, sprintf("profile=%s", paste(opts$profile, collapse = ",")))
+  if (length(opts$tag)) parts <- c(parts, sprintf("tag=%s", paste(opts$tag, collapse = ",")))
+  if (isTRUE(opts$all)) parts <- c(parts, "all enabled targets")
+  if (!length(parts)) "no selectors" else paste(parts, collapse = "; ")
+}
+
 select_targets <- function(targets, opts) {
   has_selector <- opts$all || length(opts$target) || length(opts$profile) || length(opts$tag)
   if (!has_selector) {
@@ -496,7 +607,7 @@ select_targets <- function(targets, opts) {
   }
 
   if (!length(selected)) {
-    stop("Selection did not match any deployment targets.")
+    usage_error(sprintf("Selection did not match any deployment targets (%s).", selector_summary(opts)))
   }
 
   selected
@@ -1165,6 +1276,162 @@ deploy_target <- function(entry, app_dir) {
   )
 }
 
+deploy_targets_once <- function(selected, data_sources, attempt = 1L, quiet = FALSE) {
+  results <- vector("list", length(selected))
+  temp_dirs <- character()
+  on.exit(unlink(temp_dirs, recursive = TRUE, force = TRUE), add = TRUE)
+
+  for (i in seq_along(selected)) {
+    entry <- selected[[i]]
+    if (!isTRUE(quiet)) {
+      prefix <- if (attempt > 1L) sprintf("Retry %s: ", attempt - 1L) else ""
+      cat(sprintf("\n%s[%s/%s] Deploying '%s' (%s)...\n",
+                  prefix, i, length(selected), entry$target_id, entry$app_name))
+    }
+    start_time <- Sys.time()
+
+    result <- tryCatch({
+      bundle <- create_temp_bundle(entry, data_sources)
+      temp_dirs <<- c(temp_dirs, bundle$app_dir)
+      if (!isTRUE(quiet)) {
+        print_created_bundle(entry, bundle)
+      }
+      deploy_target(entry, bundle$app_dir)
+      list(
+        status = "success",
+        elapsed = as.numeric(difftime(Sys.time(), start_time, units = "secs"))
+      )
+    }, error = function(e) {
+      list(
+        status = "failed",
+        error = conditionMessage(e),
+        elapsed = as.numeric(difftime(Sys.time(), start_time, units = "secs"))
+      )
+    })
+
+    results[[i]] <- c(list(entry = entry, attempt = attempt), result)
+    if (!isTRUE(quiet)) {
+      if (identical(result$status, "success")) {
+        cat(sprintf("  SUCCESS in %.1fs\n", result$elapsed))
+      } else {
+        cat(sprintf("  FAILED in %.1fs\n  %s\n", result$elapsed, result$error))
+      }
+    }
+  }
+
+  results
+}
+
+failed_deployments <- function(results) {
+  Filter(function(x) identical(x$status, "failed"), results)
+}
+
+target_ids_from_entries <- function(entries) {
+  vapply(entries, `[[`, character(1), "target_id")
+}
+
+target_ids_from_results <- function(results) {
+  vapply(results, function(item) item$entry$target_id, character(1))
+}
+
+print_deployment_summary <- function(results, title = "Deployment summary:") {
+  success_count <- sum(vapply(results, function(x) identical(x$status, "success"), logical(1)))
+  failed <- failed_deployments(results)
+
+  cat("\n", title, "\n", sep = "")
+  cat(sprintf("  Successful: %s\n", success_count))
+  cat(sprintf("  Failed: %s\n", length(failed)))
+
+  if (length(failed)) {
+    cat("  Failed targets:\n")
+    for (item in failed) {
+      cat(sprintf("    - %s: %s\n", item$entry$target_id, item$error))
+    }
+  }
+
+  invisible(failed)
+}
+
+prompt_retry_failed_deployments <- function(failed,
+                                            original_count,
+                                            quiet = FALSE,
+                                            stdin_interactive = isatty(stdin()),
+                                            read_line = read_stdin_line) {
+  if (!length(failed) || original_count <= 1L || isTRUE(quiet) || !isTRUE(stdin_interactive)) {
+    return(FALSE)
+  }
+
+  repeat {
+    cat("\nRetry failed targets? [y/N] ")
+    flush.console()
+    answer <- read_line()
+    if (!length(answer)) {
+      return(FALSE)
+    }
+    normalized <- tolower(trimws(answer[[1]]))
+    if (normalized %in% c("y", "yes")) return(TRUE)
+    if (normalized %in% c("", "n", "no")) return(FALSE)
+    cat("Please answer y or n.\n")
+  }
+}
+
+deploy_targets_with_retries <- function(selected,
+                                        data_sources,
+                                        quiet = FALSE,
+                                        stdin_interactive = isatty(stdin()),
+                                        read_line = read_stdin_line) {
+  current <- selected
+  attempt <- 1L
+  all_results <- list()
+  attempts <- list()
+  final_failed <- list()
+
+  repeat {
+    results <- deploy_targets_once(current, data_sources, attempt = attempt, quiet = quiet)
+    all_results <- c(all_results, results)
+    summary_title <- if (attempt == 1L) {
+      "Deployment summary:"
+    } else {
+      sprintf("Retry %s summary:", attempt - 1L)
+    }
+    failed <- if (isTRUE(quiet)) failed_deployments(results) else print_deployment_summary(results, summary_title)
+    attempts[[attempt]] <- list(
+      attempt = attempt,
+      target_ids = target_ids_from_entries(current),
+      results = results,
+      failed_target_ids = target_ids_from_results(failed)
+    )
+
+    if (!length(failed)) {
+      return(list(
+        status = 0L,
+        results = all_results,
+        attempts = attempts,
+        failed = list()
+      ))
+    }
+
+    final_failed <- failed
+    if (!prompt_retry_failed_deployments(
+      failed,
+      original_count = length(selected),
+      quiet = quiet,
+      stdin_interactive = stdin_interactive,
+      read_line = read_line
+    )) {
+      return(list(
+        status = 1L,
+        results = all_results,
+        attempts = attempts,
+        failed = final_failed
+      ))
+    }
+
+    current <- lapply(failed, `[[`, "entry")
+    attempt <- attempt + 1L
+  }
+}
+
 preview_browser_host <- function(host) {
   if (host %in% c("0.0.0.0", "::")) "127.0.0.1" else host
 }
@@ -1517,6 +1784,10 @@ list_deploy_targets <- function(registry = "yaml/deploy_targets.yaml",
                                 tag = NULL,
                                 include_disabled = FALSE,
                                 targets = NULL) {
+  target <- normalize_selector_values(target, "target")
+  profile <- normalize_selector_values(profile, "profile")
+  tag <- normalize_selector_values(tag, "tag")
+
   if (is.null(targets)) {
     targets <- load_registry(registry, require_auth = FALSE)
   }
@@ -1631,58 +1902,16 @@ main <- function(args = commandArgs(trailingOnly = TRUE), quiet = FALSE) {
   }
 
   prepare_deployment_data(selected, data_sources, opts, quiet = quiet, operation = "deployment")
+  deployment <- deploy_targets_with_retries(selected, data_sources, quiet = quiet)
 
-  results <- vector("list", length(selected))
-  temp_dirs <- character()
-  on.exit(unlink(temp_dirs, recursive = TRUE, force = TRUE), add = TRUE)
-
-  for (i in seq_along(selected)) {
-    entry <- selected[[i]]
-    cat(sprintf("\n[%s/%s] Deploying '%s' (%s)...\n",
-                i, length(selected), entry$target_id, entry$app_name))
-    start_time <- Sys.time()
-
-    result <- tryCatch({
-      bundle <- create_temp_bundle(entry, data_sources)
-      temp_dirs <<- c(temp_dirs, bundle$app_dir)
-      print_created_bundle(entry, bundle)
-      deploy_target(entry, bundle$app_dir)
-      list(
-        status = "success",
-        elapsed = as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-      )
-    }, error = function(e) {
-      list(
-        status = "failed",
-        error = conditionMessage(e),
-        elapsed = as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-      )
-    })
-
-    results[[i]] <- c(list(entry = entry), result)
-    if (identical(result$status, "success")) {
-      cat(sprintf("  SUCCESS in %.1fs\n", result$elapsed))
-    } else {
-      cat(sprintf("  FAILED in %.1fs\n  %s\n", result$elapsed, result$error))
-    }
-  }
-
-  success_count <- sum(vapply(results, function(x) identical(x$status, "success"), logical(1)))
-  failed <- Filter(function(x) identical(x$status, "failed"), results)
-
-  cat("\nDeployment summary:\n")
-  cat(sprintf("  Successful: %s\n", success_count))
-  cat(sprintf("  Failed: %s\n", length(failed)))
-
-  if (length(failed)) {
-    cat("  Failed targets:\n")
-    for (item in failed) {
-      cat(sprintf("    - %s: %s\n", item$entry$target_id, item$error))
-    }
-    return(invisible(list(status = 1L, selected = selected, results = results)))
-  }
-
-  invisible(list(status = 0L, selected = selected, results = results))
+  invisible(list(
+    status = deployment$status,
+    selected = selected,
+    preparation = prep_plan,
+    results = deployment$results,
+    attempts = deployment$attempts,
+    failed = deployment$failed
+  ))
 }
 
 deploy_by_target <- function(target_id,
@@ -1697,6 +1926,7 @@ deploy_by_target <- function(target_id,
                              preview_port = NULL,
                              launch_browser = TRUE,
                              yes = FALSE) {
+  target_id <- normalize_selector_values(target_id, "target_id")
   if (!length(target_id)) {
     usage_error("`target_id` cannot be empty.")
   }
@@ -1750,6 +1980,7 @@ preview_by_target <- function(target_id,
                               port = NULL,
                               launch_browser = TRUE,
                               yes = FALSE) {
+  target_id <- normalize_selector_values(target_id, "target_id")
   if (!length(target_id)) {
     usage_error("`target_id` cannot be empty.")
   }
