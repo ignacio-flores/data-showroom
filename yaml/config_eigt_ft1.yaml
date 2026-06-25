@@ -38,7 +38,7 @@ color:
   style: "dichromat::DarkRedtoBlue_12"
   group:
     - "year"
-    - "tax_type"
+    - "tax_type_view"
     - "kinship"
 
 #Define main selector 
@@ -47,10 +47,11 @@ fixed_selectors:
     label: "Country"
     selected:
       - "Italy"
-  tax_type:
+  tax_type_view:
     label: "Tax type"
-    selected: "Inheritance tax"
+    selected: "Inheritance or estate tax"
     choices:
+      - "Inheritance or estate tax"
       - "Gift tax"
       - "Inheritance tax"
       - "Estate tax"
@@ -74,7 +75,7 @@ dt.cols:
   GEO_long: "Country"
   GEO: "Country code"
   year: "Year"
-  tax_type: "Tax type"
+  tax_type: "Source tax type"
   kinship: "Kinship"
   d5_code: "Bracket"
   adjmrt: "Marginal tax rate"
@@ -85,7 +86,7 @@ dt.cols:
 tooltip_vars:
   GEO_long: "Country:"
   year: "Year:"
-  tax_type: "Tax type:"
+  tax_type: "Source tax type:"
   kinship: "Kinship:"
   adjmrt: "Marginal tax rate"
   xrate_lab: "Currency:"

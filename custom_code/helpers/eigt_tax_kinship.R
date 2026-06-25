@@ -1,4 +1,6 @@
 eigt_tax_type_choices <- c("Gift tax", "Inheritance tax", "Estate tax")
+eigt_inheritance_estate_tax_view <- "Inheritance or estate tax"
+eigt_tax_type_view_choices <- c(eigt_inheritance_estate_tax_view, eigt_tax_type_choices)
 eigt_kinship_choices <- c(
   "Children",
   "Spouse",
@@ -55,4 +57,52 @@ filter_eigt_visible_kinships <- function(data) {
   }
 
   data[data$kinship %in% eigt_visible_kinship_choices, , drop = FALSE]
+}
+
+add_eigt_inheritance_estate_view <- function(data, view_col = "tax_type_view") {
+  required_cols <- c("GEO", "GEO_long", "year", "tax_type", "kinship")
+  missing_cols <- setdiff(required_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop(
+      "Missing EIGT inheritance/estate view column(s): ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  data[[view_col]] <- data$tax_type
+
+  source_rows <- data[
+    data$tax_type %in% c("Inheritance tax", "Estate tax"),
+    ,
+    drop = FALSE
+  ]
+  if (nrow(source_rows) == 0) {
+    return(data)
+  }
+
+  key_cols <- c("GEO", "GEO_long", "year", "kinship")
+  key_parts <- lapply(key_cols, function(col) {
+    value <- as.character(source_rows[[col]])
+    value[is.na(value)] <- "<NA>"
+    value
+  })
+  group_key <- do.call(paste, c(key_parts, sep = "\r"))
+
+  chosen_idx <- unlist(
+    lapply(split(seq_len(nrow(source_rows)), group_key), function(idx) {
+      types <- source_rows$tax_type[idx]
+      if (any(types == "Inheritance tax")) {
+        idx[types == "Inheritance tax"]
+      } else {
+        idx[types == "Estate tax"]
+      }
+    }),
+    use.names = FALSE
+  )
+
+  combined_rows <- source_rows[chosen_idx, , drop = FALSE]
+  combined_rows[[view_col]] <- eigt_inheritance_estate_tax_view
+
+  rbind(data, combined_rows)
 }

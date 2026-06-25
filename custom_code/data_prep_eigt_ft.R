@@ -17,4 +17,5 @@ data <- data %>%
   filter(`_sum_rate` != 0) %>%
   ungroup() %>%
   add_eigt_tax_kinship("d2_label") %>%
+  add_eigt_inheritance_estate_view("tax_type_view") %>%
   select(-`_sum_rate`)

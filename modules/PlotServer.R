@@ -197,14 +197,31 @@ plotly_legend_style <- function(legend = list()) {
   legend
 }
 
-plotly_colorbar_style <- function(title = NULL) {
-  list(
+plotly_colorbar_style <- function(title = NULL,
+                                  values = NULL,
+                                  var_name = NULL,
+                                  label = NULL,
+                                  axis_info = NULL,
+                                  n = NULL) {
+  colorbar <- list(
     title = list(
       text = title,
       font = plotly_font(plot_text_style$legend_size)
     ),
     tickfont = plotly_font(plot_text_style$legend_size)
   )
+
+  ticks <- axis_number_tick_values(values, n = n)
+  if (!is.null(ticks) && length(ticks) > 0) {
+    spec <- axis_number_format_spec(var_name, label, axis_info)
+    colorbar$tickmode <- "array"
+    colorbar$tickvals <- ticks
+    colorbar$ticktext <- format_axis_number(ticks, spec = spec)
+    colorbar$exponentformat <- "none"
+    colorbar$separatethousands <- TRUE
+  }
+
+  colorbar
 }
 
 plotly_trace_legend_key <- function(trace) {
@@ -326,6 +343,239 @@ has_drawable_values <- function(df,
   }
 
   any(valid_rows & value_rows)
+}
+
+axis_format_value <- function(x, digits = 0, big.mark = ",") {
+  x <- suppressWarnings(as.numeric(x))
+  out <- rep(NA_character_, length(x))
+  finite <- is.finite(x)
+  if (!any(finite)) return(out)
+
+  formatted <- formatC(
+    x[finite],
+    format = "f",
+    digits = digits,
+    big.mark = big.mark,
+    drop0trailing = TRUE
+  )
+  formatted <- sub("\\.$", "", formatted)
+  formatted[formatted == "-0"] <- "0"
+  out[finite] <- formatted
+  out
+}
+
+axis_number_format_override <- function(axis_info, var_name) {
+  if (is.null(axis_info) || !is.list(axis_info) || is.null(var_name)) return(NULL)
+  overrides <- axis_info$number_formats
+  if (is.null(overrides) || is.null(names(overrides)) ||
+      !var_name %in% names(overrides)) {
+    return(NULL)
+  }
+  overrides[[var_name]]
+}
+
+axis_number_digits_override <- function(axis_info, var_name) {
+  if (is.null(axis_info) || !is.list(axis_info)) return(NULL)
+  digits <- axis_info$number_format_digits
+  if (is.null(digits)) return(NULL)
+  if (is.list(digits) && !is.null(var_name) && var_name %in% names(digits)) {
+    return(digits[[var_name]])
+  }
+  if (!is.list(digits)) return(digits)
+  NULL
+}
+
+axis_number_format_spec <- function(var_name = NULL,
+                                    label = NULL,
+                                    axis_info = NULL) {
+  override <- axis_number_format_override(axis_info, var_name)
+  digits <- axis_number_digits_override(axis_info, var_name)
+
+  style <- NULL
+  if (is.list(override)) {
+    style <- override$format
+    if (is.null(style)) style <- override$number_format
+    if (is.null(style)) style <- override$style
+    if (!is.null(override$digits)) digits <- override$digits
+    if (!is.null(override$number_format_digits)) {
+      digits <- override$number_format_digits
+    }
+  } else if (!is.null(override)) {
+    style <- override
+  }
+
+  if (is.null(style) && !is.null(axis_info) && is.list(axis_info)) {
+    style <- axis_info$number_format
+  }
+  if (is.null(style) || length(style) == 0 || is.na(style[[1]])) {
+    style <- "auto"
+  }
+  style <- tolower(as.character(style[[1]]))
+  supported <- c("auto", "comma", "compact", "compact_long", "percent", "plain")
+  if (!style %in% supported) style <- "auto"
+
+  text <- paste(var_name, label, collapse = " ")
+  inferred_percent <- grepl("%|percent|rate", text, ignore.case = TRUE)
+  if (identical(style, "auto")) {
+    style <- if (inferred_percent) "percent" else "compact"
+  }
+
+  if (is.null(digits) || length(digits) == 0) {
+    digits <- NULL
+  } else {
+    digits <- suppressWarnings(as.integer(digits[[1]]))
+    if (length(digits) != 1 || is.na(digits) || digits < 0) {
+      digits <- NULL
+    }
+  }
+
+  list(format = style, digits = digits, inferred_percent = inferred_percent)
+}
+
+axis_default_digits <- function(values, style) {
+  values <- abs(suppressWarnings(as.numeric(values)))
+  values <- values[is.finite(values) & values > 0]
+  if (length(values) == 0) return(0L)
+  max_value <- max(values, na.rm = TRUE)
+
+  if (identical(style, "percent")) {
+    has_fraction <- any(abs(values - round(values)) > sqrt(.Machine$double.eps))
+    if (has_fraction && max_value >= 1) return(1L)
+    if (max_value >= 1) return(1L)
+    return(2L)
+  }
+  if (max_value >= 100) return(0L)
+  if (max_value >= 10) return(1L)
+  2L
+}
+
+format_axis_number <- function(values,
+                               spec = NULL,
+                               style = NULL,
+                               digits = NULL,
+                               var_name = NULL,
+                               label = NULL,
+                               axis_info = NULL) {
+  if (is.null(spec)) {
+    spec <- axis_number_format_spec(var_name, label, axis_info)
+  } else if (!is.list(spec)) {
+    spec <- list(format = as.character(spec), digits = digits)
+  }
+  if (!is.null(style)) spec$format <- style
+  if (!is.null(digits)) spec$digits <- digits
+
+  style <- spec$format
+  if (is.null(style)) style <- "compact"
+  style <- tolower(as.character(style[[1]]))
+  if (identical(style, "auto")) {
+    inferred_percent <- isTRUE(spec$inferred_percent)
+    if (!is.null(var_name) || !is.null(label)) {
+      inferred_percent <- axis_number_format_spec(var_name, label, axis_info)$inferred_percent
+    }
+    style <- if (isTRUE(inferred_percent)) "percent" else "compact"
+  }
+  digits <- spec$digits
+
+  numeric_values <- suppressWarnings(as.numeric(values))
+  out <- rep(NA_character_, length(numeric_values))
+  finite <- is.finite(numeric_values)
+  if (!any(finite)) return(out)
+
+  if (identical(style, "plain")) {
+    label_digits <- if (is.null(digits)) axis_default_digits(numeric_values, style) else digits
+    out[finite] <- axis_format_value(numeric_values[finite], label_digits, big.mark = "")
+    return(out)
+  }
+
+  if (identical(style, "comma") || identical(style, "percent")) {
+    label_digits <- if (is.null(digits)) axis_default_digits(numeric_values, style) else digits
+    out[finite] <- axis_format_value(numeric_values[finite], label_digits)
+    if (identical(style, "percent")) {
+      out[finite] <- paste0(out[finite], "%")
+    }
+    return(out)
+  }
+
+  suffixes <- if (identical(style, "compact_long")) {
+    data.frame(
+      scale = c(1e12, 1e9, 1e6, 1e3),
+      suffix = c(" trillion", " billion", " million", " thousand"),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      scale = c(1e12, 1e9, 1e6, 1e3),
+      suffix = c("T", "B", "M", "k"),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  for (idx in which(finite)) {
+    value <- numeric_values[[idx]]
+    abs_value <- abs(value)
+    suffix_idx <- which(abs_value >= suffixes$scale)[1]
+    if (is.na(suffix_idx)) {
+      label_digits <- if (is.null(digits)) axis_default_digits(value, "comma") else digits
+      out[[idx]] <- axis_format_value(value, label_digits)
+    } else {
+      scaled <- value / suffixes$scale[[suffix_idx]]
+      label_digits <- if (is.null(digits)) {
+        if (abs(scaled) < 10) 1L else 0L
+      } else {
+        digits
+      }
+      out[[idx]] <- paste0(
+        axis_format_value(scaled, label_digits),
+        suffixes$suffix[[suffix_idx]]
+      )
+    }
+  }
+
+  out
+}
+
+axis_number_tick_values <- function(values, n = NULL) {
+  numeric_values <- suppressWarnings(as.numeric(values))
+  numeric_values <- numeric_values[is.finite(numeric_values)]
+  if (length(numeric_values) == 0) return(NULL)
+
+  tick_count <- suppressWarnings(as.integer(n))
+  if (length(tick_count) != 1 || is.na(tick_count) || tick_count <= 0) {
+    tick_count <- 6L
+  }
+
+  ticks <- pretty(range(numeric_values, na.rm = TRUE), n = tick_count)
+  ticks <- ticks[is.finite(ticks)]
+  if (length(ticks) == 0) return(NULL)
+
+  value_range <- range(numeric_values, na.rm = TRUE)
+  ticks[ticks >= value_range[[1]] & ticks <= value_range[[2]]]
+}
+
+plotly_number_axis_layout <- function(axis = list(),
+                                      values,
+                                      var_name = NULL,
+                                      label = NULL,
+                                      axis_info = NULL,
+                                      n = NULL,
+                                      tickvals = NULL,
+                                      enabled = TRUE) {
+  axis$exponentformat <- "none"
+  axis$separatethousands <- TRUE
+  if (!isTRUE(enabled)) return(axis)
+
+  if (is.null(tickvals)) {
+    tickvals <- axis_number_tick_values(values, n = n)
+  }
+  if (is.null(tickvals) || length(tickvals) == 0) return(axis)
+
+  spec <- axis_number_format_spec(var_name, label, axis_info)
+  axis$tickmode <- "array"
+  axis$tickvals <- tickvals
+  axis$ticktext <- format_axis_number(tickvals, spec = spec)
+  axis$tickformat <- NULL
+  axis$ticksuffix <- NULL
+  axis
 }
 
 is_year_axis_var <- function(var_name) {
@@ -452,7 +702,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              tooltip_vars,
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE,
-                             x_scale = NULL, scatter_options = NULL, show.grid = TRUE) {
+                             x_scale = NULL, scatter_options = NULL, show.grid = TRUE,
+                             x_axis_info = NULL, y_axis_info = NULL, y2_axis_info = NULL) {
   moduleServer(id, function(input, output, session) {
     
     stack_active <- reactive({
@@ -747,7 +998,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               zeroline = FALSE,
               showgrid = FALSE,
               automargin = TRUE
-            ), title_color = axis_left_col, tick_color = axis_left_col),
+            ), title_color = axis_left_col, tick_color = axis_left_col) %>%
+              plotly_number_axis_layout(
+                values = df[[y_var]],
+                var_name = y_var,
+                label = left_name,
+                axis_info = y_axis_info
+              ),
             yaxis2 = plotly_axis_style(list(
               title = right_name,
               overlaying = "y",
@@ -755,7 +1012,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               zeroline = FALSE,
               showgrid = FALSE,
               automargin = TRUE
-            ), title_color = axis_right_col, tick_color = axis_right_col),
+            ), title_color = axis_right_col, tick_color = axis_right_col) %>%
+              plotly_number_axis_layout(
+                values = df[[y2_var]],
+                var_name = y2_var,
+                label = right_name,
+                axis_info = y2_axis_info
+              ),
             margin = if (hide.legend) list(b = 12) else NULL,
             legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
@@ -800,15 +1063,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           return(no_data_plotly(height = plot_height))
         }
 
-        is_percent_axis <- function(var_name) {
-          grepl("percent|rate", var_name, ignore.case = TRUE)
-        }
-
-        format_axis_value <- function(value, is_percent = FALSE) {
-          suffix <- if (is_percent) "%" else ""
-          paste0(formatC(value, format = "f", big.mark = ",", digits = 2), suffix)
-        }
-
         x_axis_layout <- plotly_axis_style(list(
           title = paste0(
             x_var_lab,
@@ -818,38 +1072,39 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           zeroline = FALSE,
           automargin = TRUE
         ))
-        if (is_percent_axis(x_var)) {
-          x_axis_layout$ticksuffix <- "%"
-          x_axis_layout$tickformat <- ".2f"
-        }
+        x_axis_tickvals <- NULL
         if (identical(x_scale, "log")) {
           positive_x <- df[[x_var]][is.finite(df[[x_var]]) & df[[x_var]] > 0]
           log_breaks <- pretty(log10(range(positive_x, na.rm = TRUE)), n = if (!is.null(xnum_breaks)) xnum_breaks else 8)
           tick_vals <- 10^log_breaks
           tick_vals <- tick_vals[tick_vals >= min(positive_x, na.rm = TRUE) & tick_vals <= max(positive_x, na.rm = TRUE)]
           if (length(tick_vals) > 0) {
-            x_axis_layout$tickmode <- "array"
-            x_axis_layout$tickvals <- tick_vals
-            x_axis_layout$ticktext <- vapply(
-              tick_vals,
-              format_axis_value,
-              character(1),
-              is_percent = is_percent_axis(x_var)
-            )
-            x_axis_layout$ticksuffix <- NULL
-            x_axis_layout$tickformat <- NULL
+            x_axis_tickvals <- tick_vals
           }
+        }
+        if (!is_year_x_axis) {
+          x_axis_layout <- plotly_number_axis_layout(
+            x_axis_layout,
+            values = df[[x_var]],
+            var_name = x_var,
+            label = x_var_lab,
+            axis_info = x_axis_info,
+            n = xnum_breaks,
+            tickvals = x_axis_tickvals
+          )
         }
 
         y_axis_layout <- plotly_axis_style(list(
           title = y_var_lab,
           zeroline = FALSE,
           automargin = TRUE
-        ))
-        if (is_percent_axis(y_var)) {
-          y_axis_layout$ticksuffix <- "%"
-          y_axis_layout$tickformat <- ".2f"
-        }
+        )) %>%
+          plotly_number_axis_layout(
+            values = df[[y_var]],
+            var_name = y_var,
+            label = y_var_lab,
+            axis_info = y_axis_info
+          )
 
         scatter_option_scalar <- function(name, default, coerce = identity) {
           value <- scatter_options[[name]]
@@ -1172,7 +1427,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
             xaxis = plotly_axis_style(list(title = x_var_lab)),
-            yaxis = plotly_axis_style(list(title = y_var_lab))
+            yaxis = plotly_axis_style(list(title = y_var_lab)) %>%
+              plotly_number_axis_layout(
+                values = df_facet[[y_var]],
+                var_name = y_var,
+                label = y_var_lab,
+                axis_info = y_axis_info
+              )
           ) %>%
             apply_plotly_year_xaxis_ticks(
               df[[x_var]],
@@ -1298,7 +1559,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               range = y_range,
               title = y_var_lab,
               zeroline = FALSE
-            )),
+            )) %>%
+              plotly_number_axis_layout(
+                values = combined_y,
+                var_name = y_var,
+                label = y_var_lab,
+                axis_info = y_axis_info
+              ),
             legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
               x = 0.5,
@@ -1396,7 +1663,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               colorscale   = make_colorscale(pal),
               zmin         = z_range[1],
               zmax         = z_range[2],
-              colorbar     = plotly_colorbar_style(y_var_lab),
+              colorbar     = plotly_colorbar_style(
+                y_var_lab,
+                values = nonzero_df[[y_var]],
+                var_name = y_var,
+                label = y_var_lab,
+                axis_info = y_axis_info
+              ),
               name         = "Non-zero"
             )
         }
@@ -1750,20 +2023,52 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             barmode = if (stacked) "stack" else "group",
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
-            xaxis   = plotly_axis_style(list(
-              title = if (horiz) y_var_lab else x_var_lab,
-              zeroline = FALSE,
-              showticklabels = horiz,
-              autorange = TRUE,
-              rangemode = "tozero"
-            )),
-            yaxis   = plotly_axis_style(list(
-              title = if (horiz) x_var_lab else y_var_lab,
-              zeroline = FALSE,
-              autorange = TRUE,
-              automargin = TRUE,
-              showticklabels = !horiz
-            )),
+            xaxis   = if (horiz) {
+              plotly_axis_style(list(
+                title = y_var_lab,
+                zeroline = FALSE,
+                showticklabels = TRUE,
+                autorange = TRUE,
+                rangemode = "tozero"
+              )) %>%
+                plotly_number_axis_layout(
+                  values = df[[y_var]],
+                  var_name = y_var,
+                  label = y_var_lab,
+                  axis_info = y_axis_info
+                )
+            } else {
+              plotly_axis_style(list(
+                title = x_var_lab,
+                zeroline = FALSE,
+                showticklabels = FALSE,
+                autorange = TRUE,
+                rangemode = "tozero"
+              ))
+            },
+            yaxis   = if (horiz) {
+              plotly_axis_style(list(
+                title = x_var_lab,
+                zeroline = FALSE,
+                autorange = TRUE,
+                automargin = TRUE,
+                showticklabels = FALSE
+              ))
+            } else {
+              plotly_axis_style(list(
+                title = y_var_lab,
+                zeroline = FALSE,
+                autorange = TRUE,
+                automargin = TRUE,
+                showticklabels = TRUE
+              )) %>%
+                plotly_number_axis_layout(
+                  values = df[[y_var]],
+                  var_name = y_var,
+                  label = y_var_lab,
+                  axis_info = y_axis_info
+                )
+            },
             legend  = if (!hide.legend) plotly_legend_style(list(
               orientation = "h", x = 0.5, xanchor = "center", y = -0.2
             )) else list()
@@ -1804,6 +2109,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           for (i in seq_along(pp$x$frames)) {
             yr <- pp$x$frames[[i]]$name
             levs <- levs_by_year[[as.character(yr)]]
+            frame_df <- df
+            if ("year" %in% names(df)) {
+              frame_df <- df[as.character(df$year) == as.character(yr), , drop = FALSE]
+              if (!has_plot_rows(frame_df)) frame_df <- df
+            }
             if (!is.null(levs)) {
               if (horiz) {
                 pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(
@@ -1811,14 +2121,32 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                   categoryarray = rev(levs),
                   automargin = TRUE
                 ))
-                pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(autorange = TRUE, rangemode = "tozero"))
+                pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(
+                  autorange = TRUE,
+                  rangemode = "tozero"
+                )) %>%
+                  plotly_number_axis_layout(
+                    values = frame_df[[y_var]],
+                    var_name = y_var,
+                    label = y_var_lab,
+                    axis_info = y_axis_info
+                  )
               } else {
                 pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(
                   categoryorder = "array",
                   categoryarray = levs,
                   automargin = TRUE
                 ))
-                pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(autorange = TRUE, rangemode = "tozero"))
+                pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(
+                  autorange = TRUE,
+                  rangemode = "tozero"
+                )) %>%
+                  plotly_number_axis_layout(
+                    values = frame_df[[y_var]],
+                    var_name = y_var,
+                    label = y_var_lab,
+                    axis_info = y_axis_info
+                  )
               }
             }
           }
@@ -1956,7 +2284,6 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              color = NA,  #"black",
                              inherit.aes = TRUE
           )
-          p <- p + scale_y_continuous(labels = comma)
         }
 
         # Conditional addition of geom_line
@@ -1979,6 +2306,15 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           p <- p + ylab(y_var_lab)
         }
 
+        y_axis_format_spec <- axis_number_format_spec(
+          y_var,
+          y_var_lab,
+          y_axis_info
+        )
+        p <- p + scale_y_continuous(
+          labels = function(x) format_axis_number(x, spec = y_axis_format_spec)
+        )
+
         #add x title if x_var_label not empty
         if (!is.null(x_var_lab)) {
           p <- p + xlab(x_var_lab)
@@ -1993,7 +2329,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             hoverlabel = plotly_hoverlabel_style(),
             autosize = TRUE,
             xaxis = plotly_axis_style(list(zeroline = FALSE)),
-            yaxis = plotly_axis_style(list(zeroline = FALSE)),
+            yaxis = plotly_axis_style(list(zeroline = FALSE)) %>%
+              plotly_number_axis_layout(
+                values = df[[y_var]],
+                var_name = y_var,
+                label = y_var_lab,
+                axis_info = y_axis_info
+              ),
             legend = plotly_legend_style(list(
               title = list(text = ''),
               orientation = "h",
