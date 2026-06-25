@@ -47,7 +47,7 @@ fixed_selectors:
 loose_selectors:
    legend: 
     label: "Source"
-    type: "sticky checkbox"
+    type: "reactive checkbox"
    d4_concept_lab:
     label: "Concept" 
     type: "sticky checkbox"
