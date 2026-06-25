@@ -618,6 +618,8 @@ createViz <- function(graph = NULL,
     loose_selector_update_count <- reactiveVal(0L)
     loose_selector_initialized <- reactiveValues()
     loose_selector_processed_token <- reactiveValues()
+    loose_selector_last_choices <- reactiveValues()
+    loose_selector_last_ui_signature <- reactiveValues()
     data_selector_change <- reactiveVal(list(source = NULL, token = 0L))
     last_valid_filtered_data <- reactiveVal(NULL)
 
@@ -702,6 +704,7 @@ createViz <- function(graph = NULL,
 
           choices <- sort(unique(choices_data[[var]]))
           choices <- choices[!is.na(choices)]
+          loose_selector_last_choices[[var]] <- choices
           current_selection <- isolate(input[[var]])
           configured_selection <- if ("selected" %in% names(loose_selectors[[var]])) {
             loose_selectors[[var]]$selected
@@ -728,28 +731,49 @@ createViz <- function(graph = NULL,
             refresh_all = refresh_all
           )
 
-          loose_filters[[var]] <- selchoices
+          current_filter <- isolate(loose_filters[[var]])
+          if (!selector_values_equal(current_filter, selchoices)) {
+            loose_filters[[var]] <- selchoices
+          }
           loose_selector_initialized[[var]] <- TRUE
           loose_selector_processed_token[[var]] <- change_token
-          begin_loose_selector_update()
-          freezeReactiveValue(input, var)
-          updatePickerInput(
-            session,
-            inputId = var,
-            choices = choices,
-            selected = selchoices
-          )
+
+          current_ui_signature <- loose_selector_ui_signature(choices, selchoices)
+          previous_ui_signature <- isolate(loose_selector_last_ui_signature[[var]])
+          if (loose_selector_ui_needs_update(previous_ui_signature, choices, selchoices)) {
+            loose_selector_last_ui_signature[[var]] <- current_ui_signature
+            begin_loose_selector_update()
+            freezeReactiveValue(input, var)
+            updatePickerInput(
+              session,
+              inputId = var,
+              choices = choices,
+              selected = selchoices
+            )
+          }
         })
         
         # Observer: Update filter for this specific selector when input changes
         observeEvent(input[[var]], {
-          if (!is.null(input[[var]])) {
-            loose_filters[[var]] <- input[[var]]  # Update the filter state
-          } else {
-            loose_filters[[var]] <- NULL  # Reset filter if nothing selected
+          input_selection <- if (!is.null(input[[var]])) input[[var]] else NULL
+          filter_changed <- !selector_values_equal(
+            isolate(loose_filters[[var]]),
+            input_selection
+          )
+
+          if (filter_changed) {
+            loose_filters[[var]] <- input_selection
+            last_choices <- isolate(loose_selector_last_choices[[var]])
+            if (!is.null(last_choices)) {
+              loose_selector_last_ui_signature[[var]] <- loose_selector_ui_signature(
+                last_choices,
+                input_selection
+              )
+            }
           }
 
-          if (!isTRUE(loose_selector_updating()) &&
+          if (filter_changed &&
+              !isTRUE(loose_selector_updating()) &&
               isTRUE(isolate(loose_selector_initialized[[var]]))) {
             mark_data_selector_change(var)
           }

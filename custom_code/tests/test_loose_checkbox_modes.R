@@ -60,7 +60,34 @@ expect_false(
   "Single-value selector controls should not be checkbox-like."
 )
 
+expect_true(
+  selector_values_equal(c("B", "A"), c("A", "B")),
+  "Selector value signatures should be order-insensitive."
+)
+expect_false(
+  selector_values_equal(c("A", "B"), c("A", "C")),
+  "Selector value signatures should detect changed values."
+)
+
 choices <- c("A", "B", "C")
+ui_signature <- loose_selector_ui_signature(choices, "A")
+expect_false(
+  loose_selector_ui_needs_update(ui_signature, c("C", "B", "A"), "A"),
+  "Loose selector UI updates should be skipped when choices and selection are unchanged."
+)
+expect_true(
+  loose_selector_ui_needs_update(NULL, choices, "A"),
+  "Loose selector UI updates should run for selectors with no prior sent state."
+)
+expect_true(
+  loose_selector_ui_needs_update(ui_signature, c("A", "B", "C", "D"), "A"),
+  "Loose selector UI updates should run when available choices change."
+)
+expect_true(
+  loose_selector_ui_needs_update(ui_signature, choices, c("A", "B")),
+  "Loose selector UI updates should run when selected values change."
+)
+
 expect_equal(
   loose_selector_next_selection(
     "sticky checkbox",

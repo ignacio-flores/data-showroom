@@ -102,11 +102,13 @@ for (facet_idx in seq_along(facet_levels)) {
     legend_seen,
     show_legend = TRUE
   )
-  plots[[facet_idx]] <- legend_result$plot
+  plots[[facet_idx]] <- apply_plotly_typography(
+    apply_plotly_contrast_hoverlabels(legend_result$plot)
+  )
   legend_seen <- legend_result$legend_seen
 }
 
-built <- plotly::plotly_build(
+built <- build_plotly_for_display(
   plotly::subplot(plots, nrows = ceiling(sqrt(length(plots))), shareX = TRUE, shareY = TRUE)
 )
 traces <- built$x$data

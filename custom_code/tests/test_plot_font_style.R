@@ -195,6 +195,28 @@ expect_font(
   "Animation controls should be standardized."
 )
 
+line_plot <- plotly::plot_ly(
+  data = data.frame(x = 1:3, y = c(1, 3, 2), label = c("A", "B", "C")),
+  x = ~x,
+  y = ~y,
+  text = ~label,
+  hoverinfo = "text",
+  type = "scatter",
+  mode = "lines",
+  fill = "tozeroy"
+)
+line_plot <- apply_plotly_typography(plotly::plotly_build(line_plot))
+expect_true(
+  is.null(line_plot$x$data[[1]]$textfont),
+  "Line/area scatter traces should not receive textfont unless they render text."
+)
+rebuilt_line_plot <- plotly::plotly_build(line_plot)
+expect_equal(
+  rebuilt_line_plot$x$data[[1]]$mode,
+  "lines",
+  "Rebuilding a styled line/area trace should not add text to the trace mode."
+)
+
 contrast_plot <- plotly::plot_ly() %>%
   plotly::add_trace(
     x = 1,

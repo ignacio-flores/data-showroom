@@ -390,15 +390,32 @@ plotly_typography_updatemenu <- function(updatemenu = list()) {
   updatemenu
 }
 
+plotly_trace_type <- function(trace = list()) {
+  trace_type <- trace$type
+  if (is.null(trace_type) || length(trace_type) == 0) return("")
+  as.character(trace_type[[1]])
+}
+
+plotly_trace_mode_has_text <- function(trace = list()) {
+  mode <- trace$mode
+  if (is.null(mode) || length(mode) == 0) return(FALSE)
+  any(grepl("text", as.character(mode), fixed = TRUE))
+}
+
 plotly_typography_trace <- function(trace = list()) {
   if (is.null(trace) || !is.list(trace)) return(trace)
 
-  trace$textfont <- plotly_complete_font(
-    trace$textfont,
-    size = plot_text_style$data_label_size,
-    preserve_size = TRUE,
-    preserve_color = TRUE
-  )
+  if (!plotly_trace_type(trace) %in% c("scatter", "scattergl") ||
+      plotly_trace_mode_has_text(trace)) {
+    trace$textfont <- plotly_complete_font(
+      trace$textfont,
+      size = plot_text_style$data_label_size,
+      preserve_size = TRUE,
+      preserve_color = TRUE
+    )
+  } else {
+    trace$textfont <- NULL
+  }
   if (!is.null(trace$hoverlabel) && is.list(trace$hoverlabel)) {
     trace$hoverlabel$font <- plotly_complete_font(
       trace$hoverlabel$font,
@@ -501,7 +518,7 @@ plotly_modebar_config <- function(pp, extra_remove = NULL) {
   config(
     pp,
     displaylogo = FALSE,
-    modeBarButtonsToRemove = list(plotly_modebar_buttons_to_remove(extra_remove))
+    modeBarButtonsToRemove = plotly_modebar_buttons_to_remove(extra_remove)
   )
 }
 
@@ -1541,8 +1558,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           hoverinfo = "text",
           type = "scatter",
           mode = if (!is.null(point_text)) "markers+text" else "markers",
-          textposition = text_position,
-          textfont = plotly_font(label_size),
+          textposition = if (!is.null(point_text)) text_position else NULL,
+          textfont = if (!is.null(point_text)) plotly_font(label_size) else NULL,
           marker = list(size = 8, opacity = 0.85),
           showlegend = !hide.legend,
           height = plot_height

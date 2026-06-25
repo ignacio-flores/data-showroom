@@ -65,7 +65,11 @@ expect_equal(
   "The shared modebar helper should hide the Plotly logo."
 )
 
-configured_removed_buttons <- configured_plot$x$config$modeBarButtonsToRemove[[1]]
+expect_true(
+  is.character(configured_plot$x$config$modeBarButtonsToRemove),
+  "Configured modebar buttons should serialize as a flat character vector."
+)
+configured_removed_buttons <- configured_plot$x$config$modeBarButtonsToRemove
 expect_false(
   "resetScale2d" %in% configured_removed_buttons,
   "Configured Cartesian plots should keep resetScale2d."

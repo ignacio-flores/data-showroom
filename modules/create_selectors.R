@@ -34,6 +34,22 @@ selector_signature_value <- function(value) {
   paste(sort(as.character(value)), collapse = "\r")
 }
 
+selector_values_equal <- function(left, right) {
+  identical(selector_signature_value(left), selector_signature_value(right))
+}
+
+loose_selector_ui_signature <- function(choices, selected) {
+  paste(
+    selector_signature_value(choices),
+    selector_signature_value(selected),
+    sep = "\v"
+  )
+}
+
+loose_selector_ui_needs_update <- function(previous_signature, choices, selected) {
+  !identical(previous_signature, loose_selector_ui_signature(choices, selected))
+}
+
 selector_inputs_signature <- function(input, vars) {
   vars <- vars[!is.na(vars) & nzchar(vars)]
   if (length(vars) == 0) return("")
