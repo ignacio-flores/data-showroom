@@ -35,7 +35,7 @@ createSelectors <- function(data,
   columns       <- min(totalControls, 4)
   colWidth      <- 12 / columns
   
-  inputs <- list()
+  axisInputs <- list()
   
   # X-axis selector: title from x_axis$label, displayed names from x_axis$alt.names
   if (hasX) {
@@ -53,7 +53,7 @@ createSelectors <- function(data,
     sel_x <- if (!is.null(x_info$var) && length(x_info$var) == 1)
       x_info$var else raw_ch[1]
     
-    inputs <- c(inputs, list(
+    axisInputs <- c(axisInputs, list(
       column(width = colWidth,
              selectInput(
                inputId = "x_axis",
@@ -66,7 +66,7 @@ createSelectors <- function(data,
   }
 
   if (hasXScale) {
-    inputs <- c(inputs, list(
+    axisInputs <- c(axisInputs, list(
       column(width = colWidth,
              selectInput(
                inputId = "x_axis_scale",
@@ -91,7 +91,7 @@ createSelectors <- function(data,
     sel_y <- if (!is.null(y_info$var) && length(y_info$var) == 1)
       y_info$var else raw_ch[1]
     
-    inputs <- c(inputs, list(
+    axisInputs <- c(axisInputs, list(
       column(width = colWidth,
              selectInput(
                inputId = "y_axis",
@@ -116,7 +116,7 @@ createSelectors <- function(data,
     sel_y2 <- if (!is.null(y2_info$var) && length(y2_info$var) == 1)
       y2_info$var else raw_ch[1]
 
-    inputs <- c(inputs, list(
+    axisInputs <- c(axisInputs, list(
       column(width = colWidth,
              selectInput(
                inputId = "y2_axis",
@@ -189,7 +189,7 @@ createSelectors <- function(data,
       column(width = colWidth, ctrl)
     }
   })
-  inputs <- c(inputs, selectorCols)
+  inputs <- c(selectorCols, axisInputs)
   
   # Conversion selector if defined
   if (!is.null(num.conversion)) {

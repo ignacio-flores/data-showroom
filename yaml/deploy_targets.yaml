@@ -81,6 +81,14 @@ targets:
     tags: [inhe, multi]
     enabled: true
 
+  - target_id: inhe_dual
+    graph: inhe_dual
+    app_name: inhe_dual
+    profile: gregcull
+    auth_script: auth/shiny_auth_gregcull.R
+    tags: [inhe, dual]
+    enabled: true
+
   - target_id: inhe_prev
     graph: inhe_prev
     app_name: inhe_prev

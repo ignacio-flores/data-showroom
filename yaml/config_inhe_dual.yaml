@@ -1,0 +1,70 @@
+#define data source
+data.file: "data/inhe_warehouse_meta_v2.csv"
+data.wrangler: "custom_code/data_prep_inhe_dual.R"
+keep.col:
+  - "GEO"
+  - "GEO_long"
+  - "year"
+  - "source"
+  - "legend"
+  - "value"
+  - "d3_vartype_lab"
+  - "d4_concept_lab"
+  - "d5_dboard_specific_lab"
+
+#define plot type
+gopts: "dual_axis_line"
+plot_height: 700
+hide.selectors: False
+hide.legend: False
+download.button: True
+listen: False
+
+#define main plot variables
+axis_vars:
+  x_axis:
+    var: "year"
+    label: "Year"
+    breaks: 10
+  y_axis:
+    var: "inheritances_gifts_ratio"
+    label: "Left Axis"
+    choices: c("inheritances_gifts_ratio", "average_effective_tax_rate", "inheritances_gifts_aggregate")
+    alt.names: c("Inheritances & gifts ratio", "Average effective tax rate", "Inheritances & gifts aggregate")
+  y2_axis:
+    var: "average_effective_tax_rate"
+    label: "Right Axis"
+    choices: c("average_effective_tax_rate", "inheritances_gifts_ratio", "inheritances_gifts_aggregate")
+    alt.names: c("Average effective tax rate", "Inheritances & gifts ratio", "Inheritances & gifts aggregate")
+
+color:
+  var: "GEO_long"
+  label: "Country"
+  style: "LaCroixColoR::Apricot"
+
+#Define main selectors
+fixed_selectors:
+  GEO_long:
+    label: "Country"
+    selected: "France"
+
+#define the columns of the data table widget
+dt.cols:
+  GEO: "Country code"
+  year: "Year"
+  GEO_long: "Country"
+  inheritances_gifts_ratio: "Inheritances & gifts ratio"
+  average_effective_tax_rate: "Average effective tax rate"
+  inheritances_gifts_aggregate: "Inheritances & gifts aggregate"
+  legend: "Source"
+
+table.display: True
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO_long: "Country:"
+  year: "Year:"
+  inheritances_gifts_ratio: "Inheritances & gifts ratio:"
+  average_effective_tax_rate: "Average effective tax rate:"
+  inheritances_gifts_aggregate: "Inheritances & gifts aggregate:"
+  legend: "Source:"

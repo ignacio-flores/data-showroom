@@ -31,11 +31,8 @@ all_vars <- intersect(unique(unlist(all_varlists)), data_cols)
 
 # read/select data
 if (ext == "csv") {
-  if (!is.null(keep.col)) {
-    data <- fread(data.file, sep = ",", select = c(all_vars, keep.col))
-  } else {
-    data <- fread(data.file, sep = ",", select = all_vars)
-  }
+  sel <- if (!is.null(keep.col)) unique(c(all_vars, keep.col)) else all_vars
+  data <- fread(data.file, sep = ",", select = sel)
 } else { # rds or qs path (tmp_obj already loaded)
   sel <- if (!is.null(keep.col)) unique(c(all_vars, keep.col)) else all_vars
   data <- tmp_obj[, sel, drop = FALSE]
