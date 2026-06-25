@@ -57,7 +57,7 @@ fixed_selectors:
 loose_selectors:
    legend: 
     label: "Source"
-    type: "checkbox" 
+    type: "sticky checkbox"
    
       
 
@@ -82,6 +82,4 @@ tooltip_vars:
   d4_concept_lab: "Concept"
   d5_dboard_specific_lab: "Valuation" 
   
-
-
 

@@ -58,7 +58,7 @@ fixed_selectors:
 loose_selectors:
   geo_long:
     label: "Country"
-    type: "checkbox"
+    type: "sticky checkbox"
   kinship:
     label: "Kinship"
     type: "selector"

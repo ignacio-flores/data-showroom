@@ -63,10 +63,10 @@ loose_selectors:
     type: "selector"
   Data_Type:
     label: "Data type"
-    type: "checkbox"
+    type: "sticky checkbox"
   legend:
     label: "Source"
-    type: "checkbox"
+    type: "sticky checkbox"
 
 #define the columns of the data table widget 
 dt.cols:

@@ -1,6 +1,115 @@
 require(shiny)
 require(shinyWidgets)
 
+normalize_selector_type <- function(type) {
+  if (is.null(type) || length(type) == 0 || is.na(type[[1]])) {
+    return("select")
+  }
+  normalized <- tolower(trimws(as.character(type[[1]])))
+  normalized <- gsub("[_-]+", " ", normalized)
+  normalized <- gsub("\\s+", " ", normalized)
+  if (!nzchar(normalized)) "select" else normalized
+}
+
+selector_checkbox_mode <- function(type) {
+  type <- normalize_selector_type(type)
+  if (identical(type, "checkbox") || identical(type, "sticky checkbox")) {
+    return("sticky")
+  }
+  if (identical(type, "reactive checkbox")) {
+    return("reactive")
+  }
+  if (identical(type, "very reactive checkbox")) {
+    return("very_reactive")
+  }
+  NULL
+}
+
+selector_is_checkbox_like <- function(type) {
+  !is.null(selector_checkbox_mode(type))
+}
+
+selector_signature_value <- function(value) {
+  if (is.null(value)) return("<NULL>")
+  paste(sort(as.character(value)), collapse = "\r")
+}
+
+selector_inputs_signature <- function(input, vars) {
+  vars <- vars[!is.na(vars) & nzchar(vars)]
+  if (length(vars) == 0) return("")
+  paste(
+    vapply(vars, function(var) selector_signature_value(input[[var]]), character(1)),
+    collapse = "\v"
+  )
+}
+
+checkbox_select_rule_choices <- function(choices, select_mode = NULL) {
+  if (length(choices) == 0) return(NULL)
+  if (is.null(select_mode) || length(select_mode) == 0 || is.na(select_mode[[1]])) {
+    return(choices)
+  }
+
+  select_mode <- tolower(as.character(select_mode[[1]]))
+  if (identical(select_mode, "random") && length(choices) > 5) {
+    return(sample(choices, 5))
+  }
+  if (identical(select_mode, "spaced") && length(choices) > 5) {
+    return(choices[seq(1, length(choices), length.out = 5)])
+  }
+
+  choices
+}
+
+loose_selector_next_selection <- function(selector_type,
+                                          choices,
+                                          current_selection = NULL,
+                                          configured_selection = NULL,
+                                          select_mode = NULL,
+                                          initialized = FALSE,
+                                          refresh_all = FALSE) {
+  choices <- choices[!is.na(choices)]
+  if (length(choices) == 0) return(NULL)
+
+  current_selection <- current_selection[current_selection %in% choices]
+  configured_selection <- configured_selection[configured_selection %in% choices]
+
+  if (selector_is_checkbox_like(selector_type)) {
+    if (isTRUE(refresh_all)) return(choices)
+    if (length(current_selection) > 0) return(current_selection)
+    if (!isTRUE(initialized)) {
+      if (length(configured_selection) > 0) return(configured_selection)
+      return(checkbox_select_rule_choices(choices, select_mode))
+    }
+    return(choices)
+  }
+
+  if (length(current_selection) > 0) return(current_selection[[1]])
+  if (length(configured_selection) > 0) return(configured_selection[[1]])
+  choices[[1]]
+}
+
+loose_selector_should_refresh_all <- function(selector_type,
+                                              initialized,
+                                              change_source,
+                                              own_var,
+                                              loose_vars,
+                                              unprocessed_change = TRUE) {
+  if (!isTRUE(initialized) || !isTRUE(unprocessed_change)) return(FALSE)
+
+  checkbox_mode <- selector_checkbox_mode(selector_type)
+  if (identical(checkbox_mode, "reactive")) {
+    return(identical(change_source, "__fixed__"))
+  }
+  if (identical(checkbox_mode, "very_reactive")) {
+    return(
+      identical(change_source, "__fixed__") ||
+        (!is.null(change_source) && change_source %in% setdiff(loose_vars, own_var))
+    )
+  }
+
+  FALSE
+}
+
 # Enhanced createSelectors: supports axis choice alt.names separately from selector title labels
 createSelectors <- function(data,
                             selector_info,
@@ -131,7 +240,7 @@ createSelectors <- function(data,
   # Other selectors from selector_info
   selectorCols <- lapply(names(selector_info), function(var) {
     info <- selector_info[[var]]
-    type <- if ("type" %in% names(info)) info$type else "select"
+    type <- if ("type" %in% names(info)) normalize_selector_type(info$type) else "select"
     
     # Exclude extra_layer values when var matches
     if ("choices" %in% names(info) && !is.null(info$choices)) {
@@ -146,7 +255,7 @@ createSelectors <- function(data,
     }
     
     # Default selection
-    if (type == "checkbox") {
+    if (selector_is_checkbox_like(type)) {
       sel <- if ("selected" %in% names(info)) info$selected else choices
     } else {
       sel <- if ("selected" %in% names(info)) info$selected else NULL
@@ -154,35 +263,37 @@ createSelectors <- function(data,
     # Title label for control
     lbl <- if ("label" %in% names(info) && is.character(info$label)) info$label else var
     
-    ctrl <- switch(type,
-                   checkbox = pickerInput(
-                     inputId = var,
-                     label   = lbl,
-                     choices = choices,
-                     selected= sel,
-                     multiple= TRUE,
-                     options = list(
-                       `actions-box`          = TRUE,
-                       `live-search`          = TRUE,
-                       `dropdown-align-right` = TRUE,
-                       `selected-text-format` = "count",
-                       `count-selected-text`  = "{0} selected"
-                     )
-                   ),
-                   selector = pickerInput(
-                     inputId = var,
-                     label   = lbl,
-                     choices = choices,
-                     selected= sel
-                   ),
-                   selectInput(
-                     inputId = var,
-                     label   = lbl,
-                     choices = choices,
-                     selected= sel,
-                     multiple = if ("multiple" %in% names(info)) info$multiple else FALSE
-                   )
-    )
+    ctrl <- if (selector_is_checkbox_like(type)) {
+      pickerInput(
+        inputId = var,
+        label   = lbl,
+        choices = choices,
+        selected= sel,
+        multiple= TRUE,
+        options = list(
+          `actions-box`          = TRUE,
+          `live-search`          = TRUE,
+          `dropdown-align-right` = TRUE,
+          `selected-text-format` = "count",
+          `count-selected-text`  = "{0} selected"
+        )
+      )
+    } else if (identical(type, "selector")) {
+      pickerInput(
+        inputId = var,
+        label   = lbl,
+        choices = choices,
+        selected= sel
+      )
+    } else {
+      selectInput(
+        inputId = var,
+        label   = lbl,
+        choices = choices,
+        selected= sel,
+        multiple = if ("multiple" %in% names(info)) info$multiple else FALSE
+      )
+    }
     if (isTRUE(info$hidden)) {
       tags$div(style = "display: none;", ctrl)
     } else {

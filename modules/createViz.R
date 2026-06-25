@@ -615,21 +615,75 @@ createViz <- function(graph = NULL,
     }
     loose_filters <- do.call(reactiveValues, initial_loose_filters)
     loose_selector_updating <- reactiveVal(FALSE)
+    loose_selector_update_count <- reactiveVal(0L)
+    loose_selector_initialized <- reactiveValues()
+    loose_selector_processed_token <- reactiveValues()
+    data_selector_change <- reactiveVal(list(source = NULL, token = 0L))
     last_valid_filtered_data <- reactiveVal(NULL)
+
+    mark_data_selector_change <- function(source) {
+      current_change <- isolate(data_selector_change())
+      current_token <- if (!is.null(current_change$token)) current_change$token else 0L
+      data_selector_change(list(source = source, token = current_token + 1L))
+    }
+
+    begin_loose_selector_update <- function() {
+      loose_selector_updating(TRUE)
+      loose_selector_update_count(isolate(loose_selector_update_count()) + 1L)
+      session$onFlushed(
+        function() {
+          remaining <- max(0L, isolate(loose_selector_update_count()) - 1L)
+          loose_selector_update_count(remaining)
+          if (remaining == 0L) {
+            loose_selector_updating(FALSE)
+          }
+        },
+        once = TRUE
+      )
+    }
+
+    fixed_selector_signature <- reactive({
+      selector_inputs_signature(input, names(fixed_selectors))
+    })
+
+    observeEvent(fixed_selector_signature(), {
+      mark_data_selector_change("__fixed__")
+    }, ignoreInit = TRUE)
     
     # update loose selectors individually
     if (!is.null(loose_selectors)) {
       lapply(names(loose_selectors), function(var) {
-        
-        # compute available values based on filtered_data
-        filtered_values <- reactive({
-          req(filtered_data()) 
-          unique(filtered_data()[[var]])
-        })
-        
         observe({
           req(filtered_data())
           choices_data <- filtered_data()
+          selector_type <- if ("type" %in% names(loose_selectors[[var]])) {
+            normalize_selector_type(loose_selectors[[var]]$type)
+          } else {
+            "select"
+          }
+          checkbox_mode <- selector_checkbox_mode(selector_type)
+          change <- data_selector_change()
+          change_source <- change$source
+          change_token <- if (!is.null(change$token)) change$token else 0L
+          initialized <- isTRUE(isolate(loose_selector_initialized[[var]]))
+          processed_token <- isolate(loose_selector_processed_token[[var]])
+          unprocessed_change <- !identical(processed_token, change_token)
+
+          if (identical(checkbox_mode, "very_reactive")) {
+            other_loose_vars <- setdiff(names(loose_selectors), var)
+            selector_inputs_signature(input, other_loose_vars)
+
+            for (other_var in other_loose_vars) {
+              if (!other_var %in% names(choices_data)) next
+
+              other_values <- isolate(input[[other_var]])
+              other_values <- other_values[!is.na(other_values)]
+              if (length(other_values) == 0) next
+
+              choices_data <- choices_data %>%
+                dplyr::filter(.data[[other_var]] %in% other_values)
+            }
+          }
 
           # Avoid offering years that have no drawable points for the current axes.
           if (identical(var, "year")) {
@@ -648,60 +702,42 @@ createViz <- function(graph = NULL,
 
           choices <- sort(unique(choices_data[[var]]))
           choices <- choices[!is.na(choices)]
-          selector_type <- if ("type" %in% names(loose_selectors[[var]])) {
-            loose_selectors[[var]]$type
-          } else {
-            "select"
-          }
           current_selection <- isolate(input[[var]])
-          current_selection <- current_selection[current_selection %in% choices]
           configured_selection <- if ("selected" %in% names(loose_selectors[[var]])) {
             loose_selectors[[var]]$selected
           } else {
             NULL
           }
-          configured_selection <- configured_selection[configured_selection %in% choices]
-          selchoices <- if (length(current_selection) > 0) {
-            current_selection
-          } else if (length(configured_selection) > 0) {
-            configured_selection
-          } else if (identical(selector_type, "checkbox")) {
-            choices
-          } else if (length(choices) > 0) {
-            choices[[1]]
-          } else {
-            NULL
-          }
-          
-        # check if the selector is random and has more than 5 choices
-        if (length(current_selection) == 0 && length(configured_selection) == 0 && !is.null(loose_selectors[[var]]$select)) {
-          if (loose_selectors[[var]]$select == "random" & length(choices) > 5) {
-            selchoices <- sample(choices, 5)
-          }
-          # check if the selector is equally "spaced" and has more than 5 choices
-          else if (loose_selectors[[var]]$select == "spaced" & length(choices) > 5) {
-            selchoices <- choices[seq(1, length(choices), length.out = 5)]
-          } 
-        } 
-        if (length(choices) == 0) {
-          choices <- character(0) 
-          selchoices <- NULL
-        } else if (!identical(selector_type, "checkbox") && length(selchoices) > 1) {
-          selchoices <- selchoices[[1]]
-        }
-          loose_selector_updating(TRUE)
+
+          refresh_all <- loose_selector_should_refresh_all(
+            selector_type,
+            initialized = initialized,
+            change_source = change_source,
+            own_var = var,
+            loose_vars = names(loose_selectors),
+            unprocessed_change = unprocessed_change
+          )
+
+          selchoices <- loose_selector_next_selection(
+            selector_type,
+            choices,
+            current_selection = current_selection,
+            configured_selection = configured_selection,
+            select_mode = loose_selectors[[var]]$select,
+            initialized = initialized,
+            refresh_all = refresh_all
+          )
+
+          loose_filters[[var]] <- selchoices
+          loose_selector_initialized[[var]] <- TRUE
+          loose_selector_processed_token[[var]] <- change_token
+          begin_loose_selector_update()
           freezeReactiveValue(input, var)
           updatePickerInput(
             session,
             inputId = var,
             choices = choices,
-            selected = selchoices 
-          )
-          session$onFlushed(
-            function() {
-              loose_selector_updating(FALSE)
-            },
-            once = TRUE
+            selected = selchoices
           )
         })
         
@@ -711,6 +747,11 @@ createViz <- function(graph = NULL,
             loose_filters[[var]] <- input[[var]]  # Update the filter state
           } else {
             loose_filters[[var]] <- NULL  # Reset filter if nothing selected
+          }
+
+          if (!isTRUE(loose_selector_updating()) &&
+              isTRUE(isolate(loose_selector_initialized[[var]]))) {
+            mark_data_selector_change(var)
           }
         })
       })

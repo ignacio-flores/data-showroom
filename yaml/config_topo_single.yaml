@@ -53,7 +53,7 @@ loose_selectors:
     type: "selector"
   d4_concept_lab:
     label: "Asset or Debt type"
-    type: "checkbox"
+    type: "sticky checkbox"
     selected: 
       - "Financial Assets & Fixed Capital of Personal Businesses"
       - "Housing & Land"

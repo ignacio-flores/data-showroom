@@ -47,13 +47,13 @@ fixed_selectors:
 loose_selectors:
    legend: 
     label: "Source"
-    type: "checkbox"
+    type: "sticky checkbox"
    d4_concept_lab:
     label: "Concept" 
-    type: "checkbox"
+    type: "sticky checkbox"
    d5_dboard_specific_lab:
     label: "Valutation"
-    type: "checkbox"       
+    type: "sticky checkbox"
       
 
 #define the columns of the data table widget 
@@ -77,6 +77,4 @@ tooltip_vars:
   d4_concept_lab: "Concept"
   d5_dboard_specific_lab: "Valuation"  
   
-
-
 

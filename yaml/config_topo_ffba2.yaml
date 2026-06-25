@@ -46,10 +46,10 @@ fixed_selectors:
 loose_selectors:
   d4_concept_lab:
     label: "Wealth type"
-    type: "checkbox"
+    type: "sticky checkbox"
   legend: 
     label: "Source" 
-    type: "checkbox"
+    type: "sticky checkbox"
   d2_sector_lab:
     label: "Sector"
     selected: 

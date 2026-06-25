@@ -53,10 +53,10 @@ fixed_selectors:
 loose_selectors: 
   year:
     label: "Year"
-    type: "checkbox"
+    type: "sticky checkbox"
   GEO_long: 
     label: "Countries" 
-    type: "checkbox"
+    type: "sticky checkbox"
   d2_sector_lab: 
     label: "Type of Tax"
     type: "selector"

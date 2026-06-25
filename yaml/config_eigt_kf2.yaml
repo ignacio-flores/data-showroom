@@ -41,7 +41,7 @@ fixed_selectors:
 loose_selectors: 
   d2_sector_lab: 
     label: "Tax type"
-    type: "checkbox"
+    type: "sticky checkbox"
   
 #define the columns of the data table widget 
 dt.cols: 

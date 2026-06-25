@@ -51,7 +51,7 @@ fixed_selectors:
 loose_selectors:
   d4_concept_lab:
     label: "Wealth type"
-    type: "checkbox"
+    type: "sticky checkbox"
   legend: 
     label: "Source" 
     selected: "Luxembourg Wealth Study Database - Balance Sheet"
