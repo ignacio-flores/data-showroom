@@ -100,6 +100,97 @@ apply_plotly_axis_text_style <- function(pp, show_grid = NULL) {
   pp
 }
 
+is_year_axis_var <- function(var_name) {
+  if (is.null(var_name) || length(var_name) != 1) return(FALSE)
+  identical(tolower(as.character(var_name)), "year")
+}
+
+year_axis_numeric_values <- function(values) {
+  if (is.factor(values)) values <- as.character(values)
+  suppressWarnings(as.numeric(values))
+}
+
+year_axis_breaks <- function(values, n = NULL) {
+  numeric_values <- year_axis_numeric_values(values)
+  numeric_values <- numeric_values[is.finite(numeric_values)]
+  if (length(numeric_values) == 0) return(NULL)
+
+  value_range <- range(numeric_values, na.rm = TRUE)
+  min_year <- ceiling(value_range[[1]])
+  max_year <- floor(value_range[[2]])
+
+  if (!is.finite(min_year) || !is.finite(max_year)) return(NULL)
+
+  if (min_year > max_year) {
+    rounded_years <- sort(unique(as.integer(round(numeric_values))))
+    return(rounded_years[is.finite(rounded_years)])
+  }
+
+  year_count <- max_year - min_year + 1L
+  desired_count <- suppressWarnings(as.integer(n))
+  if (length(desired_count) != 1 || is.na(desired_count) || desired_count <= 0) {
+    desired_count <- min(8L, year_count)
+  }
+
+  if (year_count <= desired_count) {
+    return(seq.int(min_year, max_year))
+  }
+
+  pretty_breaks <- pretty(c(min_year, max_year), n = desired_count)
+  pretty_breaks <- pretty_breaks[is.finite(pretty_breaks)]
+  breaks <- sort(unique(as.integer(round(pretty_breaks))))
+  breaks <- breaks[breaks >= min_year & breaks <= max_year]
+  breaks <- sort(unique(c(min_year, breaks, max_year)))
+  breaks[is.finite(breaks)]
+}
+
+year_axis_tick_text <- function(breaks) {
+  if (is.null(breaks)) return(NULL)
+  as.character(as.integer(round(breaks)))
+}
+
+format_year_axis_value <- function(value) {
+  numeric_value <- year_axis_numeric_values(value)
+  if (length(numeric_value) == 1 && !is.na(numeric_value) && is.finite(numeric_value)) {
+    return(as.character(as.integer(round(numeric_value))))
+  }
+  value
+}
+
+plotly_year_xaxis_layout <- function(axis, values, n = NULL, enabled = TRUE) {
+  if (!isTRUE(enabled)) return(axis)
+
+  breaks <- year_axis_breaks(values, n = n)
+  if (is.null(breaks) || length(breaks) == 0) return(axis)
+
+  axis$tickmode <- "array"
+  axis$tickvals <- breaks
+  axis$ticktext <- year_axis_tick_text(breaks)
+  axis$tickformat <- NULL
+  axis$ticksuffix <- NULL
+  axis
+}
+
+apply_plotly_year_xaxis_ticks <- function(pp, values, n = NULL, enabled = TRUE) {
+  if (!isTRUE(enabled)) return(pp)
+
+  axis_names <- names(pp$x$layout)[grepl("^xaxis[0-9]*$", names(pp$x$layout))]
+  if (length(axis_names) == 0) axis_names <- "xaxis"
+
+  for (axis_name in axis_names) {
+    axis <- pp$x$layout[[axis_name]]
+    if (is.null(axis)) axis <- list()
+    pp$x$layout[[axis_name]] <- plotly_year_xaxis_layout(
+      axis,
+      values = values,
+      n = n,
+      enabled = TRUE
+    )
+  }
+
+  pp
+}
+
 plotOutputUI <- function(id,
                          show_stack_toggle = FALSE,
                          stacked_default = FALSE,
@@ -173,6 +264,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       show.grid <- resolveValue(show.grid)
       if (is.null(show.grid)) show.grid <- TRUE
       axis_show_grid <- if (isTRUE(show.grid)) NULL else FALSE
+      is_year_x_axis <- is_year_axis_var(x_var)
+      if (is_year_x_axis && x_var %in% names(df)) {
+        year_values <- year_axis_numeric_values(df[[x_var]])
+        if (any(is.finite(year_values))) {
+          df[[x_var]] <- as.integer(round(year_values))
+        }
+      }
       
       #make axes dynamic if necessary 
       # print(paste0("printing input x_axis", input, "!"))
@@ -202,13 +300,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           # Extend to the visible right edge when breaks are requested; otherwise +10%
           x_min <- min(step_df[[x_var]], na.rm = TRUE)
           x_max <- max(step_df[[x_var]], na.rm = TRUE)
+          fallback_extension_x <- if (is_year_x_axis) ceiling(x_max) + 1L else x_max * 1.1
           if (!is.null(xnum_breaks)) {
-            candidate_breaks <- pretty(c(x_min, x_max), n = xnum_breaks)
+            candidate_breaks <- if (is_year_x_axis) {
+              year_axis_breaks(c(x_min, x_max), n = xnum_breaks)
+            } else {
+              pretty(c(x_min, x_max), n = xnum_breaks)
+            }
             candidate_breaks <- candidate_breaks[is.finite(candidate_breaks)]
             right_edge <- if (length(candidate_breaks) > 0) max(candidate_breaks) else NA_real_
-            extension_x <- if (!is.na(right_edge) && right_edge > x_max) right_edge else x_max * 1.1
+            extension_x <- if (!is.na(right_edge) && right_edge > x_max) right_edge else fallback_extension_x
           } else {
-            extension_x <- x_max * 1.1
+            extension_x <- fallback_extension_x
           }
 
           # Pick one last row per step group and append an extended point
@@ -243,7 +346,9 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
 
       # Define x-axis breaks dynamically
-      if (!is.null(xnum_breaks)) {
+      if (is_year_x_axis) {
+        breaks_x <- year_axis_breaks(df[[x_var]], n = xnum_breaks)
+      } else if (!is.null(xnum_breaks)) {
         x_range <- range(df[[x_var]], na.rm = TRUE)
         breaks_x <- pretty(x_range, n = xnum_breaks)
       } else {
@@ -259,8 +364,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         }
         
         format_tooltip_value <- function(value, name) {
-          if (identical(name, "year")) {
-            return(value)
+          if (is_year_axis_var(name)) {
+            return(format_year_axis_value(value))
           }
 
           numeric_value <- suppressWarnings(as.numeric(value))
@@ -424,6 +529,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               xanchor = "center",
               y = -0.2
             )) else list()
+          ) %>%
+          apply_plotly_year_xaxis_ticks(
+            df[[x_var]],
+            n = xnum_breaks,
+            enabled = is_year_x_axis
           ) %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
@@ -719,6 +829,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               y = -0.2
             )) else list()
           ) %>%
+          apply_plotly_year_xaxis_ticks(
+            df[[x_var]],
+            n = xnum_breaks,
+            enabled = is_year_x_axis && !identical(x_scale, "log")
+          ) %>%
           config(displaylogo = FALSE,
                  modeBarButtonsToRemove = list(
                    "autoScale2d", "resetScale2d", "hoverClosestCartesian",
@@ -807,7 +922,12 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             hoverlabel = plotly_hoverlabel_style(),
             xaxis = plotly_axis_style(list(title = x_var_lab)),
             yaxis = plotly_axis_style(list(title = y_var_lab))
-          )
+          ) %>%
+            apply_plotly_year_xaxis_ticks(
+              df[[x_var]],
+              n = xnum_breaks,
+              enabled = is_year_x_axis
+            )
           
           # Add extra layer dynamically
           if (!is.null(extra_layer)) {
@@ -938,6 +1058,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               itemdoubleclick = "exclusive"
             )) else list(),
             opacity = 1
+          ) %>%
+          apply_plotly_year_xaxis_ticks(
+            df[[x_var]],
+            n = xnum_breaks,
+            enabled = is_year_x_axis
           ) %>%
           apply_plotly_axis_text_style(show_grid = axis_show_grid) %>%
           config(displaylogo = FALSE,
@@ -1493,21 +1618,19 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         }
 
         # modify x scale if necessary
-        if (!is.null(breaks_x) || !is.null(x_limits)) {
-          if (!is.null(breaks_x) && !is.null(x_limits)) {
-            p <- p + scale_x_continuous(
-              breaks = breaks_x,
-              limits = x_limits,
-              expand = expansion(mult = c(0, 0))
-            )
-          } else if (!is.null(breaks_x)) {
-            p <- p + scale_x_continuous(breaks = breaks_x)
-          } else {
-            p <- p + scale_x_continuous(
-              limits = x_limits,
-              expand = expansion(mult = c(0, 0))
-            )
-          }
+        x_scale_args <- list()
+        if (!is.null(breaks_x)) {
+          x_scale_args$breaks <- breaks_x
+        }
+        if (!is.null(x_limits)) {
+          x_scale_args$limits <- x_limits
+          x_scale_args$expand <- expansion(mult = c(0, 0))
+        }
+        if (is_year_x_axis) {
+          x_scale_args$labels <- year_axis_tick_text
+        }
+        if (length(x_scale_args) > 0) {
+          p <- p + do.call(scale_x_continuous, x_scale_args)
         }
 
         # ADD GRAY BACKGROUND LAYERS
@@ -1604,6 +1727,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               itemdoubleclick = "none",
               xanchor = "center",
               y = -0.3))
+          ) %>%
+          apply_plotly_year_xaxis_ticks(
+            df[[x_var]],
+            n = xnum_breaks,
+            enabled = is_year_x_axis
           ) %>%
           apply_plotly_axis_text_style(show_grid = axis_show_grid) %>%
           config(displaylogo = FALSE,
