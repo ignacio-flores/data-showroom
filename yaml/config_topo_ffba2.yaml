@@ -46,15 +46,15 @@ fixed_selectors:
 loose_selectors:
   d4_concept_lab:
     label: "Wealth type"
-    type: "sticky checkbox"
+    type: "reactive checkbox"
   legend: 
     label: "Source" 
-    type: "sticky checkbox"
+    type: "reactive checkbox"
   d2_sector_lab:
     label: "Sector"
     selected: 
       - "Households"
-    type: "sticky selector"      
+    type: "reactive selector"      
       
 #facets 
 facet_var: "legend"

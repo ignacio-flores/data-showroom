@@ -50,7 +50,7 @@ loose_selectors:
   legend:
     label: "Source"
     selected: "World Inequality Database - Balance Sheet"       
-    type: "sticky selector"
+    type: "reactive selector"
   d4_concept_lab:
     label: "Asset or Debt type"
     type: "sticky checkbox"

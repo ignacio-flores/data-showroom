@@ -846,6 +846,62 @@ plotly_number_axis_layout <- function(axis = list(),
   axis
 }
 
+plotly_axis_layout_names <- function(layout, axis_prefix) {
+  if (is.null(layout) || !is.list(layout)) return(character(0))
+
+  pattern <- paste0("^", axis_prefix, "axis[0-9]*$")
+  names(layout)[grepl(pattern, names(layout))]
+}
+
+plotly_merge_axis_layout <- function(axis = list(),
+                                     shared_axis = list(),
+                                     remove_title = FALSE) {
+  if (is.null(axis) || !is.list(axis)) axis <- list()
+  if (is.null(shared_axis) || !is.list(shared_axis)) shared_axis <- list()
+
+  subplot_fields <- c(
+    "domain", "anchor", "side", "position", "overlaying", "matches",
+    "scaleanchor", "scaleratio", "constraintoward"
+  )
+  subplot_layout <- axis[intersect(names(axis), subplot_fields)]
+
+  merged <- axis
+  for (axis_name in names(shared_axis)) {
+    merged[[axis_name]] <- shared_axis[[axis_name]]
+  }
+  for (axis_name in names(subplot_layout)) {
+    merged[[axis_name]] <- subplot_layout[[axis_name]]
+  }
+
+  if (isTRUE(remove_title)) {
+    merged$title <- NULL
+  }
+
+  merged
+}
+
+apply_plotly_shared_yaxis_layout <- function(pp,
+                                             shared_axis,
+                                             remove_title = FALSE) {
+  if (is.null(pp$x)) return(pp)
+  if (is.null(pp$x$layout) || !is.list(pp$x$layout)) {
+    pp$x$layout <- list()
+  }
+
+  axis_names <- plotly_axis_layout_names(pp$x$layout, "y")
+  if (length(axis_names) == 0) axis_names <- "yaxis"
+
+  for (axis_name in axis_names) {
+    pp$x$layout[[axis_name]] <- plotly_merge_axis_layout(
+      pp$x$layout[[axis_name]],
+      shared_axis = shared_axis,
+      remove_title = remove_title
+    )
+  }
+
+  pp
+}
+
 is_year_axis_var <- function(var_name) {
   if (is.null(var_name) || length(var_name) != 1) return(FALSE)
   identical(tolower(as.character(var_name)), "year")
@@ -920,7 +976,7 @@ plotly_year_xaxis_layout <- function(axis, values, n = NULL, enabled = TRUE) {
 apply_plotly_year_xaxis_ticks <- function(pp, values, n = NULL, enabled = TRUE) {
   if (!isTRUE(enabled)) return(pp)
 
-  axis_names <- names(pp$x$layout)[grepl("^xaxis[0-9]*$", names(pp$x$layout))]
+  axis_names <- plotly_axis_layout_names(pp$x$layout, "x")
   if (length(axis_names) == 0) axis_names <- "xaxis"
 
   for (axis_name in axis_names) {
@@ -1771,6 +1827,21 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           y_range <- y_range + c(-0.5, 0.5)
         }
 
+        y_tick_count <- if (n_facets > 1) 5L else NULL
+        shared_y_axis_layout <- plotly_axis_style(list(
+          range = y_range,
+          title = if (n_facets > 1) NULL else y_var_lab,
+          zeroline = FALSE,
+          showticklabels = TRUE
+        )) %>%
+          plotly_number_axis_layout(
+            values = combined_y,
+            var_name = y_var,
+            label = y_var_lab,
+            axis_info = y_axis_info,
+            n = y_tick_count
+          )
+
         facet_annotations <- if (n_facets > 1) {
           lapply(seq_along(facet_levels), function(i) {
             list(
@@ -1792,15 +1863,42 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         } else {
           list()
         }
+
+        shared_y_axis_title_annotation <- if (n_facets > 1 &&
+            !is.null(y_var_lab) &&
+            nzchar(as.character(y_var_lab))) {
+          list(list(
+            x = -0.065,
+            y = 0.5,
+            text = y_var_lab,
+            showarrow = FALSE,
+            xanchor = "center",
+            yanchor = "middle",
+            xref = "paper",
+            yref = "paper",
+            textangle = -90,
+            font = plotly_font(plot_text_style$axis_title_size)
+          ))
+        } else {
+          list()
+        }
+        plot_annotations <- c(facet_annotations, shared_y_axis_title_annotation)
         
         # Generate subplot with fixed axis ranges
-        pp <- subplot(plots, nrows = nrows, shareX = TRUE, shareY = TRUE, titleX = TRUE, titleY = TRUE) %>%
+        pp <- subplot(
+          plots,
+          nrows = nrows,
+          shareX = TRUE,
+          shareY = TRUE,
+          titleX = TRUE,
+          titleY = n_facets <= 1
+        ) %>%
           layout(
             dragmode = "zoom",
             hovermode = "closest",
             #xaxis = list(fixedrange = TRUE),
             #yaxis = list(fixedrange = TRUE),
-            annotations = facet_annotations,
+            annotations = plot_annotations,
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
             xaxis = plotly_axis_style(list(
@@ -1808,17 +1906,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               title = x_var_lab, 
               zeroline = FALSE 
             )),
-            yaxis = plotly_axis_style(list(
-              range = y_range,
-              title = y_var_lab,
-              zeroline = FALSE
-            )) %>%
-              plotly_number_axis_layout(
-                values = combined_y,
-                var_name = y_var,
-                label = y_var_lab,
-                axis_info = y_axis_info
-              ),
+            yaxis = shared_y_axis_layout,
             legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
               x = 0.5,
@@ -1834,6 +1922,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             df[[x_var]],
             n = xnum_breaks,
             enabled = is_year_x_axis
+          ) %>%
+          apply_plotly_shared_yaxis_layout(
+            shared_y_axis_layout,
+            remove_title = n_facets > 1
           ) %>%
           plotly_modebar_config()
 

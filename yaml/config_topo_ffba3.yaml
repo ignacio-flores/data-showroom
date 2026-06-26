@@ -51,14 +51,14 @@ fixed_selectors:
 loose_selectors:
   d4_concept_lab:
     label: "Wealth type"
-    type: "sticky checkbox"
+    type: "reactive checkbox"
   legend: 
     label: "Source" 
     selected: "Luxembourg Wealth Study Database - Balance Sheet"
-    type: "sticky selector"
+    type: "reactive selector"
   d2_sector_lab:
     label: "Sector"
-    type: "sticky selector"      
+    type: "reactive selector"      
       
 #facets 
 facet_var: "GEO_long"

@@ -14,6 +14,16 @@ expect_true <- function(value, message) {
   if (!isTRUE(value)) fail(message)
 }
 
+expect_equal <- function(actual, expected, message) {
+  if (!identical(actual, expected)) {
+    fail(paste0(
+      message,
+      "\nExpected: ", paste(expected, collapse = ", "),
+      "\nActual: ", paste(actual, collapse = ", ")
+    ))
+  }
+}
+
 data_path <- "data/topo_base.qs"
 if (!file.exists(data_path)) {
   fail(paste("Missing required test data:", data_path))
@@ -74,7 +84,16 @@ for (facet_idx in seq_along(facet_levels)) {
     opacity = 1,
     legendgroup = ~d4_concept_lab,
     showlegend = facet_level == facet_levels[[1]]
-  )
+  ) %>%
+    plotly::layout(
+      xaxis = plotly_axis_style(list(title = "Year")),
+      yaxis = plotly_axis_style(list(title = "Value")) %>%
+        plotly_number_axis_layout(
+          values = df_facet$value,
+          var_name = "value",
+          label = "Value"
+        )
+    )
 
   df_extra_facet <- extra_df[extra_df$legend == facet_level, , drop = FALSE]
   if (nrow(df_extra_facet) > 0) {
@@ -108,8 +127,59 @@ for (facet_idx in seq_along(facet_levels)) {
   legend_seen <- legend_result$legend_seen
 }
 
+n_facets <- length(facet_levels)
+nrows <- ceiling(sqrt(n_facets))
+
+stack_sum <- function(data) {
+  if (nrow(data) == 0) return(numeric(0))
+  stats::aggregate(value ~ legend + year, data = data, FUN = sum)$value
+}
+combined_y <- c(
+  stack_sum(main_df[main_df$value > 0, , drop = FALSE]),
+  stack_sum(main_df[main_df$value < 0, , drop = FALSE]),
+  extra_df$value
+)
+y_range <- range(combined_y, na.rm = TRUE)
+shared_y_axis_layout <- plotly_axis_style(list(
+  range = y_range,
+  zeroline = FALSE,
+  showticklabels = TRUE
+)) %>%
+  plotly_number_axis_layout(
+    values = combined_y,
+    var_name = "value",
+    label = "Value",
+    n = 5L
+  )
+shared_y_axis_title_annotation <- list(list(
+  x = -0.065,
+  y = 0.5,
+  text = "Value",
+  showarrow = FALSE,
+  xanchor = "center",
+  yanchor = "middle",
+  xref = "paper",
+  yref = "paper",
+  textangle = -90,
+  font = plotly_font(plot_text_style$axis_title_size)
+))
+
 built <- build_plotly_for_display(
-  plotly::subplot(plots, nrows = ceiling(sqrt(length(plots))), shareX = TRUE, shareY = TRUE)
+  plotly::subplot(
+    plots,
+    nrows = nrows,
+    shareX = TRUE,
+    shareY = TRUE,
+    titleY = FALSE
+  ) %>%
+    plotly::layout(
+      annotations = shared_y_axis_title_annotation,
+      yaxis = shared_y_axis_layout
+    ) %>%
+    apply_plotly_shared_yaxis_layout(
+      shared_y_axis_layout,
+      remove_title = TRUE
+    )
 )
 traces <- built$x$data
 legend_names <- vapply(
@@ -143,4 +213,63 @@ expect_true(
   "Main faceted area traces should retain the original area fill behavior."
 )
 
-cat("Faceted legend regression checks passed.\n")
+layout <- built$x$layout
+y_axis_names <- plotly_axis_layout_names(layout, "y")
+expect_true(
+  length(y_axis_names) > 1,
+  "Regression setup should create multiple subplot y axes."
+)
+y_axes <- layout[y_axis_names]
+
+axis_numeric_field <- function(axis, field) {
+  unname(as.numeric(unlist(axis[[field]])))
+}
+axis_character_field <- function(axis, field) {
+  as.character(unlist(axis[[field]]))
+}
+axis_title_text <- function(axis) {
+  title <- axis$title
+  if (is.null(title)) return("")
+  if (is.list(title)) return(title$text %||% "")
+  as.character(title[[1]])
+}
+
+expected_range <- axis_numeric_field(shared_y_axis_layout, "range")
+expected_tickvals <- axis_numeric_field(shared_y_axis_layout, "tickvals")
+expected_ticktext <- axis_character_field(shared_y_axis_layout, "ticktext")
+
+for (axis_name in y_axis_names) {
+  axis <- layout[[axis_name]]
+  expect_equal(
+    axis_numeric_field(axis, "range"),
+    expected_range,
+    paste("Faceted", axis_name, "should use the shared global y range.")
+  )
+  expect_equal(
+    axis_numeric_field(axis, "tickvals"),
+    expected_tickvals,
+    paste("Faceted", axis_name, "should use the shared global y tick values.")
+  )
+  expect_equal(
+    axis_character_field(axis, "ticktext"),
+    expected_ticktext,
+    paste("Faceted", axis_name, "should use the shared global y tick labels.")
+  )
+}
+
+y_axis_titles <- vapply(y_axes, axis_title_text, character(1))
+expect_true(
+  all(!nzchar(y_axis_titles)),
+  "Multi-facet subplot row y axes should not repeat the y-axis title."
+)
+
+value_title_annotations <- Filter(function(annotation) {
+  identical(annotation$text, "Value") &&
+    identical(as.numeric(annotation$textangle), -90)
+}, layout$annotations)
+expect_true(
+  length(value_title_annotations) == 1,
+  "Multi-facet plots should have exactly one shared rotated y-axis title annotation."
+)
+
+cat("Faceted legend and y-axis regression checks passed.\n")

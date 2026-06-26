@@ -33,19 +33,13 @@ color:
 fixed_selectors:
   GEO_long:
     label: "Country"
-    selected: "United States"
-  legend:
-    label: "Source"
-    selected: "World Inequality Database - Balance Sheet"  
+    selected: "United States" 
   xrate_lab: 
     label: "Currency"
     selected: "Euro (2023 prices)"
   pop_lab: 
     label: "Unit"
     selected: "Per capita"
-  d2_sector_lab:
-    label: "Sector"
-    selected: "Households & NPISH"
   d4_concept_lab:
     label: "Asset or Debt type"
     type: "checkbox"
@@ -53,6 +47,17 @@ fixed_selectors:
       - "Financial Assets & Fixed Capital of Personal Businesses"
       - "Housing & Land"
       - "Debt"  
+
+loose_selectors: 
+  legend:
+    label: "Source"
+    type: "reactive selector"
+    selected: "World Inequality Database - Balance Sheet" 
+  d2_sector_lab:
+    label: "Sector"
+    type: "reactive selector"
+    selected: "Households & NPISH"
+        
       
 #facets 
 facet_var: "GEO_long"
