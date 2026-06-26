@@ -176,12 +176,17 @@ createViz <- function(graph = NULL,
       choices <- sort(unique(choices_data[[lvar]]))
       choices <- choices[!is.na(choices)]
 
-      selchoices <- choices
-      if (identical(linfo$select, "random") && length(choices) > 5) {
-        selchoices <- sample(choices, 5)
-      } else if (identical(linfo$select, "spaced") && length(choices) > 5) {
-        selchoices <- choices[seq(1, length(choices), length.out = 5)]
+      selector_type <- if ("type" %in% names(linfo)) {
+        normalize_selector_type(linfo$type)
+      } else {
+        "select"
       }
+      selchoices <- loose_selector_next_selection(
+        selector_type,
+        choices,
+        select_mode = linfo$select,
+        initialized = FALSE
+      )
 
       all_selectors[[lvar]]$selected <- selchoices
     }
@@ -721,6 +726,12 @@ createViz <- function(graph = NULL,
             loose_vars = names(loose_selectors),
             unprocessed_change = unprocessed_change
           )
+          refresh_selection <- loose_selector_should_refresh_selection(
+            selector_type,
+            initialized = initialized,
+            change_source = change_source,
+            unprocessed_change = unprocessed_change
+          )
 
           selchoices <- loose_selector_next_selection(
             selector_type,
@@ -729,7 +740,8 @@ createViz <- function(graph = NULL,
             configured_selection = configured_selection,
             select_mode = loose_selectors[[var]]$select,
             initialized = initialized,
-            refresh_all = refresh_all
+            refresh_all = refresh_all,
+            refresh_selection = refresh_selection
           )
 
           current_filter <- isolate(loose_filters[[var]])

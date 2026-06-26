@@ -62,7 +62,7 @@ fixed_selectors:
 loose_selectors:
   kinship:
     label: "Kinship"
-    type: "selector"
+    type: "sticky selector"
     selected: "Children"
   year:
     label: "Years"

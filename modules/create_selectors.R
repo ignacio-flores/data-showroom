@@ -25,8 +25,23 @@ selector_checkbox_mode <- function(type) {
   NULL
 }
 
+selector_single_mode <- function(type) {
+  type <- normalize_selector_type(type)
+  if (identical(type, "selector") || identical(type, "sticky selector")) {
+    return("sticky")
+  }
+  if (identical(type, "reactive selector")) {
+    return("reactive")
+  }
+  NULL
+}
+
 selector_is_checkbox_like <- function(type) {
   !is.null(selector_checkbox_mode(type))
+}
+
+selector_is_single_like <- function(type) {
+  !is.null(selector_single_mode(type))
 }
 
 selector_signature_value <- function(value) {
@@ -36,6 +51,33 @@ selector_signature_value <- function(value) {
 
 selector_values_equal <- function(left, right) {
   identical(selector_signature_value(left), selector_signature_value(right))
+}
+
+selector_select_mode <- function(select_mode = NULL) {
+  if (is.null(select_mode) || length(select_mode) == 0 || is.na(select_mode[[1]])) {
+    return(NULL)
+  }
+  normalized <- tolower(trimws(as.character(select_mode[[1]])))
+  normalized <- gsub("[_-]+", " ", normalized)
+  normalized <- gsub("\\s+", " ", normalized)
+  if (!nzchar(normalized)) NULL else normalized
+}
+
+selector_selects_latest <- function(select_mode = NULL) {
+  identical(selector_select_mode(select_mode), "latest")
+}
+
+selector_latest_choice <- function(choices) {
+  choices <- choices[!is.na(choices)]
+  if (length(choices) == 0) return(NULL)
+
+  numeric_choices <- suppressWarnings(as.numeric(as.character(choices)))
+  if (all(!is.na(numeric_choices))) {
+    return(choices[[which.max(numeric_choices)]])
+  }
+
+  sorted_choices <- sort(choices)
+  sorted_choices[[length(sorted_choices)]]
 }
 
 loose_selector_ui_signature <- function(choices, selected) {
@@ -65,7 +107,7 @@ checkbox_select_rule_choices <- function(choices, select_mode = NULL) {
     return(choices)
   }
 
-  select_mode <- tolower(as.character(select_mode[[1]]))
+  select_mode <- selector_select_mode(select_mode)
   if (identical(select_mode, "random") && length(choices) > 5) {
     return(sample(choices, 5))
   }
@@ -76,13 +118,22 @@ checkbox_select_rule_choices <- function(choices, select_mode = NULL) {
   choices
 }
 
+single_selector_select_rule_choice <- function(choices, select_mode = NULL) {
+  choices <- choices[!is.na(choices)]
+  if (length(choices) == 0) return(NULL)
+  if (selector_selects_latest(select_mode)) return(selector_latest_choice(choices))
+  choices[[1]]
+}
+
 loose_selector_next_selection <- function(selector_type,
                                           choices,
                                           current_selection = NULL,
                                           configured_selection = NULL,
                                           select_mode = NULL,
                                           initialized = FALSE,
-                                          refresh_all = FALSE) {
+                                          refresh_all = FALSE,
+                                          refresh_latest = FALSE,
+                                          refresh_selection = FALSE) {
   choices <- choices[!is.na(choices)]
   if (length(choices) == 0) return(NULL)
 
@@ -99,9 +150,14 @@ loose_selector_next_selection <- function(selector_type,
     return(choices)
   }
 
+  if (isTRUE(refresh_selection) ||
+      (isTRUE(refresh_latest) && selector_selects_latest(select_mode))) {
+    if (length(configured_selection) > 0) return(configured_selection[[1]])
+    return(single_selector_select_rule_choice(choices, select_mode))
+  }
   if (length(current_selection) > 0) return(current_selection[[1]])
   if (length(configured_selection) > 0) return(configured_selection[[1]])
-  choices[[1]]
+  single_selector_select_rule_choice(choices, select_mode)
 }
 
 loose_selector_should_refresh_all <- function(selector_type,
@@ -124,6 +180,30 @@ loose_selector_should_refresh_all <- function(selector_type,
   }
 
   FALSE
+}
+
+loose_selector_should_refresh_selection <- function(selector_type,
+                                                    initialized,
+                                                    change_source,
+                                                    unprocessed_change = TRUE) {
+  identical(selector_single_mode(selector_type), "reactive") &&
+    isTRUE(initialized) &&
+    isTRUE(unprocessed_change) &&
+    identical(change_source, "__fixed__")
+}
+
+loose_selector_should_refresh_latest <- function(selector_type,
+                                                 select_mode = NULL,
+                                                 initialized,
+                                                 change_source,
+                                                 unprocessed_change = TRUE) {
+  selector_selects_latest(select_mode) &&
+    loose_selector_should_refresh_selection(
+      selector_type,
+      initialized = initialized,
+      change_source = change_source,
+      unprocessed_change = unprocessed_change
+    )
 }
 
 # Enhanced createSelectors: supports axis choice alt.names separately from selector title labels
@@ -294,7 +374,7 @@ createSelectors <- function(data,
           `count-selected-text`  = "{0} selected"
         )
       )
-    } else if (identical(type, "selector")) {
+    } else if (selector_is_single_like(type)) {
       pickerInput(
         inputId = var,
         label   = lbl,

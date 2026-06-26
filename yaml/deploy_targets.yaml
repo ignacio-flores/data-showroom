@@ -113,6 +113,14 @@ targets:
     tags: [eigt, ft]
     enabled: true
 
+  - target_id: eigt-ft3
+    graph: eigt_ft3
+    app_name: eigt-ft3
+    profile: frolle
+    auth_script: auth/shiny_auth_frolle.R
+    tags: [eigt, ft]
+    enabled: true
+
   - target_id: eigt-kf2
     graph: eigt_kf2
     app_name: eigt-kf2

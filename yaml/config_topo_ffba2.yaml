@@ -54,7 +54,7 @@ loose_selectors:
     label: "Sector"
     selected: 
       - "Households"
-    type: "selector"      
+    type: "sticky selector"      
       
 #facets 
 facet_var: "legend"

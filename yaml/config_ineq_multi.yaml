@@ -56,11 +56,11 @@ loose_selectors:
   d4_concept_lab:
     label: "Concept"
     selected: "Net Wealth"
-    type: "selector"
+    type: "sticky selector"
   percentile: 
     label: "Percentile"
     selected: "p0p50"
-    type: "selector"
+    type: "sticky selector"
   Data_Type:
     label: "Data type"
     type: "very reactive checkbox"

@@ -58,11 +58,11 @@ loose_selectors:
   d4_concept_lab:
     label: "Concept"
     selected: "Net Wealth"
-    type: "selector"
+    type: "sticky selector"
   percentile: 
     label: "Percentile"
     selected: "p99p100"  
-    type: "selector"
+    type: "sticky selector"
   Data_Type:
     label: "Data type"
     type: "sticky checkbox"
@@ -92,4 +92,3 @@ tooltip_vars:
   legend: "Source:"
   metadata: "Explanation:"
   data_description: "Data type:"
-

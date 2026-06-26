@@ -54,8 +54,8 @@ expect_true(
 )
 
 expect_true(
-  identical(env$loose_selectors$d4_concept_lab$type, "selector"),
-  "config_ineq_single d4_concept_lab should remain a single-choice loose selector."
+  identical(env$loose_selectors$d4_concept_lab$type, "sticky selector"),
+  "config_ineq_single d4_concept_lab should remain an explicit sticky single-choice loose selector."
 )
 
 message("OK: config_ineq_single loose selector columns are preserved for loading.")

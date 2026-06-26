@@ -53,7 +53,7 @@ loose_selectors:
     label: "Source"
     selected: 
       - "World Inequality Database - Balance Sheet"
-    type: "selector"
+    type: "sticky selector"
       
 #facets 
 facet_var: "GEO_long"

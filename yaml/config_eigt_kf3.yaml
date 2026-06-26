@@ -61,7 +61,7 @@ loose_selectors:
     type: "sticky checkbox"
   kinship:
     label: "Kinship"
-    type: "selector"
+    type: "sticky selector"
     selected: "Children"
 
 

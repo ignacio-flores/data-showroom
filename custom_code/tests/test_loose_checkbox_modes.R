@@ -51,6 +51,21 @@ expect_equal(
   "very_reactive",
   "Very reactive checkbox should use very-reactive mode."
 )
+expect_equal(
+  selector_single_mode("selector"),
+  "sticky",
+  "Legacy selector should remain a sticky single-selector alias."
+)
+expect_equal(
+  selector_single_mode("sticky selector"),
+  "sticky",
+  "Explicit sticky selector should use sticky mode."
+)
+expect_equal(
+  selector_single_mode("reactive selector"),
+  "reactive",
+  "Reactive selector should use reactive mode."
+)
 expect_true(
   selector_is_checkbox_like("very reactive checkbox"),
   "All checkbox refresh modes should render as checkbox-like picker inputs."
@@ -58,6 +73,24 @@ expect_true(
 expect_false(
   selector_is_checkbox_like("selector"),
   "Single-value selector controls should not be checkbox-like."
+)
+expect_true(
+  selector_is_single_like("reactive selector"),
+  "Reactive selector should render as a single-value picker input."
+)
+expect_true(
+  selector_selects_latest(" Latest "),
+  "Selector select mode normalization should recognize latest."
+)
+expect_equal(
+  selector_latest_choice(c("2022", "2025", "2024")),
+  "2025",
+  "Latest selection should use numeric maximum for numeric-like choices."
+)
+expect_equal(
+  selector_latest_choice(c("Beta", "Alpha", "Gamma")),
+  "Gamma",
+  "Latest selection should use the last sorted value for non-numeric choices."
 )
 
 expect_true(
@@ -128,6 +161,52 @@ expect_equal(
   ),
   choices,
   "Reactive checkbox should select all choices when a fixed-selector refresh is requested."
+)
+year_choices <- c("2022", "2025", "2024")
+expect_equal(
+  loose_selector_next_selection(
+    "sticky selector",
+    year_choices,
+    select_mode = "latest",
+    initialized = FALSE
+  ),
+  "2025",
+  "Initial single-value selectors with select: latest should choose the latest value."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "sticky selector",
+    year_choices,
+    current_selection = "2024",
+    select_mode = "latest",
+    initialized = TRUE
+  ),
+  "2024",
+  "Latest selectors should preserve an existing user selection without a fixed-selector refresh."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "reactive selector",
+    year_choices,
+    current_selection = "2024",
+    select_mode = "latest",
+    initialized = TRUE,
+    refresh_selection = TRUE
+  ),
+  "2025",
+  "Reactive latest selectors should refresh to the latest value after an upstream selector change."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "reactive selector",
+    choices,
+    current_selection = "A",
+    configured_selection = "B",
+    initialized = TRUE,
+    refresh_selection = TRUE
+  ),
+  "B",
+  "Reactive selectors should recompute configured selections after fixed selector changes."
 )
 expect_equal(
   loose_selector_next_selection(
@@ -206,17 +285,76 @@ expect_false(
   ),
   "A data selector change should only be consumed once per checkbox."
 )
+expect_true(
+  loose_selector_should_refresh_selection(
+    "reactive selector",
+    initialized = TRUE,
+    change_source = "__fixed__"
+  ),
+  "Reactive selectors should refresh after fixed selector changes."
+)
+expect_false(
+  loose_selector_should_refresh_selection(
+    "sticky selector",
+    initialized = TRUE,
+    change_source = "__fixed__"
+  ),
+  "Sticky selectors should preserve existing values after fixed selector changes."
+)
+expect_true(
+  loose_selector_should_refresh_latest(
+    "reactive selector",
+    select_mode = "latest",
+    initialized = TRUE,
+    change_source = "__fixed__"
+  ),
+  "Reactive latest selectors should refresh after fixed selector changes."
+)
+expect_false(
+  loose_selector_should_refresh_latest(
+    "reactive selector",
+    select_mode = "latest",
+    initialized = TRUE,
+    change_source = "year"
+  ),
+  "Reactive latest selectors should not refresh after their own user selection changes."
+)
+expect_false(
+  loose_selector_should_refresh_latest(
+    "selector",
+    select_mode = "latest",
+    initialized = TRUE,
+    change_source = "__fixed__"
+  ),
+  "Legacy sticky selector aliases should not refresh after fixed selector changes."
+)
+expect_false(
+  loose_selector_should_refresh_latest(
+    "sticky checkbox",
+    select_mode = "latest",
+    initialized = TRUE,
+    change_source = "__fixed__"
+  ),
+  "Checkbox selectors should keep their existing refresh rules."
+)
 
 config_paths <- list.files("yaml", pattern = "^config_.*\\.yaml$", full.names = TRUE)
 for (config_path in config_paths) {
   config <- yaml::read_yaml(config_path)
 
-  if (!is.null(config$loose_selectors)) {
-    for (var in names(config$loose_selectors)) {
-      type <- normalize_selector_type(config$loose_selectors[[var]]$type)
+  for (section in c("fixed_selectors", "loose_selectors")) {
+    if (is.null(config[[section]])) next
+    for (var in names(config[[section]])) {
+      type <- normalize_selector_type(config[[section]][[var]]$type)
+      if (identical(section, "loose_selectors")) {
+        expect_false(
+          identical(type, "checkbox"),
+          paste0(config_path, " ", section, " ", var, " should explicitly use sticky checkbox.")
+        )
+      }
       expect_false(
-        identical(type, "checkbox"),
-        paste0(config_path, " loose selector ", var, " should explicitly use sticky checkbox.")
+        identical(type, "selector"),
+        paste0(config_path, " ", section, " ", var, " should explicitly use sticky selector or reactive selector.")
       )
     }
   }

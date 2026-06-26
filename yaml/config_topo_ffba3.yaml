@@ -55,10 +55,10 @@ loose_selectors:
   legend: 
     label: "Source" 
     selected: "Luxembourg Wealth Study Database - Balance Sheet"
-    type: "selector"
+    type: "sticky selector"
   d2_sector_lab:
     label: "Sector"
-    type: "selector"      
+    type: "sticky selector"      
       
 #facets 
 facet_var: "GEO_long"
