@@ -62,11 +62,11 @@ fixed_selectors:
 loose_selectors:
   kinship:
     label: "Kinship"
-    type: "sticky selector"
+    type: "very reactive selector"
     selected: "Children"
   year:
     label: "Years"
-    type: "sticky checkbox"
+    type: "very reactive checkbox"
     select: "spaced"
 
 

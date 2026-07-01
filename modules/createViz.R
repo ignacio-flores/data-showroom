@@ -626,6 +626,7 @@ createViz <- function(graph = NULL,
     loose_selector_processed_token <- reactiveValues()
     loose_selector_last_choices <- reactiveValues()
     loose_selector_last_ui_signature <- reactiveValues()
+    loose_selector_programmatic_update <- reactiveValues()
     data_selector_change <- reactiveVal(list(source = NULL, token = 0L))
     last_valid_filtered_data <- reactiveVal(NULL)
 
@@ -635,11 +636,13 @@ createViz <- function(graph = NULL,
       data_selector_change(list(source = source, token = current_token + 1L))
     }
 
-    begin_loose_selector_update <- function() {
+    begin_loose_selector_update <- function(var) {
       loose_selector_updating(TRUE)
+      loose_selector_programmatic_update[[var]] <- TRUE
       loose_selector_update_count(isolate(loose_selector_update_count()) + 1L)
       session$onFlushed(
         function() {
+          loose_selector_programmatic_update[[var]] <- FALSE
           remaining <- max(0L, isolate(loose_selector_update_count()) - 1L)
           loose_selector_update_count(remaining)
           if (remaining == 0L) {
@@ -669,7 +672,6 @@ createViz <- function(graph = NULL,
           } else {
             "select"
           }
-          checkbox_mode <- selector_checkbox_mode(selector_type)
           change <- data_selector_change()
           change_source <- change$source
           change_token <- if (!is.null(change$token)) change$token else 0L
@@ -677,7 +679,7 @@ createViz <- function(graph = NULL,
           processed_token <- isolate(loose_selector_processed_token[[var]])
           unprocessed_change <- !identical(processed_token, change_token)
 
-          if (identical(checkbox_mode, "very_reactive")) {
+          if (selector_is_very_reactive(selector_type)) {
             other_loose_vars <- setdiff(names(loose_selectors), var)
             selector_inputs_signature(input, other_loose_vars)
 
@@ -755,7 +757,7 @@ createViz <- function(graph = NULL,
           previous_ui_signature <- isolate(loose_selector_last_ui_signature[[var]])
           if (loose_selector_ui_needs_update(previous_ui_signature, choices, selchoices)) {
             loose_selector_last_ui_signature[[var]] <- current_ui_signature
-            begin_loose_selector_update()
+            begin_loose_selector_update(var)
             freezeReactiveValue(input, var)
             updatePickerInput(
               session,
@@ -768,6 +770,10 @@ createViz <- function(graph = NULL,
         
         # Observer: Update filter for this specific selector when input changes
         observeEvent(input[[var]], {
+          if (isTRUE(isolate(loose_selector_programmatic_update[[var]]))) {
+            return()
+          }
+
           input_selection <- if (!is.null(input[[var]])) input[[var]] else NULL
           filter_changed <- !selector_values_equal(
             isolate(loose_filters[[var]]),
@@ -786,7 +792,6 @@ createViz <- function(graph = NULL,
           }
 
           if (filter_changed &&
-              !isTRUE(loose_selector_updating()) &&
               isTRUE(isolate(loose_selector_initialized[[var]]))) {
             mark_data_selector_change(var)
           }
@@ -809,22 +814,12 @@ createViz <- function(graph = NULL,
         return(NULL)
       }
 
-      if (!is.null(loose_selectors)) {
-        for (var in names(loose_selectors)) {
-          if (!is.null(loose_filters[[var]]) && length(loose_filters[[var]]) > 0) {
-            if (!var %in% names(result)) next
-
-            available_values <- unique(result[[var]])
-            active_values <- loose_filters[[var]][loose_filters[[var]] %in% available_values]
-
-            if (length(active_values) == 0) {
-              return(NULL)
-            }
-
-            result <- result %>% filter(.data[[var]] %in% active_values)
-          }
-        }
-      }
+      result <- loose_selector_filter_data(
+        result,
+        loose_filters,
+        loose_selectors,
+        selector_initialized = loose_selector_initialized
+      )
 
       if (is.null(result) || nrow(result) == 0) {
         return(NULL)

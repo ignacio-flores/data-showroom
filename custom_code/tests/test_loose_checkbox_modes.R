@@ -66,6 +66,11 @@ expect_equal(
   "reactive",
   "Reactive selector should use reactive mode."
 )
+expect_equal(
+  selector_single_mode("very reactive selector"),
+  "very_reactive",
+  "Very reactive selector should use very-reactive mode."
+)
 expect_true(
   selector_is_checkbox_like("very reactive checkbox"),
   "All checkbox refresh modes should render as checkbox-like picker inputs."
@@ -77,6 +82,18 @@ expect_false(
 expect_true(
   selector_is_single_like("reactive selector"),
   "Reactive selector should render as a single-value picker input."
+)
+expect_true(
+  selector_is_single_like("very reactive selector"),
+  "Very reactive selector should render as a single-value picker input."
+)
+expect_true(
+  selector_is_very_reactive("very reactive selector"),
+  "Very reactive selector should opt into very-reactive choice filtering."
+)
+expect_true(
+  selector_is_very_reactive("very reactive checkbox"),
+  "Very reactive checkbox should opt into very-reactive choice filtering."
 )
 expect_true(
   selector_selects_latest(" Latest "),
@@ -232,6 +249,41 @@ expect_equal(
   spaced_choices[c(1, 3, 5, 7, 9)],
   "Initial checkbox selection should keep select: spaced behavior."
 )
+expect_equal(
+  loose_selector_next_selection(
+    "reactive checkbox",
+    spaced_choices,
+    current_selection = "1",
+    select_mode = "spaced",
+    initialized = TRUE,
+    refresh_all = TRUE
+  ),
+  spaced_choices[c(1, 3, 5, 7, 9)],
+  "Reactive checkbox refreshes should reapply select: spaced."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "very reactive checkbox",
+    spaced_choices,
+    current_selection = "1",
+    select_mode = "spaced",
+    initialized = TRUE,
+    refresh_all = TRUE
+  ),
+  spaced_choices[c(1, 3, 5, 7, 9)],
+  "Very reactive checkbox refreshes should reapply select: spaced."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "reactive checkbox",
+    spaced_choices,
+    current_selection = "1",
+    initialized = TRUE,
+    refresh_all = TRUE
+  ),
+  spaced_choices,
+  "Reactive checkbox refreshes without select: spaced should still select all choices."
+)
 
 loose_vars <- c("source", "concept", "year")
 expect_true(
@@ -293,6 +345,22 @@ expect_true(
   ),
   "Reactive selectors should refresh after fixed selector changes."
 )
+expect_true(
+  loose_selector_should_refresh_selection(
+    "very reactive selector",
+    initialized = TRUE,
+    change_source = "__fixed__"
+  ),
+  "Very reactive selectors should refresh after fixed selector changes."
+)
+expect_false(
+  loose_selector_should_refresh_selection(
+    "very reactive selector",
+    initialized = TRUE,
+    change_source = "year"
+  ),
+  "Very reactive selectors should preserve valid values after loose selector changes."
+)
 expect_false(
   loose_selector_should_refresh_selection(
     "sticky selector",
@@ -338,6 +406,52 @@ expect_false(
   "Checkbox selectors should keep their existing refresh rules."
 )
 
+loose_filter_data <- data.frame(
+  year = c("2000", "2001", "2002"),
+  kinship = c("Children", "Children", "Parents"),
+  value = c(1, 2, 3),
+  stringsAsFactors = FALSE
+)
+filtered_loose_data <- loose_selector_filter_data(
+  loose_filter_data,
+  loose_filters = list(year = c("2000", "2002")),
+  loose_selectors = list(year = list()),
+  selector_initialized = list(year = TRUE)
+)
+expect_equal(
+  filtered_loose_data$year,
+  c("2000", "2002"),
+  "Loose filters should keep only selected values."
+)
+expect_true(
+  is.null(loose_selector_filter_data(
+    loose_filter_data,
+    loose_filters = list(year = character(0)),
+    loose_selectors = list(year = list()),
+    selector_initialized = list(year = TRUE)
+  )),
+  "Initialized loose selectors with no selected values should not fall through to all values."
+)
+expect_equal(
+  loose_selector_filter_data(
+    loose_filter_data,
+    loose_filters = list(),
+    loose_selectors = list(year = list()),
+    selector_initialized = list(year = FALSE)
+  )$year,
+  loose_filter_data$year,
+  "Uninitialized loose selectors may be skipped before their first computed selection."
+)
+expect_true(
+  is.null(loose_selector_filter_data(
+    loose_filter_data,
+    loose_filters = list(year = "1999"),
+    loose_selectors = list(year = list()),
+    selector_initialized = list(year = TRUE)
+  )),
+  "Loose filters with no active values in the data should return no data."
+)
+
 config_paths <- list.files("yaml", pattern = "^config_.*\\.yaml$", full.names = TRUE)
 for (config_path in config_paths) {
   config <- yaml::read_yaml(config_path)
@@ -376,6 +490,16 @@ expect_equal(
   selector_checkbox_mode("checkbox"),
   "sticky",
   "Legacy fixed checkbox types should remain supported by the shared helper."
+)
+
+ft1_config <- yaml::read_yaml("yaml/config_eigt_ft1.yaml")
+expect_true(
+  selector_is_single_like(ft1_config$loose_selectors$kinship$type),
+  "eigt-ft1 kinship should use a supported single-selector type."
+)
+expect_true(
+  selector_is_very_reactive(ft1_config$loose_selectors$kinship$type),
+  "eigt-ft1 kinship should use very-reactive choice filtering."
 )
 
 cat("Loose checkbox mode checks passed.\n")

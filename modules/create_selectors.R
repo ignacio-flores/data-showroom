@@ -33,6 +33,9 @@ selector_single_mode <- function(type) {
   if (identical(type, "reactive selector")) {
     return("reactive")
   }
+  if (identical(type, "very reactive selector")) {
+    return("very_reactive")
+  }
   NULL
 }
 
@@ -42,6 +45,11 @@ selector_is_checkbox_like <- function(type) {
 
 selector_is_single_like <- function(type) {
   !is.null(selector_single_mode(type))
+}
+
+selector_is_very_reactive <- function(type) {
+  identical(selector_checkbox_mode(type), "very_reactive") ||
+    identical(selector_single_mode(type), "very_reactive")
 }
 
 selector_signature_value <- function(value) {
@@ -141,7 +149,7 @@ loose_selector_next_selection <- function(selector_type,
   configured_selection <- configured_selection[configured_selection %in% choices]
 
   if (selector_is_checkbox_like(selector_type)) {
-    if (isTRUE(refresh_all)) return(choices)
+    if (isTRUE(refresh_all)) return(checkbox_select_rule_choices(choices, select_mode))
     if (length(current_selection) > 0) return(current_selection)
     if (!isTRUE(initialized)) {
       if (length(configured_selection) > 0) return(configured_selection)
@@ -186,7 +194,7 @@ loose_selector_should_refresh_selection <- function(selector_type,
                                                     initialized,
                                                     change_source,
                                                     unprocessed_change = TRUE) {
-  identical(selector_single_mode(selector_type), "reactive") &&
+  selector_single_mode(selector_type) %in% c("reactive", "very_reactive") &&
     isTRUE(initialized) &&
     isTRUE(unprocessed_change) &&
     identical(change_source, "__fixed__")
@@ -204,6 +212,46 @@ loose_selector_should_refresh_latest <- function(selector_type,
       change_source = change_source,
       unprocessed_change = unprocessed_change
     )
+}
+
+loose_selector_filter_data <- function(result,
+                                       loose_filters,
+                                       loose_selectors,
+                                       selector_initialized = NULL) {
+  if (is.null(result) || nrow(result) == 0) {
+    return(NULL)
+  }
+  if (is.null(loose_selectors)) {
+    return(result)
+  }
+
+  for (var in names(loose_selectors)) {
+    if (!var %in% names(result)) next
+
+    filter_values <- loose_filters[[var]]
+    if (is.null(filter_values) || length(filter_values) == 0) {
+      if (!is.null(selector_initialized) &&
+          isTRUE(selector_initialized[[var]])) {
+        return(NULL)
+      }
+      next
+    }
+
+    available_values <- unique(result[[var]])
+    active_values <- filter_values[filter_values %in% available_values]
+
+    if (length(active_values) == 0) {
+      return(NULL)
+    }
+
+    result <- result[result[[var]] %in% active_values, , drop = FALSE]
+  }
+
+  if (is.null(result) || nrow(result) == 0) {
+    return(NULL)
+  }
+
+  result
 }
 
 # Enhanced createSelectors: supports axis choice alt.names separately from selector title labels

@@ -62,7 +62,7 @@ fixed_selectors:
 loose_selectors:
   year:
     label: "Year"
-    type: "reactive selector"
+    type: "very reactive selector"
     select: "latest"
   kinship:
     label: "Kinship"
