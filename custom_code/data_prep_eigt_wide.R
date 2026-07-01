@@ -4,6 +4,8 @@ library(dplyr)
 library(readr)
 library(tidyr)
 
+source("custom_code/helpers/eigt_preprocessing.R")
+
 wide_output_file <- "data/eigt_wide.qs"
 ft_output_file <- "data/eigt_ft_wide.qs"
 
@@ -16,6 +18,15 @@ first_schedule_typtax <- function(x) {
     stop("Multiple typtax values found for one EIGT FT schedule.", call. = FALSE)
   }
   as.numeric(values[[1]])
+}
+
+is_drawable_ft_schedule <- function(typtax, exempt, adjmrt) {
+  schedule_typtax <- first_schedule_typtax(typtax)
+  normal_schedule <- !is.na(schedule_typtax) && schedule_typtax %in% c(2, 4)
+  full_exemption_schedule <- any(!is.na(exempt) & exempt == 0) &&
+    any(!is.na(adjmrt) & adjmrt == 0)
+
+  normal_schedule || full_exemption_schedule
 }
 
 data <- read_csv("data/eigt_warehouse_meta_v2.csv")
@@ -35,8 +46,11 @@ d3_vartype <- d3_vartype %>% select(-c('d3_description'))
 d4_concept <- d4_concept %>% select(-c('d4_description'))
 d5_dboard_specific <- d5_dboard_specific %>% select(-c('d5_description'))
 
-data <- data %>% select(GEO, GEO_long, year, source, varcode, value) %>%
+data <- data %>%
+  filter(!is_eigt_subregion_geo(GEO)) %>%
+  select(GEO, GEO_long, year, source, varcode, value) %>%
   separate(varcode, into = c("d1_code", "d2_code", "d3_code", "d4_code", "d5_code"), sep = "-") %>%
+  mutate(value = normalize_eigt_full_exemption_values(value, d4_code = d4_code)) %>%
   left_join(d2_sector, by = 'd2_code') %>% left_join(d3_vartype, by = 'd3_code') %>% 
   left_join(d4_concept, by = 'd4_code') %>% left_join(d5_dboard_specific, by = 'd5_code')  
 
@@ -47,13 +61,14 @@ data <- pivot_wider(
   values_from = value) 
 
 data <- data %>% mutate(d5_code = as.numeric(d5_code))
+data <- normalize_eigt_wide_exemptions(data)
 
 ft_data <- data %>%
   group_by(GEO, year, d2_label) %>%
-  mutate(.schedule_typtax = first_schedule_typtax(typtax)) %>%
+  mutate(.drawable_ft_schedule = is_drawable_ft_schedule(typtax, exempt, adjmrt)) %>%
   ungroup() %>%
-  filter(.schedule_typtax %in% c(2, 4)) %>%
-  select(-.schedule_typtax)
+  filter(.drawable_ft_schedule) %>%
+  select(-.drawable_ft_schedule)
 
 qs::qsave(data, wide_output_file, preset = "fast")
 qs::qsave(ft_data, ft_output_file, preset = "fast")

@@ -4,6 +4,7 @@ library(dplyr)
 library(qs)
 library(stringr)
 
+source("custom_code/helpers/eigt_preprocessing.R")
 source("custom_code/helpers/eigt_tax_kinship.R")
 
 input_file <- "data/eigt_warehouse_meta_v2.csv"
@@ -54,10 +55,14 @@ data <- data %>%
     d4_concept_lab %in% target_concepts,
     !is.na(year),
     GEO != "VE",
-    !str_detect(GEO, fixed("_"))
+    !is_eigt_subregion_geo(GEO)
   ) %>%
   mutate(
     value = suppressWarnings(as.numeric(value)),
+    value = normalize_eigt_full_exemption_values(
+      value,
+      concept = d4_concept_lab
+    ),
     value = if_else(!is.na(value) & value < 0, NA_real_, value)
   )
 

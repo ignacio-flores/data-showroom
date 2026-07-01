@@ -2,6 +2,7 @@ library(dplyr)
 library(janitor)
 library(tidyr)
 
+source("custom_code/helpers/eigt_preprocessing.R")
 source("custom_code/helpers/eigt_tax_kinship.R")
 
 first_non_na <- function(x) {
@@ -23,8 +24,17 @@ tax_concepts <- c("Top Marginal Rate", "Exemption Threshold")
 revenue_concepts <- setdiff(target_concepts, tax_concepts)
 
 data <- data %>%
-  filter(d4_concept_lab %in% target_concepts, !is.na(year)) %>%
-  mutate(value = as.numeric(value))
+  filter(
+    d4_concept_lab %in% target_concepts,
+    !is.na(year),
+    !is_eigt_subregion_geo(GEO)
+  ) %>%
+  mutate(
+    value = normalize_eigt_full_exemption_values(
+      as.numeric(value),
+      concept = d4_concept_lab
+    )
+  )
 
 revenue_df <- data %>%
   filter(

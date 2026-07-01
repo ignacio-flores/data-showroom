@@ -19,7 +19,11 @@ assert_ft_typtax_filter <- function(data) {
 
   schedule_typtax <- dt[
     ,
-    .(typtax_values = list(unique(typtax[!is.na(typtax)]))),
+    .(
+      typtax_values = list(unique(typtax[!is.na(typtax)])),
+      full_exemption_schedule = any(!is.na(exempt) & exempt == 0) &&
+        any(!is.na(adjmrt) & adjmrt == 0)
+    ),
     by = .(GEO, year, d2_label)
   ]
   invalid_multi <- schedule_typtax[lengths(typtax_values) > 1]
@@ -36,10 +40,11 @@ assert_ft_typtax_filter <- function(data) {
     )
   ]
   invalid <- schedule_typtax[
-    is.na(schedule_typtax) | !schedule_typtax %in% c(2, 4)
+    (is.na(schedule_typtax) | !schedule_typtax %in% c(2, 4)) &
+      !full_exemption_schedule
   ]
   if (nrow(invalid) > 0) {
-    stop("FT data contains schedules outside typtax values 2 and 4.")
+    stop("FT data contains non-exempt schedules outside typtax values 2 and 4.")
   }
 }
 
@@ -49,8 +54,14 @@ prepare_ft_schedule <- function(data) {
   dt[, adjmrt := zoo::na.locf(adjmrt, na.rm = FALSE), by = .(GEO, d2_label, year)]
   dt[, year := as.character(year)]
   dt[, .sum_rate := sum(adjmrt, na.rm = TRUE), by = .(GEO, d2_label, year)]
-  dt <- dt[.sum_rate != 0]
-  dt[, .sum_rate := NULL]
+  dt[
+    ,
+    .full_exemption_schedule := any(!is.na(exempt) & exempt == 0) &&
+      any(!is.na(adjmrt) & adjmrt == 0),
+    by = .(GEO, d2_label, year)
+  ]
+  dt <- dt[.sum_rate != 0 | .full_exemption_schedule]
+  dt[, c(".sum_rate", ".full_exemption_schedule") := NULL]
   dt[]
 }
 

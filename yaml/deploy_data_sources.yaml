@@ -50,6 +50,8 @@ recipes:
     inputs:
       - data/eigt_warehouse_meta_v2.csv
       - data/supplementary_var_long.csv
+      - custom_code/helpers/eigt_preprocessing.R
+      - custom_code/helpers/eigt_tax_kinship.R
     outputs:
       - data/eigt_wm_ready.qs
   eigt_wide:
@@ -57,6 +59,7 @@ recipes:
     inputs:
       - data/eigt_warehouse_meta_v2.csv
       - data/dictionary.xlsx
+      - custom_code/helpers/eigt_preprocessing.R
     outputs:
       - data/eigt_wide.qs
       - data/eigt_ft_wide.qs
@@ -64,10 +67,13 @@ recipes:
 runtime_dependencies:
   custom_code/dictionary_loader_ineq.R:
     - data/dictionary.xlsx
+  custom_code/data_prep_eigt2.R:
+    - custom_code/helpers/eigt_preprocessing.R
   custom_code/data_prep_eigt_kf1_dual.R:
     - custom_code/helpers/eigt_tax_kinship.R
   custom_code/data_prep_eigt_ft.R:
     - custom_code/helpers/eigt_tax_kinship.R
   custom_code/data_prep_eigt3.R:
     - data/supplementary_var_long.csv
+    - custom_code/helpers/eigt_preprocessing.R
     - custom_code/helpers/eigt_tax_kinship.R
