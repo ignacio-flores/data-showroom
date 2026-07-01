@@ -530,6 +530,125 @@ apply_plotly_axis_text_style <- function(pp, show_grid = NULL) {
   pp
 }
 
+normalize_overlap_offset <- function(overlap_offset = NULL) {
+  options <- list(
+    enabled = FALSE,
+    amount = 0.006,
+    axis = "y",
+    mode = "group_index"
+  )
+
+  if (is.null(overlap_offset)) return(options)
+
+  if (!is.list(overlap_offset)) {
+    options$enabled <- isTRUE(overlap_offset)
+    return(options)
+  }
+
+  options$enabled <- isTRUE(overlap_offset$enabled)
+
+  amount <- suppressWarnings(as.numeric(overlap_offset$amount))
+  if (length(amount) == 1 && is.finite(amount) && amount > 0) {
+    options$amount <- amount
+  }
+
+  axis <- overlap_offset$axis
+  if (!is.null(axis) && length(axis) == 1 && !is.na(axis)) {
+    options$axis <- tolower(as.character(axis))
+  }
+
+  mode <- overlap_offset$mode
+  if (!is.null(mode) && length(mode) == 1 && !is.na(mode)) {
+    options$mode <- tolower(as.character(mode))
+  }
+
+  options
+}
+
+overlap_offset_supported <- function(gopts, overlap_offset) {
+  isTRUE(overlap_offset$enabled) &&
+    identical(overlap_offset$axis, "y") &&
+    identical(overlap_offset$mode, "group_index") &&
+    any(c("line", "step") %in% gopts) &&
+    !"area" %in% gopts
+}
+
+overlap_offset_group_id <- function(df, groupvars = NULL, color_var = NULL) {
+  if (!has_plot_rows(df)) return(character(0))
+
+  valid_groupvars <- character(0)
+  if (!is.null(groupvars) && length(groupvars) > 0) {
+    valid_groupvars <- unique(groupvars[groupvars %in% names(df)])
+  }
+  if (length(valid_groupvars) == 0 && !is.null(color_var) && color_var %in% names(df)) {
+    valid_groupvars <- color_var
+  }
+  if (length(valid_groupvars) == 0) {
+    return(rep("all", nrow(df)))
+  }
+
+  group_data <- df[valid_groupvars]
+  group_data[] <- lapply(group_data, function(values) {
+    values <- as.character(values)
+    values[is.na(values)] <- "<NA>"
+    values
+  })
+
+  as.character(do.call(
+    interaction,
+    c(group_data, list(drop = TRUE, lex.order = TRUE, sep = "\r"))
+  ))
+}
+
+overlap_offset_step_size <- function(values, amount) {
+  numeric_values <- suppressWarnings(as.numeric(values))
+  finite_values <- numeric_values[is.finite(numeric_values)]
+  if (length(finite_values) == 0) return(amount)
+
+  value_range <- range(finite_values, na.rm = TRUE)
+  value_span <- diff(value_range)
+  if (!is.finite(value_span) || value_span <= 0) {
+    value_span <- max(abs(finite_values), 1, na.rm = TRUE)
+  }
+
+  amount * value_span
+}
+
+apply_overlap_offset_to_data <- function(df,
+                                         y_var,
+                                         groupvars = NULL,
+                                         color_var = NULL,
+                                         overlap_offset = NULL,
+                                         gopts = NULL,
+                                         output_var = ".plot_y_offset") {
+  result <- list(data = df, y_var = y_var, enabled = FALSE)
+  overlap_offset <- normalize_overlap_offset(overlap_offset)
+
+  if (!overlap_offset_supported(gopts, overlap_offset) ||
+      !has_plot_rows(df) ||
+      is.null(y_var) ||
+      !y_var %in% names(df)) {
+    return(result)
+  }
+
+  group_id <- overlap_offset_group_id(df, groupvars = groupvars, color_var = color_var)
+  group_levels <- unique(group_id[!is.na(group_id) & nzchar(group_id)])
+  if (length(group_levels) <= 1) return(result)
+
+  step_size <- overlap_offset_step_size(df[[y_var]], overlap_offset$amount)
+  if (!is.finite(step_size) || step_size <= 0) return(result)
+
+  offsets <- (seq_along(group_levels) - (length(group_levels) + 1) / 2) * step_size
+  names(offsets) <- group_levels
+  row_offsets <- offsets[group_id]
+  row_offsets[is.na(row_offsets)] <- 0
+
+  output_var <- make.unique(c(names(df), output_var))[length(names(df)) + 1]
+  df[[output_var]] <- suppressWarnings(as.numeric(df[[y_var]])) + row_offsets
+
+  list(data = df, y_var = output_var, enabled = TRUE)
+}
+
 no_data_plotly <- function(message = "No data available", height = NULL) {
   height <- suppressWarnings(as.numeric(height))
   if (length(height) != 1 || is.na(height) || height <= 0) {
@@ -1027,6 +1146,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE,
                              x_scale = NULL, scatter_options = NULL, show.grid = TRUE,
+                             overlap_offset = NULL,
                              x_axis_info = NULL, y_axis_info = NULL, y2_axis_info = NULL) {
   moduleServer(id, function(input, output, session) {
     
@@ -1062,6 +1182,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       if (is.null(x_scale)) x_scale <- "regular"
       show.grid <- resolveValue(show.grid)
       if (is.null(show.grid)) show.grid <- TRUE
+      overlap_offset <- normalize_overlap_offset(resolveValue(overlap_offset))
       axis_show_grid <- if (isTRUE(show.grid)) NULL else FALSE
       is_year_x_axis <- is_year_axis_var(x_var)
       if (is_year_x_axis && x_var %in% names(df)) {
@@ -1663,6 +1784,17 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           return(no_data_plotly(height = plot_height))
         }
 
+        overlap_plot <- apply_overlap_offset_to_data(
+          df,
+          y_var = y_var,
+          groupvars = groupvars,
+          color_var = color_var,
+          overlap_offset = overlap_offset,
+          gopts = gopts
+        )
+        df <- overlap_plot$data
+        y_plot_var <- overlap_plot$y_var
+
         facet_levels <- unique(df[[facet_var]])
         facet_labels <- facet_levels
         if (!is.null(facet_label_var) && facet_label_var %in% names(df)) {
@@ -1713,7 +1845,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           plt <- plot_ly(
             df_facet,
             x = ~get(x_var),
-            y = ~get(y_var),
+            y = ~get(y_plot_var),
             color = ~get(color_var),
             colors = pal, 
             #colors = viridis_pal(option = color_style)(length(unique(df[[color_var]]))),
@@ -1735,7 +1867,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             xaxis = plotly_axis_style(list(title = x_var_lab)),
             yaxis = plotly_axis_style(list(title = y_var_lab)) %>%
               plotly_number_axis_layout(
-                values = df_facet[[y_var]],
+                values = df_facet[[y_plot_var]],
                 var_name = y_var,
                 label = y_var_lab,
                 axis_info = y_axis_info
@@ -1815,7 +1947,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             )
           combined_y <- c(stacked_y$.positive_stack, stacked_y$.negative_stack)
         } else {
-          combined_y <- df[[y_var]]
+          combined_y <- df[[y_plot_var]]
         }
 
         if (!is.null(extra_layer)) {
@@ -2498,6 +2630,17 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         )) {
           return(no_data_plotly(height = plot_height))
         }
+
+        overlap_plot <- apply_overlap_offset_to_data(
+          df,
+          y_var = y_var,
+          groupvars = groupvars,
+          color_var = color_var,
+          overlap_offset = overlap_offset,
+          gopts = gopts
+        )
+        df <- overlap_plot$data
+        y_plot_var <- overlap_plot$y_var
         
         #define grouping variable 
         group_expr <- if (!is.null(groupvars) && length(groupvars) > 0) {
@@ -2509,7 +2652,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         # Single faceted plots with ggplotly 
         p <- ggplot(df, aes(
           x = .data[[x_var]],
-          y = .data[[y_var]],
+          y = .data[[y_plot_var]],
           group = !!group_expr,
           color = .data[[color_var]],
           fill = .data[[color_var]],
@@ -2565,7 +2708,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             data = df,
             aes(
               x = .data[[x_var]],
-              y = .data[[y_var]],
+              y = .data[[y_plot_var]],
               group = grouping_aes
               #text = tooltip_text
             ),
@@ -2579,18 +2722,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
         if ("line" %in% gopts) {
           p <- p + geom_line(data = df,
-                             aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
+                             aes(x = .data[[x_var]], y = .data[[y_plot_var]], group = !!group_expr),
                              color = "lightgray", alpha = 1, inherit.aes = FALSE,
                              linewidth = 0.6, linetype = 1)
         }
         if ("point" %in% gopts) {
           p <- p + geom_point(data = df,
-                              aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
+                              aes(x = .data[[x_var]], y = .data[[y_plot_var]], group = !!group_expr),
                               color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 1)
         }
         if ("step" %in% gopts) {
           p <- p + geom_step(data = df,
-                             aes(x = .data[[x_var]], y = .data[[y_var]], group = !!group_expr),
+                             aes(x = .data[[x_var]], y = .data[[y_plot_var]], group = !!group_expr),
                              color = "lightgray", alpha = 1, inherit.aes = FALSE, size = 0.9, direction = "hv")
         }
 
@@ -2647,7 +2790,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             xaxis = plotly_axis_style(list(zeroline = FALSE)),
             yaxis = plotly_axis_style(list(zeroline = FALSE)) %>%
               plotly_number_axis_layout(
-                values = df[[y_var]],
+                values = df[[y_plot_var]],
                 var_name = y_var,
                 label = y_var_lab,
                 axis_info = y_axis_info

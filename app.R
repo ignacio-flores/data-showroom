@@ -47,7 +47,8 @@ createViz(
   scatter_options = scatter_options,
   value_transform = value_transform,
   meta.layout = meta.layout,
-  show.grid = show.grid
+  show.grid = show.grid,
+  overlap_offset = overlap_offset
 )
 
 #Comments: extra_layers work with faceted plots only (can be made independent)

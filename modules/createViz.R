@@ -30,7 +30,8 @@ createViz <- function(graph = NULL,
                       scatter_options = NULL,
                       value_transform = NULL,
                       meta.layout = NULL,
-                      show.grid = TRUE
+                      show.grid = TRUE,
+                      overlap_offset = NULL
                       ) {
   
   tic("loading and preliminary work")
@@ -848,6 +849,7 @@ createViz <- function(graph = NULL,
                      x_scale = if (is_dynamic_scatter) selected_x_scale else NULL,
                      scatter_options = if (is_dynamic_scatter) scatter_options else NULL,
                      show.grid = show.grid,
+                     overlap_offset = overlap_offset,
                      x_axis_info = axis_vars$x_axis,
                      y_axis_info = axis_vars$y_axis,
                      y2_axis_info = axis_vars$y2_axis)

@@ -14,6 +14,11 @@ value_transform:
 
 #define plot type 
 gopts: "step"
+overlap_offset:
+  enabled: true
+  amount: 0.003
+  axis: "y"
+  mode: "group_index"
  
 #define main plot variables 
 axis_vars: 

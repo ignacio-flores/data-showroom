@@ -155,6 +155,7 @@ Common keys:
 | `tooltip_vars` | Variables shown in plot hover text |
 | `facet_var` | Optional faceting variable |
 | `extra_layer` | Optional overlay series such as a net wealth line on top of stacked areas |
+| `overlap_offset` | Optional visual-only line/step offset for separating overlapping series; defaults to disabled |
 | `download.button` | Show a CSV download button for filtered data |
 | `table.display` | Show the data table tab |
 | `hide.selectors` | Hide controls, useful for embedded views |
@@ -217,6 +218,19 @@ dt.cols:
 table.display: true
 download.button: true
 ```
+
+Line and step charts can opt into visual-only offsets for overlapping series:
+
+```yaml
+overlap_offset:
+  enabled: true
+  amount: 0.006
+  axis: "y"
+  mode: "group_index"
+```
+
+The `amount` is a fraction of the current y-range. Tooltips, tables, and
+downloads continue to use the original data values.
 
 ## Extending the app
 

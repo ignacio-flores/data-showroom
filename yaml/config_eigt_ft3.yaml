@@ -15,6 +15,11 @@ value_transform:
 #define graph options
 gopts: "step"
 plot_height: 700
+overlap_offset:
+  enabled: true
+  amount: 0.003
+  axis: "y"
+  mode: "group_index"
 
 download.button: True
 hide.legend: False
