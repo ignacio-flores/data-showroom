@@ -7,8 +7,8 @@ library(stringr)
 source("custom_code/helpers/eigt_preprocessing.R")
 source("custom_code/helpers/eigt_tax_kinship.R")
 
-input_file <- "data/eigt_warehouse_meta_v2.csv"
-output_file <- "data/eigt_wm_ready.qs"
+input_file <- "data/taxw_warehouse_meta_v2.csv"
+output_file <- "data/taxw_wm_ready.qs"
 
 target_concepts <- c(
   "Tax Indicator",

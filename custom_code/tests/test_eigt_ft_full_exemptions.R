@@ -11,9 +11,9 @@ expect_true <- function(value, message) {
   if (!isTRUE(value)) fail(message)
 }
 
-data_file <- "data/eigt_ft_wide.qs"
+data_file <- "data/taxw_ft_wide.qs"
 if (!file.exists(data_file)) {
-  fail("Missing data/eigt_ft_wide.qs. Run custom_code/data_prep_eigt_wide.R first.")
+  fail("Missing data/taxw_ft_wide.qs. Run custom_code/data_prep_eigt_wide.R first.")
 }
 
 for (config_file in c(

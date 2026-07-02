@@ -123,16 +123,16 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/topo_conversion_bundle.qs`
 - `data/topo_metadata_bundle.qs`
 - `data/currency_conversion_bundle.qs`
-- `data/eigt_wide.qs`
-- `data/eigt_ft_wide.qs`
+- `data/taxw_wide.qs`
+- `data/taxw_ft_wide.qs`
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
-- `data/eigt_wm_ready.qs`
+- `data/taxw_wm_ready.qs`
 - `data/methodological_table.xlsx`
 - `data/dictionary.xlsx`
 - `data/supplementary_var_long.csv`
 
-The `eigt_wm*` configs use the prepared `data/eigt_wm_ready.qs` artifact. Other `eigt_*` configs reference additional files such as `data/eigt_wide_viz.csv` and `data/eigt_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
+The `eigt_wm*` configs use the prepared `data/taxw_wm_ready.qs` artifact. Other `eigt_*` configs reference additional files such as `data/taxw_wide_viz.csv` and `data/taxw_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
 
 ## How configuration works
 
@@ -271,7 +271,7 @@ Rscript custom_code/prepare_topo_bundle.R
 Rscript custom_code/tests/check_topo_lazy_equivalence.R
 ```
 
-EIGT fiscal-threshold presets use the filtered `data/eigt_ft_wide.qs`
+EIGT fiscal-threshold presets use the filtered `data/taxw_ft_wide.qs`
 artifact and `value_transform: currency_columns` to materialize
 selected-currency bracket bounds at runtime from
 `data/currency_conversion_bundle.qs`. Rebuild and check those ignored

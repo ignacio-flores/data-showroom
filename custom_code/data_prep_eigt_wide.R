@@ -6,8 +6,8 @@ library(tidyr)
 
 source("custom_code/helpers/eigt_preprocessing.R")
 
-wide_output_file <- "data/eigt_wide.qs"
-ft_output_file <- "data/eigt_ft_wide.qs"
+wide_output_file <- "data/taxw_wide.qs"
+ft_output_file <- "data/taxw_ft_wide.qs"
 
 first_schedule_typtax <- function(x) {
   values <- unique(x[!is.na(x)])
@@ -29,7 +29,7 @@ is_drawable_ft_schedule <- function(typtax, exempt, adjmrt) {
   normal_schedule || full_exemption_schedule
 }
 
-data <- read_csv("data/eigt_warehouse_meta_v2.csv")
+data <- read_csv("data/taxw_warehouse_meta_v2.csv")
 
 remind_dictionary(
   file_path = file.path("data/dictionary.xlsx"),

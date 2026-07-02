@@ -4,7 +4,7 @@ library(zoo)
 
 source("modules/value_transform.R")
 
-base_file <- "data/eigt_ft_wide.qs"
+base_file <- "data/taxw_ft_wide.qs"
 bundle_file <- "data/currency_conversion_bundle.qs"
 
 if (!file.exists(base_file) || !file.exists(bundle_file)) {
