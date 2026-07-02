@@ -150,4 +150,44 @@ expect_true(
   "Non-full-exemption negative sentinel values should keep existing NA cleanup behavior."
 )
 
+wm1_config <- yaml::read_yaml("yaml/config_eigt_wm1.yaml")
+wm2_config <- yaml::read_yaml("yaml/config_eigt_wm2.yaml")
+expect_equal(
+  wm1_config$data.file,
+  "data/taxw_wm_ready.qs",
+  "eigt-wm1 should keep using the kinship-filtered WM artifact."
+)
+expect_equal(
+  wm2_config$data.file,
+  "data/taxw_wm2_ready.qs",
+  "eigt-wm2 should use the WM artifact that keeps revenue rows."
+)
+
+if (file.exists(wm2_config$data.file)) {
+  wm2_data <- qs::qread(wm2_config$data.file)
+  wm2_startup <- wm2_data %>%
+    filter(
+      d4_concept_lab == wm2_config$fixed_selectors$d4_concept_lab$selected,
+      xrate_lab == wm2_config$fixed_selectors$xrate_lab$selected,
+      show_zero == wm2_config$fixed_selectors$show_zero$selected
+    )
+
+  expect_true(
+    nrow(wm2_startup) > 0,
+    "eigt-wm2 startup fixed selectors should produce rows."
+  )
+  expect_true(
+    all(
+      c(
+        "Total Revenue from Tax",
+        "Total Revenue from Tax as % of Total Tax Revenue",
+        "Total Revenue from Tax as % of Gross Domestic Product"
+      ) %in% unique(wm2_data$d4_concept_lab)
+    ),
+    "eigt-wm2 artifact should retain revenue concepts."
+  )
+} else {
+  message("Skipping eigt-wm2 artifact checks; ", wm2_config$data.file, " is not present.")
+}
+
 cat("EIGT preprocessing checks passed.\n")

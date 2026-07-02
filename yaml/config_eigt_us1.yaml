@@ -1,0 +1,78 @@
+#define data source
+data.file: "data/taxw_us_state_long.qs"
+
+#define plot type
+gopts: "map"
+
+map_options:
+  locationmode: "USA-states"
+  scope: "usa"
+  projection: "albers usa"
+
+color:
+  var: "state_abbr"
+  label: "State"
+  style: "rcartocolor::BluGrn"
+  group:
+    - "state_abbr"
+    - "d2_sector_lab"
+
+axis_vars:
+  y_axis:
+    var: "value"
+
+fixed_selectors:
+  state_name:
+    label: "State"
+    type: "checkbox"
+  year:
+    label: "Year"
+    selected: 2020
+  d4_concept_lab:
+    label: "Tax Feature"
+    selected: "Total Revenue from Tax as % of Total Tax Revenue"
+    choices:
+      - "Total Revenue from Tax"
+      - "Total Revenue from Tax as % of Total Tax Revenue"
+  xrate_lab:
+    label: "Currency"
+    hidden: True
+    selected: "USD (2023 prices)"
+    choices:
+      - "USD (2023 prices)"
+  show_zero:
+    label: "Show Zero"
+    hidden: True
+    selected: "Yes"
+    choices:
+      - "Yes"
+      - "No"
+
+loose_selectors:
+  d2_sector_lab:
+    label: "Tax type"
+    type: "very reactive selector"
+    selected: "EIG Tax, general government level"
+
+dt.cols:
+  state_name: "State"
+  GEO: "State code"
+  year: "Year"
+  d4_concept_lab: "Variable"
+  d2_sector_lab: "Type of tax"
+  xrate_lab: "Currency"
+  value: "Value"
+
+tooltip_vars:
+  state_name: "State:"
+  year: "Year:"
+  d4_concept_lab: "Tax feature:"
+  d2_sector_lab: "Type of tax:"
+  value: "Value:"
+
+download.button: True
+hide.selectors: False
+listen: False
+table.display: True
+hide.legend: False
+plot_height: 700

@@ -128,11 +128,14 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/topo_warehouse_meta_v1_2.csv`
 - `data/ineq_warehouse_meta_v1_2.csv`
 - `data/taxw_wm_ready.qs`
+- `data/taxw_wm2_ready.qs`
+- `data/taxw_us_state_long.qs`
+- `data/taxw_us_state_ft_wide.qs`
 - `data/methodological_table.xlsx`
 - `data/dictionary.xlsx`
 - `data/supplementary_var_long.csv`
 
-The `eigt_wm*` configs use the prepared `data/taxw_wm_ready.qs` artifact. Other `eigt_*` configs reference additional files such as `data/taxw_wide_viz.csv` and `data/taxw_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
+The `eigt_wm1` config uses the prepared `data/taxw_wm_ready.qs` artifact. The `eigt_wm2` config uses `data/taxw_wm2_ready.qs`, which retains general-government revenue rows for the animated bar chart. The `eigt_us*` configs use the US-state artifacts. Other `eigt_*` configs reference additional files such as `data/taxw_wide_viz.csv` and `data/taxw_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
 
 ## How configuration works
 

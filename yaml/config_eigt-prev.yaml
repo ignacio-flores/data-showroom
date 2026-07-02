@@ -46,7 +46,7 @@ loose_selectors:
   kinship:
     label: "Kinship"
     selected: "Children"
-    type: "sticky selector"
+    type: "reactive selector"
 
 #define the columns of the data table widget
 dt.cols:

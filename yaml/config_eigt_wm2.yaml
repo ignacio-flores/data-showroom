@@ -1,5 +1,5 @@
 #define data source
-data.file: "data/taxw_wm_ready.qs"
+data.file: "data/taxw_wm2_ready.qs"
 
 #define plot type 
 gopts: 

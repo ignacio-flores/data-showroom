@@ -68,7 +68,7 @@ loose_selectors:
     type: "sticky checkbox"
   legend:
     label: "Source"
-    type: "reactive checkbox"
+    type: "very reactive checkbox"
 
 #define the columns of the data table widget 
 dt.cols:

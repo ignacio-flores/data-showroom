@@ -57,7 +57,7 @@ fixed_selectors:
 loose_selectors:
    legend: 
     label: "Source"
-    type: "reactive checkbox"
+    type: "very reactive checkbox"
    
       
 

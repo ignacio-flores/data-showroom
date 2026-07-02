@@ -46,6 +46,7 @@ createViz(
   area_stack_default = area_stack_default,
   scatter_options = scatter_options,
   value_transform = value_transform,
+  map_options = map_options,
   meta.layout = meta.layout,
   show.grid = show.grid,
   overlap_offset = overlap_offset

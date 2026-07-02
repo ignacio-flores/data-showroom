@@ -1,0 +1,96 @@
+#define data source
+data.file: "data/taxw_us_state_ft_wide.qs"
+data.wrangler: "custom_code/data_prep_eigt_ft.R"
+keep.col:
+  - "GEO_long"
+  - "d2_label"
+  - "exempt"
+
+#define graph options
+gopts: "step"
+plot_height: 700
+overlap_offset:
+  enabled: true
+  amount: 0.003
+  axis: "y"
+  mode: "group_index"
+
+download.button: True
+hide.legend: False
+hide.selectors: False
+listen: False
+
+axis_vars:
+  x_axis:
+    var: "adjlbo"
+    label: "Bracket's lower bound (millions, 2023 USD)"
+    breaks: 10
+  y_axis:
+    var: "adjmrt"
+    label: "Marginal tax rate"
+
+color:
+  var: "state_name"
+  label: "State"
+  style: "dichromat::DarkRedtoBlue_12"
+  group:
+    - "year"
+    - "tax_type_view"
+    - "kinship"
+    - "state_name"
+
+fixed_selectors:
+  state_name:
+    label: "State"
+    selected:
+      - "California"
+      - "Massachusetts"
+      - "New York"
+      - "Texas"
+      - "Washington"
+    multiple: true
+  tax_type_view:
+    label: "Tax type"
+    selected: "Inheritance or estate tax"
+    choices:
+      - "Inheritance or estate tax"
+      - "Gift tax"
+      - "Inheritance tax"
+      - "Estate tax"
+  xrate_lab:
+    label: "Currency"
+    hidden: True
+    selected: "USD (2023 prices)"
+    choices:
+      - "USD (2023 prices)"
+
+loose_selectors:
+  year:
+    label: "Year"
+    type: "very reactive selector"
+    select: "latest"
+  kinship:
+    label: "Kinship"
+    type: "very reactive selector"
+    selected: "Children"
+
+dt.cols:
+  state_name: "State"
+  GEO: "State code"
+  year: "Year"
+  tax_type: "Source tax type"
+  kinship: "Kinship"
+  d5_code: "Bracket"
+  adjmrt: "Marginal tax rate"
+  xrate_lab: "Currency"
+  adjlbo: "Lower bound (millions, 2023 USD)"
+
+tooltip_vars:
+  state_name: "State:"
+  year: "Year:"
+  tax_type: "Source tax type:"
+  kinship: "Kinship:"
+  adjmrt: "Marginal tax rate:"
+  adjlbo: "Lower bound (millions):"
+
+table.display: True

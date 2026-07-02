@@ -1145,7 +1145,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              tooltip_vars,
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE,
-                             x_scale = NULL, scatter_options = NULL, show.grid = TRUE,
+                             x_scale = NULL, scatter_options = NULL, map_options = NULL,
+                             show.grid = TRUE,
                              overlap_offset = NULL,
                              x_axis_info = NULL, y_axis_info = NULL, y2_axis_info = NULL) {
   moduleServer(id, function(input, output, session) {
@@ -2073,6 +2074,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           lapply(seq_len(n), function(i) list((i-1)/(n-1), pal[i]))
         }
 
+        map_option <- function(name, default = NULL) {
+          value <- if (!is.null(map_options)) map_options[[name]] else NULL
+          if (is.null(value) || length(value) == 0) default else value[[1]]
+        }
+
+        map_locationmode <- map_option("locationmode", "ISO-3")
+        map_scope <- map_option("scope")
+        map_projection <- map_option(
+          "projection",
+          if (identical(map_locationmode, "USA-states")) "albers usa" else "mercator"
+        )
+
         validate(need(color_var %in% names(df), paste0("color_var '", color_var, "' not in df")))
         validate(need(y_var %in% names(df), paste0("y_var '", y_var, "' not in df")))
 
@@ -2122,7 +2135,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               data         = nonzero_df,
               type         = "choropleth",
               locations    = ~get(color_var),
-              locationmode = "ISO-3",
+              locationmode = map_locationmode,
               z            = ~get(y_var),
               frame        = if (!is.null(frame_var)) ~get(frame_var) else NULL,
               text         = ~tooltip_text,
@@ -2147,7 +2160,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               data         = zero_df,
               type         = "choropleth",
               locations    = ~get(color_var),
-              locationmode = "ISO-3",
+              locationmode = map_locationmode,
               z            = ~.zero_value,
               frame        = if (!is.null(frame_var)) ~get(frame_var) else NULL,
               text         = ~tooltip_text,
@@ -2164,13 +2177,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           layout(
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
-            geo = list(
-              projection    = list(type = "mercator"),
+            geo = Filter(Negate(is.null), list(
+              scope         = map_scope,
+              projection    = list(type = map_projection),
               showland      = TRUE,
               landcolor     = "rgb(240,240,240)",
               showcountries = TRUE,
-              countrycolor  = "rgb(200,200,200)"
-            ))
+              countrycolor  = "rgb(200,200,200)",
+              showsubunits  = identical(map_locationmode, "USA-states"),
+              subunitcolor  = "rgb(200,200,200)"
+            )))
 
         if (!is.null(frame_var)) {
           pp <- pp %>%
