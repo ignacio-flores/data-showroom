@@ -5,7 +5,8 @@ tic("loading dictionary")
     sheet_names = c("Sources", "data_type", "source_type")
   )
   #filter sources and clean 
-  sce <- Sources[Sources$Section == "Wealth Inequality Trends" & !is.na(Sources$Source), c("Source", "Data_Type", "Legend", "AggSource", "Link")]
+  ineq_sections <- c("Wealth Inequality Trends", "Wealth Inequality")
+  sce <- Sources[Sources$Section %in% ineq_sections & !is.na(Sources$Source), c("Source", "Data_Type", "Legend", "AggSource", "Link")]
   colnames(data_type) <- c("Data_Type", "description")
   colnames(source_type) <- c("source_type_short", "source_type_description")
   sce <- merge(sce, data_type, by = "Data_Type") 
@@ -25,5 +26,4 @@ toc()
 tic("merging metadata")
   data <- merge(data, sce, by = "source")
 toc()   
-
 

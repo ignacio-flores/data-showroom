@@ -89,6 +89,22 @@ targets:
     tags: [eigt, us, states, schedule, ft]
     enabled: true
 
+  - target_id: ineq-owr1
+    graph: ineq_owr1
+    app_name: ineq-owr1
+    profile: glubsprint
+    auth_script: auth/shiny_auth_glubsprint.R
+    tags: [ineq, owr]
+    enabled: true
+
+  - target_id: ineq-owr2
+    graph: ineq_owr2
+    app_name: ineq-owr2
+    profile: glubsprint
+    auth_script: auth/shiny_auth_glubsprint.R
+    tags: [ineq, owr]
+    enabled: true
+
   - target_id: inhe_single
     graph: inhe_single
     app_name: inhe_single

@@ -1,0 +1,105 @@
+#define data source
+data.file: "data/ineq_warehouse_meta_v2.csv"
+meta.file: "data/methodological_table.xlsx"
+meta.loc: "tab"
+data.wrangler: "custom_code/dictionary_loader_ineq_owr.R"
+keep.col:
+  - "varcode"
+
+#define plot type
+gopts:
+ - "line"
+ - "point"
+plot_height: 700
+hide.selectors: False
+hide.legend: False
+download.button: True
+listen: False
+
+#define main plot variables
+axis_vars:
+  x_axis:
+    var: "year"
+    label: "Year"
+    breaks: 10
+  y_axis:
+    var: "value"
+    label: "Ownership Rate (%)"
+
+color:
+  var: "GEO_long"
+  label: "Country"
+  style: "MoMAColors::Abbott"
+
+#Define main selectors
+fixed_selectors:
+  GEO_long:
+    label: "Country"
+    selected:
+      - "Senegal"
+      - "Ethiopia"
+      - "Malawi"
+      - "Tanzania"
+      - "Cambodia"
+      - "Nigeria"
+      - "India"
+      - "Chile"
+    multiple: true
+  legend:
+    label: "Source"
+    selected: "Demographic and Health Surveys (own estimates)"
+  d3_vartype_lab:
+    label: "Variable"
+    choices:
+      - "Ownership Rate"
+    selected: "Ownership Rate"
+    hidden: true
+  percentile:
+    label: "Percentile"
+    choices:
+      - "p0p100"
+    selected: "p0p100"
+    hidden: true
+  d5_dboard_specific_lab:
+    label: "Unit of analysis"
+    choices:
+      - "Households"
+      - "Individuals - Adults"
+    selected:
+      - "Households"
+      - "Individuals - Adults"
+    multiple: true
+
+#Define reactive or 'loose' selectors (react to changes in main selectors)
+loose_selectors:
+  d4_concept_lab:
+    label: "Asset"
+    selected: "Agricultural Land"
+    type: "sticky selector"
+  Data_Type:
+    label: "Data type"
+    type: "sticky checkbox"
+
+#define the columns of the data table widget
+dt.cols:
+  GEO: "Country code"
+  year: "Year"
+  GEO_long: "Country"
+  d4_concept_lab: "Asset"
+  d5_dboard_specific_lab: "Unit of Analysis"
+  value: "Ownership Rate (%)"
+  legend: "Source"
+  metadata: "Description"
+  data_description: "Metadata"
+  Data_Type: "Data type"
+table.display: True
+
+#define the information shown in the tooltip
+tooltip_vars:
+  GEO_long: "Country:"
+  year: "Year:"
+  d4_concept_lab: "Asset:"
+  value: "Ownership rate (%):"
+  legend: "Source:"
+  metadata: "Explanation:"
+  data_description: "Data type:"

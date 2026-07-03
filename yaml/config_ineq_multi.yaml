@@ -41,6 +41,12 @@ fixed_selectors:
     multiple: true  
   d3_vartype_lab:
      label: "Variable"
+     choices:
+       - "Average Wealth"
+       - "Gini Coefficient"
+       - "Share of Total Net Wealth"
+       - "Threshold"
+       - "Total"
      selected: "Share of Total Net Wealth" 
   d5_dboard_specific_lab:
     label: "Unit of analysis"
