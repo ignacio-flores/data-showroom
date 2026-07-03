@@ -11,18 +11,18 @@ value_transform:
   unit_selector: "pop_lab"
   debt_negative: false
 
-#define plot type 
-gopts: 
+#define plot type
+gopts:
  - "line"
- 
-#define main plot variables 
-axis_vars: 
-  x_axis: 
-    var: "year" 
+
+#define main plot variables
+axis_vars:
+  x_axis:
+    var: "year"
     label: "Year"
-  y_axis: 
-    var: "value" 
-    label: "Value" 
+  y_axis:
+    var: "value"
+    label: "Value"
 
 color:
   var: "legend"
@@ -32,34 +32,36 @@ color:
     - "d2_sector_lab"
     - "legend"
 
-#Define main selectors 
+#Define main selectors
 fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
-  xrate_lab: 
-    label: "Currency"
-    selected: "Euro (2023 prices)"
-  pop_lab: 
-    label: "Unit"
-    selected: "Per capita"
   d2_sector_lab:
     label: "Sector"
-    selected: 
+    selected:
       - "Households & NPISH"
       - "Households"
-    multiple: true  
+    multiple: true
   d4_concept_lab:
     label: "Asset or Debt type"
-    selected: "Debt"  
-    
+    selected: "Debt"
+
 #Define reactive or 'loose' selectors (react to changes in main selectors)
 loose_selectors:
+  xrate_lab:
+    label: "Currency"
+    selected: "Euro (2023 prices)"
+    type: "sticky selector"
+  pop_lab:
+    label: "Unit"
+    selected: "Per capita"
+    type: "sticky selector"
   legend:
     label: "Source"
     type: "reactive checkbox"
 
-#define the columns of the data table widget 
+#define the columns of the data table widget
 dt.cols:
   GEO: "Country code"
   year: "Year"
@@ -77,8 +79,8 @@ tooltip_vars:
   value: "Value:"
   d4_concept_lab: "Wealth type:"
   legend: "Source:"
- 
-#other options 
+
+#other options
 download.button: True
 hide.selectors: False
 listen: False

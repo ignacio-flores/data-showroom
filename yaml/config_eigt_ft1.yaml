@@ -13,7 +13,7 @@ value_transform:
     - "adjlbo"
   scale_divisor: 1000000
 
-#define graph options 
+#define graph options
 gopts: "step"
 plot_height: 700
 overlap_offset:
@@ -25,9 +25,9 @@ overlap_offset:
 download.button: True
 hide.legend: False
 hide.selectors: False
-listen: False 
- 
-#define main plot variables 
+listen: False
+
+#define main plot variables
 axis_vars:
   x_axis:
     var: "adjlbo"
@@ -37,9 +37,9 @@ axis_vars:
     var: "adjmrt"
     label: "Marginal tax rate"
 
-#define colors 
-color:  
-  var: "year" 
+#define colors
+color:
+  var: "year"
   label: "Year"
   style: "dichromat::DarkRedtoBlue_12"
   group:
@@ -47,7 +47,7 @@ color:
     - "tax_type_view"
     - "kinship"
 
-#Define main selector 
+#Define main selector
 fixed_selectors:
   GEO_long:
     label: "Country"
@@ -61,11 +61,12 @@ fixed_selectors:
       - "Gift tax"
       - "Inheritance tax"
       - "Estate tax"
+
+loose_selectors:
   xrate_lab:
     label: "Currency"
     selected: "USD (2023 prices)"
-      
-loose_selectors:
+    type: "sticky selector"
   kinship:
     label: "Kinship"
     type: "very reactive selector"
@@ -76,8 +77,8 @@ loose_selectors:
     select: "spaced"
 
 
-#define the columns of the data table widget 
-dt.cols: 
+#define the columns of the data table widget
+dt.cols:
   GEO_long: "Country"
   GEO: "Country code"
   year: "Year"
@@ -98,5 +99,5 @@ tooltip_vars:
   xrate_lab: "Currency:"
   adjlbo: "Lower bound (millions):"
 
-#other options 
+#other options
 table.display: True

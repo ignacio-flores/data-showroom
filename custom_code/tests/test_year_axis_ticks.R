@@ -95,6 +95,47 @@ expect_equal(
 expect_integer_ticks(layout_axis$tickvals, "Year Plotly x-axis tick values")
 expect_decimal_free_text(layout_axis$ticktext, "Year Plotly x-axis tick labels")
 
+min_layout_axis <- plotly_year_xaxis_layout(
+  list(title = "Year"),
+  values = c(1800, 1850, 1900, 2023),
+  n = 8,
+  enabled = TRUE,
+  axis_info = list(min = 1900)
+)
+expect_equal(
+  min_layout_axis$range[[1]],
+  1900,
+  "Year Plotly x-axis with axis_info$min should start at the configured floor."
+)
+expect_equal(
+  min_layout_axis$range[[2]],
+  2023,
+  "Year Plotly x-axis with axis_info$min should retain the data max."
+)
+expect_true(
+  all(min_layout_axis$tickvals >= 1900),
+  "Year Plotly x-axis ticks should not include values below axis_info$min."
+)
+
+numeric_min_axis <- plotly_number_axis_layout(
+  list(title = "Year-like value"),
+  values = c(1800, 1900, 2023),
+  var_name = "year_value",
+  label = "Year-like value",
+  axis_info = list(min = 1900),
+  n = 8,
+  apply_axis_min = TRUE
+)
+expect_equal(
+  numeric_min_axis$range[[1]],
+  1900,
+  "Numeric Plotly x-axis with axis_info$min should start at the configured floor."
+)
+expect_true(
+  all(numeric_min_axis$tickvals >= 1900),
+  "Numeric Plotly x-axis ticks should not include values below axis_info$min."
+)
+
 non_year_axis <- plotly_year_xaxis_layout(
   list(title = "Value"),
   values = c(1.2, 2.8),
@@ -127,6 +168,30 @@ expect_equal(
 )
 expect_integer_ticks(pp$x$layout$xaxis$tickvals, "Plotly object year tick values")
 expect_decimal_free_text(pp$x$layout$xaxis$ticktext, "Plotly object year tick labels")
+
+pp_min <- apply_plotly_year_xaxis_ticks(
+  plotly::layout(
+    plotly::plot_ly(
+      data = data.frame(year = c(1800, 1900, 2023), value = c(1, 2, 3)),
+      x = ~year,
+      y = ~value
+    ),
+    xaxis = list(title = "Year")
+  ),
+  values = c(1800, 1900, 2023),
+  n = 8,
+  enabled = TRUE,
+  axis_info = list(min = 1900)
+)
+expect_equal(
+  pp_min$x$layout$xaxis$range[[1]],
+  1900,
+  "Plotly objects with axis_info$min should receive a year x-axis range floor."
+)
+expect_true(
+  all(pp_min$x$layout$xaxis$tickvals >= 1900),
+  "Plotly object year tick values should not include values below axis_info$min."
+)
 
 expect_equal(
   format_year_axis_value(2020),

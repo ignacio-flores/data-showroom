@@ -43,6 +43,7 @@ fixed_selectors:
   d3_vartype_lab:
      label: "Variable"
      selected: "Ratio" 
+     choices: c("Ratio", "Aggregate")
 
 #define loose selectors 
 loose_selectors:
@@ -78,4 +79,3 @@ tooltip_vars:
   d4_concept_lab: "Concept"
   d5_dboard_specific_lab: "Valuation"  
   
-

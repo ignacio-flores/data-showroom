@@ -28,11 +28,12 @@ expect_equal <- function(actual, expected, message) {
 }
 
 config <- yaml::read_yaml("yaml/config_eigt_ft3.yaml")
+year_selector_type <- normalize_selector_type(config$loose_selectors$year$type)
 
 expect_equal(
-  normalize_selector_type(config$loose_selectors$year$type),
-  "reactive selector",
-  "eigt-ft3 year should be a reactive selector."
+  year_selector_type,
+  "very reactive selector",
+  "eigt-ft3 year should be a very reactive selector."
 )
 expect_equal(
   normalize_selector_type(config$loose_selectors$kinship$type),
@@ -56,7 +57,7 @@ drawable_ft_rows <- function(country) {
 
 india_rows <- drawable_ft_rows("India")
 india_latest <- loose_selector_next_selection(
-  "reactive selector",
+  year_selector_type,
   sort(unique(india_rows$year)),
   select_mode = "latest",
   initialized = FALSE
@@ -76,7 +77,7 @@ expect_equal(
 
 ireland_rows <- drawable_ft_rows("Ireland")
 ireland_latest <- loose_selector_next_selection(
-  "reactive selector",
+  year_selector_type,
   sort(unique(ireland_rows$year)),
   current_selection = india_latest,
   select_mode = "latest",

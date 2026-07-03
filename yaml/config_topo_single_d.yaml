@@ -11,65 +11,69 @@ value_transform:
   unit_selector: "pop_lab"
   debt_negative: true
 
-area_stack_toggle: true      
+area_stack_toggle: true
 
-#define plot type 
-gopts: 
+#define plot type
+gopts:
  - "area"
- 
-#define main plot variables 
-axis_vars: 
-  x_axis: 
-    var: "year" 
+
+#define main plot variables
+axis_vars:
+  x_axis:
+    var: "year"
     label: "Year"
-  y_axis: 
-    var: "value" 
-    label: "Value" 
-    
-color:    
+  y_axis:
+    var: "value"
+    label: "Value"
+
+color:
   var: "d4_concept_lab"
   label: "Concept"
   style: "nationalparkcolors::Badlands"
 
-#Define main selectors 
+#Define main selectors
 fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
   legend:
     label: "Source"
-    selected: "World Inequality Database - Balance Sheet"  
-  xrate_lab: 
-    label: "Currency"
-    selected: "Euro (2023 prices)"
-  pop_lab: 
-    label: "Unit"
-    selected: "Per capita"
+    selected: "World Inequality Database - Balance Sheet"
   d2_sector_lab:
     label: "Sector"
     selected: "Households & NPISH"
   d4_concept_lab:
     label: "Asset or Debt type"
     type: "checkbox"
-    selected: 
+    selected:
       - "Cash, Deposits, Bonds & Loans"
-      - "Debt"  
+      - "Debt"
       - "Fixed Capital of Personal Businesses"
       - "Pensions & Life Insurance"
       - "Stocks, Business Equities & Fund Shares"
       - "Financial Assets & Fixed Capital of Personal Businesses"
       - "Housing & Land"
-      
-#facets 
+
+loose_selectors:
+  xrate_lab:
+    label: "Currency"
+    selected: "Euro (2023 prices)"
+    type: "sticky selector"
+  pop_lab:
+    label: "Unit"
+    selected: "Per capita"
+    type: "sticky selector"
+
+#facets
 facet_var: "GEO_long"
 facet_var_lab: "Country"
 
 #Additional Variable Layer options
 extra_layer:
    values: "Net Wealth"
-   type: "line" 
+   type: "line"
 
-#define the columns of the data table widget 
+#define the columns of the data table widget
 dt.cols:
   GEO: "Country code"
   year: "Year"
@@ -87,8 +91,8 @@ tooltip_vars:
   year: "Year:"
   value: "Value:"
   legend: "Source:"
- 
-#other options 
+
+#other options
 download.button: True
 hide.selectors: False
 listen: False

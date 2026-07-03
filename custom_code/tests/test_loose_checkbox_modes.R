@@ -62,6 +62,11 @@ expect_equal(
   "Explicit sticky selector should use sticky mode."
 )
 expect_equal(
+  selector_config_choices(list(choices = 'c("A", "B")')),
+  c("A", "B"),
+  "Configured selector choices should support legacy c(...) strings."
+)
+expect_equal(
   selector_single_mode("reactive selector"),
   "reactive",
   "Reactive selector should use reactive mode."
@@ -451,8 +456,27 @@ expect_true(
   )),
   "Loose filters with no active values in the data should return no data."
 )
+expect_equal(
+  loose_selector_filter_data(
+    data.frame(
+      year = c("2000", "2001"),
+      xrate_lab = c("USD", "USD"),
+      stringsAsFactors = FALSE
+    ),
+    loose_filters = list(year = "2000", xrate_lab = "EUR"),
+    loose_selectors = list(year = list(), xrate_lab = list()),
+    selector_initialized = list(year = TRUE, xrate_lab = TRUE),
+    exclude_vars = "xrate_lab"
+  )$year,
+  "2000",
+  "Excluded loose selectors should not filter data."
+)
 
 config_paths <- list.files("yaml", pattern = "^config_.*\\.yaml$", full.names = TRUE)
+value_transform_selector_name <- function(value_transform, key, fallback) {
+  if (!is.null(value_transform[[key]])) value_transform[[key]] else fallback
+}
+
 for (config_path in config_paths) {
   config <- yaml::read_yaml(config_path)
 
@@ -469,6 +493,36 @@ for (config_path in config_paths) {
       expect_false(
         identical(type, "selector"),
         paste0(config_path, " ", section, " ", var, " should explicitly use sticky selector or reactive selector.")
+      )
+    }
+  }
+
+  if (!is.null(config$value_transform)) {
+    transform_selector_names <- value_transform_selector_name(
+      config$value_transform,
+      "currency_selector",
+      "xrate_lab"
+    )
+    if (normalize_selector_type(config$value_transform$type) %in% c("currency unit", "topo currency unit")) {
+      transform_selector_names <- c(
+        transform_selector_names,
+        value_transform_selector_name(config$value_transform, "unit_selector", "pop_lab")
+      )
+    }
+
+    for (var in transform_selector_names) {
+      expect_false(
+        var %in% names(config$fixed_selectors),
+        paste0(config_path, " value-transform selector ", var, " should not be fixed.")
+      )
+      expect_true(
+        var %in% names(config$loose_selectors),
+        paste0(config_path, " value-transform selector ", var, " should be loose.")
+      )
+      expect_equal(
+        normalize_selector_type(config$loose_selectors[[var]]$type),
+        "sticky selector",
+        paste0(config_path, " value-transform selector ", var, " should be sticky.")
       )
     }
   }
@@ -500,6 +554,14 @@ expect_true(
 expect_true(
   selector_is_very_reactive(ft1_config$loose_selectors$kinship$type),
   "eigt-ft1 kinship should use very-reactive choice filtering."
+)
+
+topo_single_config <- yaml::read_yaml("yaml/config_topo_single.yaml")
+topo_source_config <- yaml::read_yaml("yaml/config_topo_source.yaml")
+expect_equal(
+  topo_source_config$loose_selectors$d4_concept_lab$selected,
+  topo_single_config$loose_selectors$d4_concept_lab$selected,
+  "topo-source-comp should use the same default wealth types as topo-country-view."
 )
 
 cat("Loose checkbox mode checks passed.\n")

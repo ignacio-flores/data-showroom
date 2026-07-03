@@ -61,6 +61,18 @@ selector_values_equal <- function(left, right) {
   identical(selector_signature_value(left), selector_signature_value(right))
 }
 
+selector_parse_choices <- function(choices) {
+  if (is.character(choices) && length(choices) == 1 && grepl("^c\\(", choices)) {
+    return(tryCatch(eval(parse(text = choices)), error = function(e) choices))
+  }
+  choices
+}
+
+selector_config_choices <- function(info) {
+  if (is.null(info) || is.null(info$choices)) return(NULL)
+  selector_parse_choices(info$choices)
+}
+
 selector_select_mode <- function(select_mode = NULL) {
   if (is.null(select_mode) || length(select_mode) == 0 || is.na(select_mode[[1]])) {
     return(NULL)
@@ -217,7 +229,8 @@ loose_selector_should_refresh_latest <- function(selector_type,
 loose_selector_filter_data <- function(result,
                                        loose_filters,
                                        loose_selectors,
-                                       selector_initialized = NULL) {
+                                       selector_initialized = NULL,
+                                       exclude_vars = NULL) {
   if (is.null(result) || nrow(result) == 0) {
     return(NULL)
   }
@@ -226,6 +239,7 @@ loose_selector_filter_data <- function(result,
   }
 
   for (var in names(loose_selectors)) {
+    if (var %in% exclude_vars) next
     if (!var %in% names(result)) next
 
     filter_values <- loose_filters[[var]]
@@ -262,16 +276,7 @@ createSelectors <- function(data,
                             extra_layer = NULL,
                             scatter_options = NULL) {
   # Helper: parse 'c("a","b")' strings into vectors
-  parseChoices <- function(ch) {
-    if (is.character(ch) && length(ch) == 1 && grepl("^c\\(", ch)) {
-      tryCatch(eval(parse(text = ch)), error = function(e) {
-        warning("Failed to parse choices: ", ch)
-        ch
-      })
-    } else {
-      ch
-    }
-  }
+  parseChoices <- selector_parse_choices
   
   # Layout counts
   visibleSelectors <- names(selector_info)[vapply(selector_info, function(info) {

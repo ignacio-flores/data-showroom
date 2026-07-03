@@ -72,11 +72,14 @@ createViz <- function(graph = NULL,
           TRUE
         }
       )
-      fixed_selectors <- inject_value_transform_selector_choices(
+      selector_groups <- inject_value_transform_selector_group_choices(
         fixed_selectors,
+        loose_selectors,
         value_transform,
         value_transform_state$bundle
       )
+      fixed_selectors <- selector_groups$fixed_selectors
+      loose_selectors <- selector_groups$loose_selectors
     } else if (is_currency_columns_transform) {
       value_transform_state <- list(
         type = value_transform_type,
@@ -88,11 +91,14 @@ createViz <- function(graph = NULL,
         columns = value_transform$columns,
         scale_divisor = value_transform$scale_divisor %||% 1
       )
-      fixed_selectors <- inject_currency_selector_choices(
+      selector_groups <- inject_currency_selector_group_choices(
         fixed_selectors,
+        loose_selectors,
         value_transform,
         value_transform_state$bundle
       )
+      fixed_selectors <- selector_groups$fixed_selectors
+      loose_selectors <- selector_groups$loose_selectors
     }
     if (!is.null(value_transform_state)) {
       if (!is.null(loose_selectors)) {
@@ -112,6 +118,17 @@ createViz <- function(graph = NULL,
     "Metadata"
   } else {
     "Methodological table"
+  }
+  value_transform_selector_names <- character(0)
+  if (!is.null(value_transform_state)) {
+    value_transform_selector_names <- value_transform_state$currency_selector
+    if (!is.null(value_transform_state$unit_selector)) {
+      value_transform_selector_names <- c(
+        value_transform_selector_names,
+        value_transform_state$unit_selector
+      )
+    }
+    value_transform_selector_names <- unique(value_transform_selector_names)
   }
 
   parseAxisChoices <- function(ch) {
@@ -374,7 +391,7 @@ createViz <- function(graph = NULL,
 
       currency_label <- value_transform_selector_value(
         input,
-        fixed_selectors,
+        all_selectors,
         value_transform_state$currency_selector,
         fallback = value_transform_state$bundle$currency_choices[[1]]
       )
@@ -389,7 +406,7 @@ createViz <- function(graph = NULL,
       } else {
         unit_label <- value_transform_selector_value(
           input,
-          fixed_selectors,
+          all_selectors,
           value_transform_state$unit_selector,
           fallback = value_transform_state$bundle$unit_choices[[1]]
         )
@@ -712,7 +729,14 @@ createViz <- function(graph = NULL,
             }
           }
 
-          choices <- sort(unique(choices_data[[var]]))
+          configured_choices <- selector_config_choices(loose_selectors[[var]])
+          choices <- if (!is.null(configured_choices)) {
+            configured_choices
+          } else if (var %in% names(choices_data)) {
+            sort(unique(choices_data[[var]]))
+          } else {
+            character(0)
+          }
           choices <- choices[!is.na(choices)]
           loose_selector_last_choices[[var]] <- choices
           current_selection <- isolate(input[[var]])
@@ -820,7 +844,8 @@ createViz <- function(graph = NULL,
         result,
         loose_filters,
         loose_selectors,
-        selector_initialized = loose_selector_initialized
+        selector_initialized = loose_selector_initialized,
+        exclude_vars = value_transform_selector_names
       )
 
       if (is.null(result) || nrow(result) == 0) {

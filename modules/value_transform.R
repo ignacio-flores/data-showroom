@@ -94,6 +94,33 @@ load_value_transform_bundle <- function(bundle_file, require_units = TRUE) {
   bundle
 }
 
+inject_selector_choices <- function(fixed_selectors,
+                                    loose_selectors = NULL,
+                                    selector,
+                                    label,
+                                    choices) {
+  had_loose_selectors <- !is.null(loose_selectors)
+  if (is.null(fixed_selectors)) fixed_selectors <- list()
+  if (is.null(loose_selectors)) loose_selectors <- list()
+
+  if (selector %in% names(fixed_selectors)) {
+    fixed_selectors[[selector]]$choices <- choices
+  } else if (selector %in% names(loose_selectors)) {
+    loose_selectors[[selector]]$choices <- choices
+  } else {
+    fixed_selectors[[selector]] <- list(label = label, choices = choices)
+  }
+
+  list(
+    fixed_selectors = fixed_selectors,
+    loose_selectors = if (had_loose_selectors || length(loose_selectors) > 0) {
+      loose_selectors
+    } else {
+      NULL
+    }
+  )
+}
+
 inject_currency_selector_choices <- function(fixed_selectors, value_transform, bundle) {
   currency_selector <- value_transform$currency_selector %||% "xrate_lab"
 
@@ -103,6 +130,20 @@ inject_currency_selector_choices <- function(fixed_selectors, value_transform, b
 
   fixed_selectors[[currency_selector]]$choices <- bundle$currency_choices
   fixed_selectors
+}
+
+inject_currency_selector_group_choices <- function(fixed_selectors,
+                                                   loose_selectors,
+                                                   value_transform,
+                                                   bundle) {
+  currency_selector <- value_transform$currency_selector %||% "xrate_lab"
+  inject_selector_choices(
+    fixed_selectors,
+    loose_selectors,
+    selector = currency_selector,
+    label = "Currency",
+    choices = bundle$currency_choices
+  )
 }
 
 inject_value_transform_selector_choices <- function(fixed_selectors, value_transform, bundle) {
@@ -120,6 +161,27 @@ inject_value_transform_selector_choices <- function(fixed_selectors, value_trans
 
   fixed_selectors[[unit_selector]]$choices <- bundle$unit_choices
   fixed_selectors
+}
+
+inject_value_transform_selector_group_choices <- function(fixed_selectors,
+                                                          loose_selectors,
+                                                          value_transform,
+                                                          bundle) {
+  selector_groups <- inject_currency_selector_group_choices(
+    fixed_selectors,
+    loose_selectors,
+    value_transform,
+    bundle
+  )
+
+  unit_selector <- value_transform$unit_selector %||% "pop_lab"
+  inject_selector_choices(
+    selector_groups$fixed_selectors,
+    selector_groups$loose_selectors,
+    selector = unit_selector,
+    label = "Unit",
+    choices = bundle$unit_choices
+  )
 }
 
 value_transform_selector_value <- function(input, selector_info, selector_name, fallback = NULL) {

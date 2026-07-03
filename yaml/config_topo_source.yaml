@@ -20,6 +20,7 @@ axis_vars:
   x_axis:
     var: "year"
     label: "Year"
+    min: 1900
   y_axis:
     var: "value"
     label: "Value"
@@ -34,18 +35,25 @@ fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
-  xrate_lab:
-    label: "Currency"
-    selected: "Euro (2023 prices)"
-  pop_lab:
-    label: "Unit"
-    selected: "Per capita"
 
 #Define reactive or 'loose' selectors (react to changes in main selectors)
 loose_selectors:
+  xrate_lab:
+    label: "Currency"
+    selected: "Euro (2023 prices)"
+    type: "sticky selector"
+  pop_lab:
+    label: "Unit"
+    selected: "Per capita"
+    type: "sticky selector"
   d4_concept_lab:
     label: "Wealth type"
     type: "sticky checkbox"
+    selected:
+      - "Financial Assets & Fixed Capital of Personal Businesses"
+      - "Housing & Land"
+      - "Net Wealth"
+      - "Debt"
   legend:
     label: "Source"
     type: "reactive checkbox"

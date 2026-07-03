@@ -13,27 +13,27 @@ value_transform:
     - "adjlbo"
   scale_divisor: 1000000
 
-#define plot type 
+#define plot type
 gopts: "step"
 overlap_offset:
   enabled: true
   amount: 0.003
   axis: "y"
   mode: "group_index"
- 
-#define main plot variables 
-axis_vars: 
-  x_axis: 
+
+#define main plot variables
+axis_vars:
+  x_axis:
     var: "adjlbo"
     label: "Bracket's lower bound (millions, selected currency)"
-    breaks: 10 
-  y_axis: 
+    breaks: 10
+  y_axis:
     var: "adjmrt"
     label: "Marginal tax rate"
-    
-color: 
+
+color:
   var: "GEO_long"
-  label: "Country" 
+  label: "Country"
   style: "dichromat::DarkRedtoBlue_12"
   group:
     - "year"
@@ -41,19 +41,19 @@ color:
     - "kinship"
     - "GEO_long"
 
-#Define main selector 
+#Define main selector
 fixed_selectors:
-  year: 
+  year:
     label: "Year"
     selected: 2007
   GEO_long:
     label: "Country"
     selected:
       - "Italy"
-      - "France" 
+      - "France"
       - "Germany"
       - "Chile"
-    multiple: true   
+    multiple: true
   tax_type_view:
     label: "Tax type"
     selected: "Inheritance or estate tax"
@@ -62,18 +62,19 @@ fixed_selectors:
       - "Gift tax"
       - "Inheritance tax"
       - "Estate tax"
+
+loose_selectors:
   xrate_lab:
     label: "Currency"
     selected: "USD (2023 prices)"
-
-loose_selectors:
+    type: "sticky selector"
   kinship:
     label: "Kinship"
     type: "very reactive selector"
     selected: "Everybody"
 
-#define the columns of the data table widget 
-dt.cols: 
+#define the columns of the data table widget
+dt.cols:
   GEO_long: "Country"
   GEO: "Country code"
   year: "Year"
@@ -94,7 +95,7 @@ tooltip_vars:
   xrate_lab: "Currency:"
   adjlbo: "Lower bound (millions):"
 
-#other options 
+#other options
 download.button: True
 hide.selectors: False
 listen: False

@@ -921,8 +921,97 @@ format_axis_number <- function(values,
   out
 }
 
+axis_numeric_values <- function(values) {
+  if (is.factor(values)) values <- as.character(values)
+  suppressWarnings(as.numeric(values))
+}
+
+axis_numeric_min <- function(axis_info) {
+  if (is.null(axis_info) || !is.list(axis_info) || is.null(axis_info$min)) {
+    return(NULL)
+  }
+
+  min_value <- axis_info$min
+  if (length(min_value) != 1) return(NULL)
+
+  min_value <- suppressWarnings(as.numeric(min_value))
+  if (is.na(min_value) || !is.finite(min_value)) return(NULL)
+
+  min_value
+}
+
+axis_numeric_data_range <- function(values) {
+  numeric_values <- axis_numeric_values(values)
+  numeric_values <- numeric_values[is.finite(numeric_values)]
+  if (length(numeric_values) == 0) return(NULL)
+
+  range(numeric_values, na.rm = TRUE)
+}
+
+axis_numeric_range_with_min <- function(values,
+                                        axis_info = NULL,
+                                        existing_range = NULL,
+                                        enabled = TRUE) {
+  if (!isTRUE(enabled)) return(existing_range)
+
+  min_value <- axis_numeric_min(axis_info)
+  range_values <- NULL
+  if (!is.null(existing_range) && length(existing_range) >= 2) {
+    range_values <- suppressWarnings(as.numeric(existing_range[1:2]))
+    if (!all(is.finite(range_values))) {
+      range_values <- NULL
+    }
+  }
+  if (is.null(range_values) && is.null(min_value)) return(NULL)
+  if (is.null(range_values)) {
+    range_values <- axis_numeric_data_range(values)
+  }
+  if (is.null(range_values)) return(NULL)
+
+  if (!is.null(min_value)) {
+    range_values[[1]] <- min_value
+    if (!is.finite(range_values[[2]]) || range_values[[2]] < min_value) {
+      range_values[[2]] <- min_value
+    }
+  }
+
+  if (!all(is.finite(range_values))) return(NULL)
+  if (identical(range_values[[1]], range_values[[2]])) {
+    if (!is.null(min_value) && identical(range_values[[1]], min_value)) {
+      range_values[[2]] <- range_values[[2]] + 1
+    } else {
+      range_values <- range_values + c(-0.5, 0.5)
+    }
+  }
+
+  range_values
+}
+
+axis_visible_numeric_values <- function(values,
+                                        axis_info = NULL,
+                                        axis_range = NULL,
+                                        enabled = TRUE) {
+  numeric_values <- axis_numeric_values(values)
+  numeric_values <- numeric_values[is.finite(numeric_values)]
+  if (!isTRUE(enabled)) return(numeric_values)
+
+  range_values <- axis_range
+  if (is.null(range_values)) {
+    range_values <- axis_numeric_range_with_min(values, axis_info = axis_info)
+  }
+  if (is.null(range_values) || length(range_values) < 2) return(numeric_values)
+
+  range_values <- suppressWarnings(as.numeric(range_values[1:2]))
+  if (!all(is.finite(range_values))) return(numeric_values)
+
+  visible_values <- numeric_values[
+    numeric_values >= range_values[[1]] & numeric_values <= range_values[[2]]
+  ]
+  c(range_values[[1]], visible_values, range_values[[2]])
+}
+
 axis_number_tick_values <- function(values, n = NULL) {
-  numeric_values <- suppressWarnings(as.numeric(values))
+  numeric_values <- axis_numeric_values(values)
   numeric_values <- numeric_values[is.finite(numeric_values)]
   if (length(numeric_values) == 0) return(NULL)
 
@@ -946,13 +1035,36 @@ plotly_number_axis_layout <- function(axis = list(),
                                       axis_info = NULL,
                                       n = NULL,
                                       tickvals = NULL,
-                                      enabled = TRUE) {
+                                      enabled = TRUE,
+                                      apply_axis_min = FALSE) {
   axis$exponentformat <- "none"
   axis$separatethousands <- TRUE
   if (!isTRUE(enabled)) return(axis)
 
+  axis_range <- if (isTRUE(apply_axis_min)) {
+    axis_numeric_range_with_min(
+      values,
+      axis_info = axis_info,
+      existing_range = axis$range
+    )
+  } else {
+    NULL
+  }
+  if (!is.null(axis_range)) {
+    axis$range <- axis_range
+  }
+
   if (is.null(tickvals)) {
-    tickvals <- axis_number_tick_values(values, n = n)
+    tick_values <- if (isTRUE(apply_axis_min)) {
+      axis_visible_numeric_values(
+        values,
+        axis_info = axis_info,
+        axis_range = axis_range
+      )
+    } else {
+      values
+    }
+    tickvals <- axis_number_tick_values(tick_values, n = n)
   }
   if (is.null(tickvals) || length(tickvals) == 0) return(axis)
 
@@ -1027,8 +1139,7 @@ is_year_axis_var <- function(var_name) {
 }
 
 year_axis_numeric_values <- function(values) {
-  if (is.factor(values)) values <- as.character(values)
-  suppressWarnings(as.numeric(values))
+  axis_numeric_values(values)
 }
 
 year_axis_breaks <- function(values, n = NULL) {
@@ -1078,10 +1189,29 @@ format_year_axis_value <- function(value) {
   value
 }
 
-plotly_year_xaxis_layout <- function(axis, values, n = NULL, enabled = TRUE) {
+plotly_year_xaxis_layout <- function(axis,
+                                     values,
+                                     n = NULL,
+                                     enabled = TRUE,
+                                     axis_info = NULL,
+                                     axis_range = NULL) {
   if (!isTRUE(enabled)) return(axis)
 
-  breaks <- year_axis_breaks(values, n = n)
+  axis_range <- axis_numeric_range_with_min(
+    values,
+    axis_info = axis_info,
+    existing_range = if (!is.null(axis_range)) axis_range else axis$range
+  )
+  if (!is.null(axis_range)) {
+    axis$range <- axis_range
+  }
+
+  tick_values <- axis_visible_numeric_values(
+    values,
+    axis_info = axis_info,
+    axis_range = axis_range
+  )
+  breaks <- year_axis_breaks(tick_values, n = n)
   if (is.null(breaks) || length(breaks) == 0) return(axis)
 
   axis$tickmode <- "array"
@@ -1092,7 +1222,12 @@ plotly_year_xaxis_layout <- function(axis, values, n = NULL, enabled = TRUE) {
   axis
 }
 
-apply_plotly_year_xaxis_ticks <- function(pp, values, n = NULL, enabled = TRUE) {
+apply_plotly_year_xaxis_ticks <- function(pp,
+                                          values,
+                                          n = NULL,
+                                          enabled = TRUE,
+                                          axis_info = NULL,
+                                          axis_range = NULL) {
   if (!isTRUE(enabled)) return(pp)
 
   axis_names <- plotly_axis_layout_names(pp$x$layout, "x")
@@ -1105,7 +1240,9 @@ apply_plotly_year_xaxis_ticks <- function(pp, values, n = NULL, enabled = TRUE) 
       axis,
       values = values,
       n = n,
-      enabled = TRUE
+      enabled = TRUE,
+      axis_info = axis_info,
+      axis_range = axis_range
     )
   }
 
@@ -1272,12 +1409,33 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         x_limits <- range(df[[x_var]], na.rm = TRUE)
       }
 
+      x_axis_values <- if (!is.null(x_var) && x_var %in% names(df)) df[[x_var]] else NULL
+      x_axis_range <- axis_numeric_range_with_min(
+        x_axis_values,
+        axis_info = x_axis_info,
+        existing_range = x_limits,
+        enabled = !identical(x_scale, "log")
+      )
+      if (!is.null(x_axis_range)) {
+        x_limits <- x_axis_range
+      }
+      x_tick_values <- axis_visible_numeric_values(
+        x_axis_values,
+        axis_info = x_axis_info,
+        axis_range = x_axis_range,
+        enabled = !identical(x_scale, "log")
+      )
+
       # Define x-axis breaks dynamically
       if (is_year_x_axis) {
-        breaks_x <- year_axis_breaks(df[[x_var]], n = xnum_breaks)
+        breaks_x <- year_axis_breaks(x_tick_values, n = xnum_breaks)
       } else if (!is.null(xnum_breaks)) {
-        x_range <- range(df[[x_var]], na.rm = TRUE)
-        breaks_x <- pretty(x_range, n = xnum_breaks)
+        if (!is.null(x_axis_range)) {
+          breaks_x <- axis_number_tick_values(x_tick_values, n = xnum_breaks)
+        } else {
+          x_range <- range(df[[x_var]], na.rm = TRUE)
+          breaks_x <- pretty(x_range, n = xnum_breaks)
+        }
       } else {
         breaks_x <- NULL
       }
@@ -1438,7 +1596,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               zeroline = FALSE,
               showgrid = FALSE,
               automargin = TRUE
-            )),
+            )) %>%
+              plotly_number_axis_layout(
+                values = x_axis_values,
+                var_name = x_var,
+                label = x_var_lab,
+                axis_info = x_axis_info,
+                n = xnum_breaks,
+                enabled = !is_year_x_axis,
+                apply_axis_min = TRUE
+              ),
             yaxis = plotly_axis_style(list(
               title = left_name,
               zeroline = FALSE,
@@ -1474,9 +1641,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             )) else list()
           ) %>%
           apply_plotly_year_xaxis_ticks(
-            df[[x_var]],
+            x_axis_values,
             n = xnum_breaks,
-            enabled = is_year_x_axis
+            enabled = is_year_x_axis,
+            axis_info = x_axis_info,
+            axis_range = x_axis_range
           ) %>%
           plotly_modebar_config()
 
@@ -1527,7 +1696,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             label = x_var_lab,
             axis_info = x_axis_info,
             n = xnum_breaks,
-            tickvals = x_axis_tickvals
+            tickvals = x_axis_tickvals,
+            apply_axis_min = !identical(x_scale, "log")
           )
         }
 
@@ -1759,9 +1929,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             )) else list()
           ) %>%
           apply_plotly_year_xaxis_ticks(
-            df[[x_var]],
+            x_axis_values,
             n = xnum_breaks,
-            enabled = is_year_x_axis && !identical(x_scale, "log")
+            enabled = is_year_x_axis && !identical(x_scale, "log"),
+            axis_info = x_axis_info,
+            axis_range = x_axis_range
           ) %>%
           plotly_modebar_config()
 
@@ -1865,7 +2037,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             dragmode = "zoom",
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
-            xaxis = plotly_axis_style(list(title = x_var_lab)),
+            xaxis = plotly_axis_style(list(title = x_var_lab)) %>%
+              plotly_number_axis_layout(
+                values = x_axis_values,
+                var_name = x_var,
+                label = x_var_lab,
+                axis_info = x_axis_info,
+                n = xnum_breaks,
+                enabled = !is_year_x_axis,
+                apply_axis_min = TRUE
+              ),
             yaxis = plotly_axis_style(list(title = y_var_lab)) %>%
               plotly_number_axis_layout(
                 values = df_facet[[y_plot_var]],
@@ -1875,9 +2056,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               )
           ) %>%
             apply_plotly_year_xaxis_ticks(
-              df[[x_var]],
+              x_axis_values,
               n = xnum_breaks,
-              enabled = is_year_x_axis
+              enabled = is_year_x_axis,
+              axis_info = x_axis_info,
+              axis_range = x_axis_range
             )
           
           # Add extra layer dynamically
@@ -1934,7 +2117,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         
         # Generate subplot
         # Compute global axis limits
-        x_range <- range(df[[x_var]], na.rm = TRUE)
+        x_range <- if (!is.null(x_axis_range)) {
+          x_axis_range
+        } else {
+          range(df[[x_var]], na.rm = TRUE)
+        }
         
         if (isTRUE(stack_active()) && "area" %in% gopts) {
           stack_groups <- unique(c(facet_var, x_var))
@@ -2038,7 +2225,16 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               range = x_range, 
               title = x_var_lab, 
               zeroline = FALSE 
-            )),
+            )) %>%
+              plotly_number_axis_layout(
+                values = x_axis_values,
+                var_name = x_var,
+                label = x_var_lab,
+                axis_info = x_axis_info,
+                n = xnum_breaks,
+                enabled = !is_year_x_axis,
+                apply_axis_min = TRUE
+              ),
             yaxis = shared_y_axis_layout,
             legend = if (!hide.legend) plotly_legend_style(list(
               orientation = "h",
@@ -2052,9 +2248,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             opacity = 1
           ) %>%
           apply_plotly_year_xaxis_ticks(
-            df[[x_var]],
+            x_axis_values,
             n = xnum_breaks,
-            enabled = is_year_x_axis
+            enabled = is_year_x_axis,
+            axis_info = x_axis_info,
+            axis_range = x_range
           ) %>%
           apply_plotly_shared_yaxis_layout(
             shared_y_axis_layout,
@@ -2803,7 +3001,19 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
             autosize = TRUE,
-            xaxis = plotly_axis_style(list(zeroline = FALSE)),
+            xaxis = plotly_axis_style(Filter(Negate(is.null), list(
+              zeroline = FALSE,
+              range = x_limits
+            ))) %>%
+              plotly_number_axis_layout(
+                values = x_axis_values,
+                var_name = x_var,
+                label = x_var_lab,
+                axis_info = x_axis_info,
+                n = xnum_breaks,
+                enabled = !is_year_x_axis,
+                apply_axis_min = TRUE
+              ),
             yaxis = plotly_axis_style(list(zeroline = FALSE)) %>%
               plotly_number_axis_layout(
                 values = df[[y_plot_var]],
@@ -2821,9 +3031,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               y = -0.3))
           ) %>%
           apply_plotly_year_xaxis_ticks(
-            df[[x_var]],
+            x_axis_values,
             n = xnum_breaks,
-            enabled = is_year_x_axis
+            enabled = is_year_x_axis,
+            axis_info = x_axis_info,
+            axis_range = x_limits
           ) %>%
           plotly_modebar_config()
 

@@ -61,11 +61,12 @@ fixed_selectors:
       - "Gift tax"
       - "Inheritance tax"
       - "Estate tax"
+
+loose_selectors:
   xrate_lab:
     label: "Currency"
     selected: "USD (2023 prices)"
-
-loose_selectors:
+    type: "sticky selector"
   year:
     label: "Year"
     type: "very reactive selector"
