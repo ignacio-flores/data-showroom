@@ -118,9 +118,9 @@ expect_equal(
   "US map should use the general-government revenue series by default."
 )
 expect_equal(
-  us3_config$loose_selectors$kinship$selected,
-  "Children",
-  "US full schedule should default to the children kinship comparison."
+  us3_config$loose_selectors$kinship,
+  NULL,
+  "US full schedule should not expose a kinship selector."
 )
 
 if (file.exists(us1_config$data.file)) {
@@ -162,8 +162,13 @@ if (file.exists(us3_config$data.file)) {
   ft_data <- env$data
 
   expect_equal(length(unique(ft_data$state_abbr)), 51L, "State FT data should include 50 states plus DC.")
-  ft_start <- filter_fixed(ft_data, us3_config$fixed_selectors) %>%
-    filter(kinship == us3_config$loose_selectors$kinship$selected)
+  expect_set_equal(
+    unique(ft_data$kinship),
+    "Children",
+    "State FT data should use a single canonical schedule variant."
+  )
+
+  ft_start <- filter_fixed(ft_data, us3_config$fixed_selectors)
   latest_year <- max(suppressWarnings(as.numeric(ft_start$year)), na.rm = TRUE)
   ft_start <- ft_start %>%
     filter(as.numeric(year) == latest_year, !is.na(adjlbo), !is.na(adjmrt))
@@ -194,10 +199,9 @@ if (file.exists(us3_config$data.file)) {
     "Levying default states should retain positive state-tax schedules."
   )
 
-  latest_child_combined <- ft_data %>%
+  latest_combined <- ft_data %>%
     filter(
       tax_type_view == "Inheritance or estate tax",
-      kinship == "Children",
       as.numeric(year) == latest_year,
       !is.na(adjmrt)
     ) %>%
@@ -205,18 +209,18 @@ if (file.exists(us3_config$data.file)) {
     summarise(max_rate = max(adjmrt, na.rm = TRUE), .groups = "drop")
 
   expect_true(
-    all(c("California", "Florida", "Texas") %in% latest_child_combined$state_name),
+    all(c("California", "Florida", "Texas") %in% latest_combined$state_name),
     "Non-levying states should still have explicit zero schedules in the combined view."
   )
   expect_true(
-    all(latest_child_combined$max_rate[
-      latest_child_combined$state_name %in% c("California", "Florida", "Texas")
+    all(latest_combined$max_rate[
+      latest_combined$state_name %in% c("California", "Florida", "Texas")
     ] == 0),
     "California, Florida, and Texas should not show positive state schedules."
   )
   expect_true(
-    all(latest_child_combined$max_rate[
-      latest_child_combined$state_name %in% c("New York", "Washington")
+    all(latest_combined$max_rate[
+      latest_combined$state_name %in% c("New York", "Washington")
     ] > 0),
     "New York and Washington should retain positive state schedules."
   )

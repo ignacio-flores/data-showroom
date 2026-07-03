@@ -322,7 +322,8 @@ if (length(monetary_ft_cols) > 0) {
 ft_data <- ft_data %>%
   mutate(xrate_lab = usd_2023_label) %>%
   select(-cpi) %>%
-  apply_state_tax_indicator_to_schedules(schedule_status)
+  apply_state_tax_indicator_to_schedules(schedule_status) %>%
+  filter(kinship == "Children")
 
 ft_data <- ft_data %>%
   group_by(GEO, year, d2_label) %>%

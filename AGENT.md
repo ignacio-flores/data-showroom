@@ -104,7 +104,7 @@ changes:
 ## Deployment
 
 - Do not edit or commit files in `auth/`.
-- Use `deploy-app.R --dry-run` before deployment changes.
+- Use `bin/viz ... dry-run` before deployment changes.
 - Keep `yaml/deploy_targets.yaml` consistent with available config files.
 
 ## Documentation

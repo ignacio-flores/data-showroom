@@ -36,7 +36,6 @@ color:
   group:
     - "year"
     - "tax_type_view"
-    - "kinship"
     - "state_name"
 
 fixed_selectors:
@@ -69,17 +68,12 @@ loose_selectors:
     label: "Year"
     type: "very reactive selector"
     select: "latest"
-  kinship:
-    label: "Kinship"
-    type: "very reactive selector"
-    selected: "Children"
 
 dt.cols:
   state_name: "State"
   GEO: "State code"
   year: "Year"
   tax_type: "Source tax type"
-  kinship: "Kinship"
   d5_code: "Bracket"
   adjmrt: "Marginal tax rate"
   xrate_lab: "Currency"
@@ -89,7 +83,6 @@ tooltip_vars:
   state_name: "State:"
   year: "Year:"
   tax_type: "Source tax type:"
-  kinship: "Kinship:"
   adjmrt: "Marginal tax rate:"
   adjlbo: "Lower bound (millions):"
 

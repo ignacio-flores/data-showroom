@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-source("deploy-app.R")
+source("tools/viz/entrypoint.R")
 
 # Helpers ---------------------------------------------------------------------
 
@@ -93,12 +93,12 @@ with_mocked_globals <- function(replacements, expr) {
 covered_help_options <- character()
 
 cover_help_options <- function(...) {
-  covered_help_options <<- sort(unique(c(covered_help_options, unlist(list(...)))))
+  normalized <- gsub("^--", "", unlist(list(...)))
+  covered_help_options <<- sort(unique(c(covered_help_options, normalized)))
 }
 
 usage_options <- function() {
-  lines <- capture.output(usage())
-  sort(unique(unlist(regmatches(lines, gregexpr("--[A-Za-z0-9-]+", lines)))))
+  sort(unique(unname(cli_keyword_aliases)))
 }
 
 expect_help_options_covered <- function() {
@@ -162,21 +162,21 @@ fixture_targets <- list(
 
 # Help behavior and coverage --------------------------------------------------
 
-cover_help_options("--help")
-help_opts <- parse_args(c("--help", "--bogus", "--registry"))
+cover_help_options("help")
+help_opts <- parse_args(c("help", "--bogus", "--registry"))
 expect_true(
   isTRUE(help_opts$help),
-  "--help should short-circuit argument validation in parse_args()."
+  "help should short-circuit argument validation in parse_args()."
 )
 
 help_result <- NULL
 help_output <- capture.output({
-  help_result <- main(c("--help", "--bogus"))
+  help_result <- main(c("help", "--bogus"))
 })
 expect_identical(
   help_result$status,
   0L,
-  "--help should return success even when unrelated invalid args follow it."
+  "help should return success even when unrelated invalid args follow it."
 )
 expect_true(
   any(grepl("Usage:", help_output, fixed = TRUE)),
@@ -185,7 +185,58 @@ expect_true(
 
 # Parser/options --------------------------------------------------------------
 
-cover_help_options("--target", "--profile", "--tag")
+cover_help_options("target", "profile", "tag", "deploy", "preview", "install", "uninstall", "prefix", "name", "force")
+bare_preview <- parse_args(c("target", "alpha"))
+expect_true(
+  identical(bare_preview$target, "alpha") &&
+    isTRUE(bare_preview$preview) &&
+    !isTRUE(bare_preview$deploy),
+  "Bare target syntax should preview by default."
+)
+
+bare_deploy <- parse_args(c("target", "alpha", "deploy"))
+expect_true(
+  identical(bare_deploy$target, "alpha") &&
+    !isTRUE(bare_deploy$preview) &&
+    isTRUE(bare_deploy$deploy),
+  "Final deploy should switch the action from preview to deployment."
+)
+
+expect_error(
+  parse_args(c("deploy", "target", "alpha")),
+  "deploy must be the final argument",
+  "deploy should be rejected unless it is the final argument."
+)
+
+install_opts <- parse_args(c("install", "prefix", tempdir(), "name", "data-viz", "force"))
+expect_true(
+  isTRUE(install_opts$install) &&
+    identical(install_opts$install_prefix, tempdir()) &&
+    identical(install_opts$install_name, "data-viz") &&
+    isTRUE(install_opts$force),
+  "install should parse prefix, name, and force options."
+)
+
+uninstall_opts <- parse_args(c("uninstall", "--prefix", tempdir(), "--name=data-viz"))
+expect_true(
+  isTRUE(uninstall_opts$uninstall) &&
+    identical(uninstall_opts$install_prefix, tempdir()) &&
+    identical(uninstall_opts$install_name, "data-viz"),
+  "uninstall should parse dashed prefix and name options."
+)
+
+expect_error(
+  parse_args(c("prefix", tempdir())),
+  "require install or uninstall",
+  "prefix should require install or uninstall."
+)
+
+expect_error(
+  parse_args(c("install", "target", "alpha")),
+  "install cannot be used",
+  "install should reject preview/deploy selectors."
+)
+
 expect_identical(
   parse_args(c("--target", "alpha,beta"))$target,
   c("alpha", "beta"),
@@ -234,11 +285,11 @@ expect_error(
   "Repeated target commas should be rejected."
 )
 
-cover_help_options("--dry-run")
+cover_help_options("dry-run")
 dry_opts <- parse_args(c("--target", "alpha", "--dry-run"))
 expect_true(
-  isTRUE(dry_opts$dry_run),
-  "--dry-run should parse with an explicit target selector."
+  isTRUE(dry_opts$dry_run) && !isTRUE(dry_opts$preview),
+  "dry-run should parse with an explicit target selector and disable preview."
 )
 
 expect_error(
@@ -253,14 +304,13 @@ expect_error(
   "Option-like registry values should be rejected."
 )
 
-cover_help_options("--preview", "--preview-host", "--preview-port", "--no-browser", "--yes")
+cover_help_options("preview-host", "preview-port", "no-browser", "yes")
 preview_opts <- parse_args(c(
-  "--profile", "main",
-  "--preview",
-  "--preview-host", "0.0.0.0",
-  "--preview-port", "8767",
-  "--no-browser",
-  "--yes"
+  "profile", "main",
+  "preview-host", "0.0.0.0",
+  "preview-port", "8767",
+  "no-browser",
+  "yes"
 ))
 expect_true(
   isTRUE(preview_opts$preview) &&
@@ -268,7 +318,7 @@ expect_true(
     identical(preview_opts$preview_port, 8767L) &&
     !isTRUE(preview_opts$launch_browser) &&
     isTRUE(preview_opts$yes),
-  "Preview options should parse together when --preview is supplied."
+  "Preview options should parse without requiring an explicit preview flag."
 )
 
 expect_error(
@@ -279,20 +329,20 @@ expect_error(
 
 expect_error(
   parse_args(c("--target", "alpha", "--all")),
-  "--all cannot be used with --target",
-  "--all and --target should be mutually exclusive."
+  "all cannot be used with target",
+  "all and target should be mutually exclusive."
 )
 
 expect_error(
   parse_args(c("--target", "alpha", "--dry-run", "--refresh-data")),
-  "--dry-run cannot be used",
-  "--dry-run should not accept refresh/cache flags."
+  "dry-run cannot be used",
+  "dry-run should not accept refresh/cache flags."
 )
 
-expect_error(
-  parse_args(c("--no-browser")),
-  "require --preview",
-  "Preview-only flags should require --preview."
+no_browser_opts <- parse_args(c("no-browser"))
+expect_true(
+  isTRUE(no_browser_opts$preview) && !isTRUE(no_browser_opts$launch_browser),
+  "Preview-only flags should be valid because preview is the default action."
 )
 
 expect_true(
@@ -300,7 +350,7 @@ expect_true(
   "--yes should skip large preview confirmation."
 )
 
-cover_help_options("--refresh-data", "--use-cache")
+cover_help_options("refresh-data", "use-cache")
 refresh_opts <- parse_args(c("--target", "alpha", "--refresh-data"))
 cache_opts <- parse_args(c("--target", "alpha", "--use-cache"))
 expect_true(
@@ -314,7 +364,7 @@ expect_identical(
 )
 expect_error(
   parse_args(c("--target", "alpha", "--refresh-data", "--use-cache")),
-  "--refresh-data and --use-cache cannot be used together",
+  "refresh-data and use-cache cannot be used together",
   "Refresh and cache decisions should be mutually exclusive."
 )
 
@@ -356,6 +406,97 @@ expect_error(
   "Mismatched selector intersections should produce a usage error."
 )
 
+target_menu_opts <- apply_selector_menu(
+  parse_args(c("target")),
+  fixture_targets,
+  menu_fn = function(prompt, choices, default = 1L) 2L,
+  stdin_interactive = TRUE
+)
+expect_identical(
+  target_menu_opts$target,
+  "alpha",
+  "Bare target without a value should allow interactive target selection."
+)
+expect_identical(
+  target_menu_labels(fixture_targets),
+  c("all", "alpha", "beta", "gamma", "disabled"),
+  "Target menu labels should be compact target IDs only."
+)
+
+all_menu_opts <- apply_selector_menu(
+  parse_args(c("target")),
+  fixture_targets,
+  menu_fn = function(prompt, choices, default = 1L) 1L,
+  stdin_interactive = TRUE
+)
+expect_true(
+  isTRUE(all_menu_opts$all),
+  "Target menu should include all as the first option."
+)
+
+tag_menu_opts <- apply_selector_menu(
+  parse_args(c("tag")),
+  fixture_targets,
+  menu_fn = function(prompt, choices, default = 1L) 2L,
+  stdin_interactive = TRUE
+)
+expect_identical(
+  tag_menu_opts$tag,
+  "eigt",
+  "Bare tag without a value should allow interactive tag selection."
+)
+
+cancelled_menu_opts <- apply_selector_menu(
+  parse_args(c("target")),
+  fixture_targets,
+  menu_fn = function(prompt, choices, default = 1L) NA_integer_,
+  stdin_interactive = TRUE
+)
+expect_true(
+  isTRUE(cancelled_menu_opts$cancelled),
+  "Escape/cancel in a selector menu should mark the run as cancelled."
+)
+
+expect_error(
+  apply_selector_menu(parse_args(c("target")), fixture_targets, stdin_interactive = FALSE),
+  "requires an interactive terminal",
+  "Bare target without a value should require an interactive terminal."
+)
+
+fake_key_idx <- 0L
+fake_keys <- c("down", "enter")
+menu_choice <- NULL
+invisible(capture.output({
+  menu_choice <- terminal_menu(
+    "Choose fixture:",
+    c("first", "second"),
+    stdin_interactive = TRUE,
+    read_key = function() {
+      fake_key_idx <<- fake_key_idx + 1L
+      fake_keys[[fake_key_idx]]
+    }
+  )
+}))
+expect_identical(
+  menu_choice,
+  2L,
+  "terminal_menu() should move with arrow keys and select with enter."
+)
+
+cancel_choice <- NULL
+invisible(capture.output({
+  cancel_choice <- terminal_menu(
+    "Choose fixture:",
+    c("first", "second"),
+    stdin_interactive = TRUE,
+    read_key = function() "escape"
+  )
+}))
+expect_true(
+  is.na(cancel_choice),
+  "terminal_menu() should return NA when escape is pressed."
+)
+
 cover_help_options("--list", "--include-disabled", "--registry")
 list_opts <- parse_args(c("--list", "--include-disabled", "--registry", "registry.yml"))
 expect_true(
@@ -371,6 +512,11 @@ expect_identical(
   listed$target_id,
   c("alpha", "beta", "gamma"),
   "list_deploy_targets() should exclude disabled targets by default."
+)
+expect_identical(
+  names(listed),
+  c("target_id", "graph", "profile", "enabled", "tags"),
+  "list_deploy_targets() should omit app_name and server columns from display output."
 )
 
 listed <- NULL
@@ -444,11 +590,102 @@ expect_identical(
   "--source-root should override manifest source roots when loading data sources."
 )
 
+# Install/uninstall -----------------------------------------------------------
+
+install_prefix <- file.path(tempdir(), sprintf("viz-install-%s", Sys.getpid()))
+install_opts <- parse_args(c("install", "prefix", install_prefix))
+install_result <- NULL
+install_output <- capture.output({
+  install_result <- install_viz_command(install_opts)
+})
+installed_launcher <- file.path(install_prefix, "bin", "viz")
+expect_true(
+  file.exists(installed_launcher) &&
+    isTRUE(file.access(installed_launcher, mode = 1) == 0) &&
+    identical(install_result$path, installed_launcher),
+  "install should write an executable launcher under prefix/bin."
+)
+expect_output_contains(
+  install_output,
+  c("Installed viz", "export PATH="),
+  "install should print the installed path and PATH hint."
+)
+launcher_text <- readLines(installed_launcher, warn = FALSE)
+expect_true(
+  any(grepl(launcher_marker, launcher_text, fixed = TRUE)) &&
+    any(grepl(viz_repo_root, launcher_text, fixed = TRUE)),
+  "Installed launcher should contain ownership marker and repo root."
+)
+
+launcher_help <- system2(installed_launcher, "help", stdout = TRUE, stderr = TRUE)
+expect_true(
+  any(grepl("Usage:", launcher_help, fixed = TRUE)),
+  "Installed launcher should delegate to bin/viz."
+)
+
+launcher_list <- local({
+  old_dir <- getwd()
+  on.exit(setwd(old_dir), add = TRUE)
+  setwd(tempdir())
+  system2(
+    installed_launcher,
+    c("list", "target", "eigt-kf2"),
+    stdout = TRUE,
+    stderr = TRUE
+  )
+})
+expect_true(
+  any(grepl("eigt-kf2", launcher_list, fixed = TRUE)),
+  "Installed launcher should work when called outside the repo root."
+)
+
+uninstall_opts <- parse_args(c("uninstall", "prefix", install_prefix))
+uninstall_result <- NULL
+uninstall_output <- capture.output({
+  uninstall_result <- uninstall_viz_command(uninstall_opts)
+})
+expect_true(
+  !file.exists(installed_launcher) &&
+    isTRUE(uninstall_result$removed),
+  "uninstall should remove a launcher installed by this checkout."
+)
+expect_output_contains(
+  uninstall_output,
+  "Removed",
+  "uninstall should print the removed launcher path."
+)
+
+dir.create(dirname(installed_launcher), recursive = TRUE, showWarnings = FALSE)
+writeLines("# unrelated command", installed_launcher)
+expect_error(
+  install_viz_command(install_opts, quiet = TRUE),
+  "already exists",
+  "install should refuse to overwrite unrelated commands without force."
+)
+expect_error(
+  uninstall_viz_command(uninstall_opts, quiet = TRUE),
+  "was not installed by this checkout",
+  "uninstall should refuse to remove unrelated commands without force."
+)
+force_uninstall_opts <- parse_args(c("uninstall", "prefix", install_prefix, "force"))
+invisible(uninstall_viz_command(force_uninstall_opts, quiet = TRUE))
+expect_true(
+  !file.exists(installed_launcher),
+  "force uninstall should remove unrelated commands at the requested path."
+)
+
 # Helper wrappers -------------------------------------------------------------
 
 with_mocked_globals(
   list(main = function(args = commandArgs(trailingOnly = TRUE), quiet = FALSE) args),
   {
+    deploy_args <- deploy_by_target("alpha")
+    parsed_deploy <- parse_args(deploy_args)
+    expect_true(
+      identical(parsed_deploy$target, "alpha") && isTRUE(parsed_deploy$deploy),
+      "deploy_by_target() should append final deploy for actual deployments."
+    )
+
     deploy_args <- deploy_by_target("alpha, beta", dry_run = TRUE)
     expect_identical(
       parse_args(deploy_args)$target,
@@ -488,12 +725,16 @@ run_stubbed_deploy <- function(outcomes,
   answer_idx <- 0L
   call_counts <- new.env(parent = emptyenv())
 
-  read_line <- function() {
+  menu_fn <- function(prompt, choices, default = 1L) {
     answer_idx <<- answer_idx + 1L
     if (answer_idx > length(answers)) {
       fail("Unexpected retry prompt.")
     }
-    answers[[answer_idx]]
+    answer <- answers[[answer_idx]]
+    if (is.numeric(answer)) {
+      return(as.integer(answer))
+    }
+    match(answer, choices)
   }
 
   result <- NULL
@@ -523,7 +764,7 @@ run_stubbed_deploy <- function(outcomes,
           data_sources = list(),
           quiet = quiet,
           stdin_interactive = stdin_interactive,
-          read_line = read_line
+          menu_fn = menu_fn
         )
       }
     )
@@ -532,7 +773,7 @@ run_stubbed_deploy <- function(outcomes,
   list(result = result, calls = calls, answers = answer_idx, output = output)
 }
 
-deploy_run <- run_stubbed_deploy(list(beta = "fail"), answers = "n")
+deploy_run <- run_stubbed_deploy(list(beta = "fail"), answers = 2L)
 expect_identical(
   deploy_run$result$status,
   1L,
@@ -554,7 +795,7 @@ expect_identical(
   "Bulk deploy failure should prompt once when the user declines retry."
 )
 
-deploy_run <- run_stubbed_deploy(list(beta = c("fail", "success")), answers = "y")
+deploy_run <- run_stubbed_deploy(list(beta = c("fail", "success")), answers = 1L)
 expect_identical(
   deploy_run$result$status,
   0L,
@@ -581,7 +822,7 @@ expect_identical(
   "Successful retry metadata should have no failed target IDs."
 )
 
-deploy_run <- run_stubbed_deploy(list(beta = c("fail", "fail", "success")), answers = c("y", "n"))
+deploy_run <- run_stubbed_deploy(list(beta = c("fail", "fail", "success")), answers = c(1L, 2L))
 expect_identical(
   deploy_run$result$status,
   1L,
@@ -639,4 +880,4 @@ expect_identical(
 
 expect_help_options_covered()
 
-message("OK: deploy-app.R CLI help, option parsing, selection, and retry behavior are consistent.")
+message("OK: viz CLI help, option parsing, selection, and retry behavior are consistent.")

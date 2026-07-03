@@ -26,7 +26,8 @@ It is especially geared toward the GC Wealth Data Warehouse ecosystem, but the a
 ```text
 .
 ├── app.R                  # Shiny entrypoint; selects which YAML preset to run
-├── deploy-app.R           # shinyapps.io deployment CLI
+├── bin/viz                # Preview/deploy command wrapper
+├── tools/viz/             # Preview/deploy tooling
 ├── modules/               # Core app modules
 ├── yaml/                  # Dashboard presets
 ├── custom_code/           # Optional dataset-specific wrangling scripts
@@ -298,35 +299,73 @@ Deployment targets are defined once in [`yaml/deploy_targets.yaml`](yaml/deploy_
 - explicit auth script path
 - optional tags and enabled flag
 
-Use [`deploy-app.R`](deploy-app.R) with selectors:
+Use [`bin/viz`](bin/viz) with selectors. Preview is the default action:
 
 ```bash
-Rscript deploy-app.R --target inhe_multi
-Rscript deploy-app.R --target eigt-kf2,eigt-wm2
-Rscript deploy-app.R --target eigt-kf2, eigt-wm2
-Rscript deploy-app.R --target eigt-kf2 --target eigt-wm2
-Rscript deploy-app.R --profile gregcull
-Rscript deploy-app.R --tag topo
-Rscript deploy-app.R --all
-Rscript deploy-app.R --profile hubquin --tag eigt --dry-run
-Rscript deploy-app.R --target inhe_multi --preview
-Rscript deploy-app.R --tag topo --preview --yes
+bin/viz target inhe_multi
+bin/viz target eigt-kf2,eigt-wm2
+bin/viz target eigt-kf2, eigt-wm2
+bin/viz target eigt-kf2 target eigt-wm2
+bin/viz profile gregcull
+bin/viz tag topo
+bin/viz all
+bin/viz profile hubquin tag eigt dry-run
+bin/viz target inhe_multi preview-port 8767
+bin/viz tag topo yes
 ```
 
-Deployments run sequentially and continue on errors. The script prints a final success/failure summary.
-For bulk deployments, failed target IDs and errors are summarized after each attempt. In an interactive terminal, the script asks whether to retry only the failed targets; answering `y` retries them, while `n` or an empty answer exits with failure status.
+Add the repo's `bin` directory to your `PATH` if you want to run `viz` from anywhere:
+
+```bash
+export PATH="/path/to/data-showroom/bin:$PATH"
+```
+
+You can also install a launcher into a local bin directory:
+
+```bash
+bin/viz install
+```
+
+By default this writes `~/.local/bin/viz`, creating `~/.local/bin` if needed. The installed command is only a small launcher that points back to this checkout, so pulling repo updates or editing `tools/viz/` updates the installed `viz` immediately. Re-run `viz install` only if you move the repo or want to change the install location/name.
+
+Useful install options:
+
+```bash
+bin/viz install prefix ~/.local
+bin/viz install prefix /tmp/data-showroom-tools name data-viz
+viz uninstall
+viz uninstall prefix /tmp/data-showroom-tools name data-viz
+```
+
+The launcher stores the absolute repo root at install time. If the checkout moves, the installed command exits with a message asking you to reinstall from the new location. `uninstall` only removes a launcher created by this checkout unless you add `force`.
+
+Deploy with the same selector syntax by adding `deploy` at the end:
+
+```bash
+viz target inhe_multi deploy
+viz tag topo deploy
+viz profile hubquin tag eigt deploy
+viz all deploy
+```
+
+Deployments run sequentially and continue on errors. The command prints a final success/failure summary.
+For bulk deployments, failed target IDs and errors are summarized after each attempt. In an interactive terminal, the command uses an arrow-key menu to retry only the failed targets or stop.
 Deploy calls use `forceUpdate = TRUE`, so existing apps with the same `app_name` are updated in place.
-Selector options (`--target`, `--profile`, and `--tag`) accept comma-separated values with or without spaces, or repeated flags. Bulk selectors (`--all`, `--profile`, and `--tag`) only select enabled targets; an explicit `--target` can still name a disabled target for intentional one-off deploys.
-Use `--dry-run` to inspect the selected targets, data actions, and bundle contents without copying, generating, or deploying files. Use `--preview` to prepare the same bundles that would be deployed and run them locally in Shiny. Preview and deploy prompt before stale cached files/artifacts are reused; pass `--refresh-data` to refresh all stale dependencies or `--use-cache` to reuse them without prompting. Refresh/cache flags apply to preview/deploy runs, not dry runs. Bulk preview works with the same selectors as deployment; if more than five targets match, the CLI prompts before starting them, and `--yes` skips that prompt. Add `--preview-port 8767` to choose the first local port, or `--no-browser` to print URLs without opening browser tabs.
+Selectors (`target`, `profile`, and `tag`) accept comma-separated values with or without spaces, or repeated selectors. Bulk selectors (`all`, `profile`, and `tag`) only select enabled targets; an explicit `target` can still name a disabled target for intentional one-off deploys.
+Use `dry-run` to inspect the selected targets, data actions, and bundle contents without copying, generating, previewing, or deploying files. Preview and deploy prompt before stale cached files/artifacts are reused; pass `refresh-data` to refresh all stale dependencies or `use-cache` to reuse them without prompting. Refresh/cache flags apply to preview/deploy runs, not dry runs. Bulk preview works with the same selectors as deployment; if more than five targets match, the CLI prompts before starting them, and `yes` skips that prompt. Add `preview-port 8767` to choose the first local port, or `no-browser` to print URLs without opening browser tabs.
+
+Run `viz target` to choose an available target from an arrow-key menu. Run `viz tag` to choose from available tags. Press Enter to run the highlighted choice, or Escape to cancel.
+
+Dashed options still work for compatibility, so `viz --target inhe_multi --no-browser` is equivalent to `viz target inhe_multi no-browser`.
 
 Credential files in `auth/` are not committed, so each profile used in the registry must exist locally for deployment. Local preview does not require credential files.
 
 ### Deploy from RStudio Console
 
-If you `source("deploy-app.R")`, the script does not auto-run. Use helper functions:
+If you want to use the helper functions from the R console, source the `viz` entrypoint. It does not auto-run when sourced:
 
 ```r
-source("deploy-app.R")
+source("tools/viz/entrypoint.R")
 
 # List deployable targets (IDs are what you type to deploy)
 list_deploy_targets()

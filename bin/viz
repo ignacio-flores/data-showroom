@@ -1,0 +1,11 @@
+#!/usr/bin/env Rscript
+
+args <- commandArgs(trailingOnly = FALSE)
+file_arg <- "--file="
+script_path <- sub(file_arg, "", args[startsWith(args, file_arg)][[1]])
+repo_root <- normalizePath(file.path(dirname(script_path), ".."), mustWork = TRUE)
+options(viz.entrypoint = file.path(repo_root, "tools", "viz", "entrypoint.R"))
+setwd(repo_root)
+
+source(file.path(repo_root, "tools", "viz", "entrypoint.R"))
+cli_main(commandArgs(trailingOnly = TRUE))
