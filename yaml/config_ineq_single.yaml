@@ -71,7 +71,7 @@ loose_selectors:
     type: "sticky selector"
   Data_Type:
     label: "Data type"
-    type: "sticky checkbox"
+    type: "reactive checkbox"
   legend:
     label: "Source"
     type: "very reactive checkbox"
