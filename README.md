@@ -157,10 +157,12 @@ Common keys:
 | `loose_selectors` | Selectors whose choices react to the current filtered data |
 | `dt.cols` | Columns shown in the data table and their labels |
 | `tooltip_vars` | Variables shown in plot hover text |
+| `dual_axis_options` | Optional compact hover and duplicate-metric rules for `dual_axis_line` plots |
 | `facet_var` | Optional faceting variable |
 | `extra_layer` | Optional overlay series such as a net wealth line on top of stacked areas |
 | `overlap_offset` | Optional visual-only line/step offset for separating overlapping series; defaults to disabled |
 | `download.button` | Show a CSV download button for filtered data |
+| `download.cols` | Extra provenance columns retained in filtered CSV downloads |
 | `table.display` | Show the data table tab |
 | `hide.selectors` | Hide controls, useful for embedded views |
 | `listen` | Listen for external JavaScript messages |
@@ -222,6 +224,52 @@ dt.cols:
 table.display: true
 download.button: true
 ```
+
+Loose checkbox selectors may set `select: first` to select only the first
+available value initially and whenever a reactive refresh reapplies the
+selection rule. An explicit `selected` value takes precedence on initial load.
+
+Selector controls can also be shown conditionally from axis selections:
+
+```yaml
+loose_selectors:
+  revenue_tax_category:
+    label: "Revenue category"
+    type: "very reactive checkbox"
+    select: "first"
+    visible_when:
+      any:
+        y_axis: ["revenu", "prorev", "revgdp"]
+        y2_axis: ["revenu", "prorev", "revgdp"]
+```
+
+Within `visible_when`, `any` displays the selector when any listed input matches
+one of its values. `all` requires every listed input to match; when both groups
+are present, both groups must pass. Input names refer to Shiny input IDs such as
+`x_axis`, `y_axis`, and `y2_axis`. Selectors without `visible_when` retain their
+existing unconditional display behavior.
+
+Dual-axis charts can opt into a compact unified tooltip and prevent the same
+metric from being selected on both axes:
+
+```yaml
+dual_axis_options:
+  prevent_duplicate_metrics: true
+  hover:
+    mode: "compact"
+    context_vars:
+      GEO_long:
+        label: "Country"
+      tax_type_view:
+        label: "Type of tax"
+        show_for: ["toprat", "exempt"]
+```
+
+Compact hover mode shows the unified x value once, formats each active metric
+with its axis number format, and appends applicable context once. A context
+entry without `show_for` is always included; otherwise it is included when
+either active metric is listed. Configurations without `dual_axis_options`
+retain the existing dual-axis behavior.
 
 Line and step charts can opt into visual-only offsets for overlapping series:
 

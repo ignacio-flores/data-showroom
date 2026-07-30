@@ -9,6 +9,12 @@ if ("dual_axis_line" %in% gopts && is.null(axis_vars$y2_axis$var)) {
   stop("Please specify axis_vars$y2_axis$var for dual_axis_line plots")
 }
 
+validate_dual_axis_options(
+  dual_axis_options = dual_axis_options,
+  axis_vars = axis_vars,
+  gopts = gopts
+)
+
 #Parse color
 if (!("bar" %in% gopts)) {
   if(is.null(color$var)) {

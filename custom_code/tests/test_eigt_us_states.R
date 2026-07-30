@@ -12,6 +12,10 @@ expect_true <- function(value, message) {
   if (!isTRUE(value)) fail(message)
 }
 
+expect_false <- function(value, message) {
+  if (isTRUE(value)) fail(message)
+}
+
 expect_equal <- function(actual, expected, message) {
   if (!identical(actual, expected)) {
     fail(paste0(
@@ -93,9 +97,22 @@ expect_equal(us1_config$map_options$locationmode, "USA-states", "US map should u
 expect_equal(us1_config$map_options$scope, "usa", "US map should use the USA map scope.")
 
 expected_state_concepts <- c(
+  "Tax Indicator",
+  "Top Marginal Rate",
+  "Exemption Threshold",
   "Total Revenue from Tax",
   "Total Revenue from Tax as % of Total Tax Revenue"
 )
+
+expected_tax_views <- c(
+  "Inheritance or estate tax",
+  "Inheritance tax",
+  "Estate tax",
+  "Gift tax"
+)
+
+expected_eig_revenue_category <-
+  "Estate, inheritance and gift taxes (EIG)"
 
 expect_equal(
   us1_config$fixed_selectors$d4_concept_lab$selected,
@@ -105,23 +122,100 @@ expect_equal(
 expect_equal(
   us1_config$fixed_selectors$d4_concept_lab$choices,
   expected_state_concepts,
-  "US map should expose only state-level revenue concepts."
+  "US map should expose the ordered state tax features without the GDP share."
 )
 expect_equal(
   us2_config$fixed_selectors$d4_concept_lab$choices,
   expected_state_concepts,
-  "US trend graph should expose only state-level revenue concepts."
+  "US trend graph should expose the ordered state tax features without the GDP share."
 )
 expect_equal(
-  us1_config$loose_selectors$d2_sector_lab$selected,
-  "EIG Tax, general government level",
-  "US map should use the general-government revenue series by default."
+  names(us1_config$loose_selectors),
+  "tax_category",
+  "US map should expose one feature-dependent tax-category selector."
+)
+expect_equal(
+  names(us2_config$loose_selectors),
+  "tax_category",
+  "US trend graph should expose one feature-dependent tax-category selector."
+)
+expect_equal(
+  us1_config$loose_selectors$tax_category$selected,
+  expected_eig_revenue_category,
+  "US map should default its revenue feature to aggregate EIG."
+)
+expect_equal(
+  unlist(us2_config$loose_selectors$tax_category$selected, use.names = FALSE),
+  expected_eig_revenue_category,
+  "US trend graph should default its revenue feature to aggregate EIG."
+)
+expect_equal(
+  us2_config$loose_selectors$tax_category$type,
+  "sticky selector",
+  "US trend tax category should be a single-value selector."
+)
+expect_equal(
+  us2_config$loose_selectors$tax_category$select,
+  "first",
+  "US trend tax categories should select the first valid category after a feature change."
+)
+expect_equal(
+  us1_config$fixed_selectors$xrate_lab$selected,
+  "USD (2023 prices)",
+  "US map should retain the hidden real-USD currency."
+)
+expect_true(
+  isTRUE(us1_config$fixed_selectors$xrate_lab$hidden),
+  "US map currency should remain hidden."
+)
+expect_true(
+  isTRUE(us2_config$fixed_selectors$xrate_lab$hidden),
+  "US trend currency should remain hidden."
+)
+expect_equal(
+  us1_config$fixed_selectors$show_zero$selected,
+  "Yes",
+  "US map should retain its show-zero default."
+)
+expect_equal(
+  us2_config$fixed_selectors$show_zero$selected,
+  "No",
+  "US trend graph should retain its nonzero default."
 )
 expect_equal(
   us3_config$loose_selectors$kinship,
   NULL,
   "US full schedule should not expose a kinship selector."
 )
+
+us_configs <- list(
+  "US map" = us1_config,
+  "US trend graph" = us2_config
+)
+
+for (config_name in names(us_configs)) {
+  config <- us_configs[[config_name]]
+  surface_vars <- c(
+    names(config$fixed_selectors),
+    names(config$loose_selectors),
+    config$color$group,
+    names(config$dt.cols),
+    names(config$tooltip_vars)
+  )
+  expect_false(
+    "kinship" %in% surface_vars,
+    paste(config_name, "should not expose or group by raw kinship.")
+  )
+  expect_true(
+    "tax_category" %in% names(config$dt.cols) &&
+      "tax_category" %in% names(config$tooltip_vars),
+    paste(config_name, "should show the active tax category in its table and tooltip.")
+  )
+  expect_true(
+    all(c("tax_type_view", "revenue_tax_category") %in% config$download.cols),
+    paste(config_name, "downloads should preserve both category dimensions.")
+  )
+}
 
 if (file.exists(us1_config$data.file)) {
   long_data <- qs::qread(us1_config$data.file)
@@ -136,20 +230,132 @@ if (file.exists(us1_config$data.file)) {
   expect_set_equal(
     unique(long_data$d4_concept_lab),
     expected_state_concepts,
-    "State long data should contain only the two state-level revenue concepts."
+    "State long data should contain the five approved state tax features."
+  )
+  expect_true(
+    all(c(
+      "tax_category", "tax_type_view", "revenue_tax_category",
+      "d2_sector_lab", "tax_type", "kinship", "source", "varcode"
+    ) %in% names(long_data)),
+    "State long data should retain raw source-tax and relationship provenance."
+  )
+  if (is.factor(long_data$tax_type_view)) {
+    expect_equal(
+      levels(long_data$tax_type_view),
+      expected_tax_views,
+      "Normalized state tax views should retain the approved factor order."
+    )
+  }
+  expect_equal(
+    levels(long_data$revenue_tax_category),
+    c(expected_eig_revenue_category, "Gift tax"),
+    "State revenue categories should use the shared country-compatible order."
+  )
+  expect_equal(
+    levels(long_data$tax_category),
+    c(
+      "Inheritance or estate tax",
+      "Inheritance tax",
+      "Estate tax",
+      expected_eig_revenue_category,
+      "Gift tax"
+    ),
+    "Feature-dependent state tax categories should preserve both subset orders."
+  )
+
+  chart_rows <- long_data %>%
+    filter(show_zero == "Yes")
+
+  duplicate_rows <- chart_rows %>%
+    count(
+      GEO, GEO_long, year, d4_concept_lab, tax_category,
+      name = ".rows"
+    ) %>%
+    filter(.rows > 1)
+  expect_equal(
+    nrow(duplicate_rows),
+    0L,
+    "State chart data should have one normalized row per panel/view/feature."
+  )
+
+  tax_feature_rows <- chart_rows %>%
+    filter(d4_concept_lab %in% expected_state_concepts[1:3])
+  expect_set_equal(
+    as.character(unique(tax_feature_rows$tax_category)),
+    expected_tax_views,
+    "State policy features should expose all four legal tax views."
+  )
+  expect_true(
+    all(is.na(tax_feature_rows$revenue_tax_category)),
+    "State policy rows should not carry a revenue category."
+  )
+  canonical_counts <- tax_feature_rows %>%
+    filter(tax_type_view != "Inheritance or estate tax") %>%
+    distinct(GEO, GEO_long, year, tax_type, kinship) %>%
+    count(GEO, GEO_long, year, tax_type, name = ".kinships") %>%
+    filter(.kinships > 1)
+  expect_equal(
+    nrow(canonical_counts),
+    0L,
+    "Each source tax should use one canonical Children-then-Everybody relationship."
+  )
+
+  status_rows <- tax_feature_rows %>%
+    filter(d4_concept_lab == "Tax Indicator")
+  status_coverage <- status_rows %>%
+    group_by(year, tax_type_view) %>%
+    summarise(.states = n_distinct(state_abbr), .groups = "drop")
+  expect_equal(
+    nrow(status_coverage),
+    length(unique(status_rows$year)) * length(expected_tax_views),
+    "Every state year should expose all three source-tax statuses plus the combined view."
+  )
+  expect_true(
+    all(status_coverage$.states == 51),
+    "Every year and normalized tax view should retain all 50 states plus DC."
+  )
+  expect_true(
+    any(status_rows$value > 0, na.rm = TRUE),
+    "Normalized status rows should retain states with an active tax."
+  )
+  expect_true(
+    any(status_rows$value == 0, na.rm = TRUE),
+    "Normalized status rows should retain explicit zero-tax states."
+  )
+
+  revenue_rows <- chart_rows %>%
+    filter(d4_concept_lab %in% expected_state_concepts[4:5])
+  expect_set_equal(
+    unique(revenue_rows$d2_sector_lab),
+    "EIG Tax, general government level",
+    "Only the general EIG revenue series should feed normalized state views."
   )
   expect_set_equal(
-    unique(long_data$d2_sector_lab),
-    "EIG Tax, general government level",
-    "State long data should contain only general-government revenue rows."
+    unique(revenue_rows$kinship),
+    "General government level",
+    "State revenue should retain its raw general-government relationship."
+  )
+  expect_set_equal(
+    as.character(unique(revenue_rows$revenue_tax_category)),
+    expected_eig_revenue_category,
+    "State revenue should expose only the aggregate EIG category present in the warehouse."
+  )
+  expect_set_equal(
+    as.character(unique(revenue_rows$tax_category)),
+    expected_eig_revenue_category,
+    "The feature-dependent category should label state revenue as aggregate EIG."
+  )
+  expect_true(
+    all(is.na(revenue_rows$tax_type_view)),
+    "State revenue rows should never be assigned to a legal tax view."
   )
 
   us1_start <- filter_fixed(long_data, us1_config$fixed_selectors) %>%
-    filter(d2_sector_lab == us1_config$loose_selectors$d2_sector_lab$selected)
+    filter(tax_category == us1_config$loose_selectors$tax_category$selected)
   expect_true(nrow(us1_start) > 0, "eigt-us1 startup filters should produce rows.")
 
   us2_start <- filter_fixed(long_data, us2_config$fixed_selectors) %>%
-    filter(d2_sector_lab %in% us2_config$loose_selectors$d2_sector_lab$selected)
+    filter(tax_category %in% us2_config$loose_selectors$tax_category$selected)
   expect_true(nrow(us2_start) > 0, "eigt-us2 startup filters should produce rows.")
 } else {
   message("Skipping US-state long artifact checks; ", us1_config$data.file, " is not present.")

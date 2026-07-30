@@ -114,6 +114,11 @@ expect_equal(
   "Gamma",
   "Latest selection should use the last sorted value for non-numeric choices."
 )
+expect_equal(
+  checkbox_select_rule_choices(c("Combined", "Inheritance", "Estate"), "first"),
+  "Combined",
+  "Checkbox select: first should choose only the first available value."
+)
 
 expect_true(
   selector_values_equal(c("B", "A"), c("A", "B")),
@@ -240,6 +245,61 @@ expect_equal(
   ),
   choices,
   "Very reactive checkbox should select all choices when another data selector changes."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "very reactive checkbox",
+    choices,
+    select_mode = "first",
+    initialized = FALSE
+  ),
+  "A",
+  "Initial reactive checkboxes with select: first should choose only the first value."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "very reactive checkbox",
+    choices,
+    current_selection = "C",
+    select_mode = "first",
+    initialized = TRUE,
+    refresh_all = TRUE
+  ),
+  "A",
+  "Reactive checkbox refreshes should reapply select: first."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "very reactive checkbox",
+    choices,
+    configured_selection = "C",
+    select_mode = "first",
+    initialized = FALSE
+  ),
+  "C",
+  "An explicit selected value should take precedence over select: first."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "sticky checkbox",
+    c("EIG", "Gift"),
+    current_selection = "Combined",
+    select_mode = "first",
+    initialized = TRUE
+  ),
+  "EIG",
+  "Sticky select:first checkboxes should choose the first value when the prior selection is unavailable."
+)
+expect_equal(
+  loose_selector_next_selection(
+    "sticky checkbox",
+    c("EIG", "Gift"),
+    current_selection = "Gift",
+    select_mode = "first",
+    initialized = TRUE
+  ),
+  "Gift",
+  "Sticky select:first checkboxes should preserve a still-valid user selection."
 )
 
 spaced_choices <- as.character(seq_len(9))
@@ -470,6 +530,80 @@ expect_equal(
   )$year,
   "2000",
   "Excluded loose selectors should not filter data."
+)
+
+any_visibility <- selector_visible_when_condition(list(
+  any = list(
+    y_axis = c("revenue", "revenue_share"),
+    y2_axis = "revenue"
+  )
+))
+expect_true(
+  grepl('input\\["y_axis"\\] === "revenue"', any_visibility),
+  "visible_when any rules should reference the configured primary-axis value."
+)
+expect_true(
+  grepl('input\\["y2_axis"\\] === "revenue"', any_visibility),
+  "visible_when any rules should reference the configured secondary-axis value."
+)
+expect_true(
+  grepl(" \\|\\| ", any_visibility),
+  "visible_when any rules should combine alternatives with OR."
+)
+
+combined_visibility <- selector_visible_when_condition(list(
+  any = list(y_axis = c("revenue", "revenue_share")),
+  all = list(x_axis = "year", y2_axis = "rate")
+))
+expect_true(
+  grepl(" && ", combined_visibility),
+  "visible_when all rules, and combined any/all groups, should use AND."
+)
+expect_true(
+  grepl('input\\["x_axis"\\] === "year"', combined_visibility),
+  "visible_when all rules should support any configured input ID."
+)
+expect_true(
+  is.null(selector_visible_when_condition(NULL)),
+  "Selectors without visible_when should remain unconditionally visible."
+)
+
+conditional_selector_ui <- createSelectors(
+  data = data.frame(
+    tax_category = c("EIG", "Gift"),
+    value = c(1, 2),
+    stringsAsFactors = FALSE
+  ),
+  selector_info = list(
+    tax_category = list(
+      label = "Tax category",
+      type = "very reactive checkbox",
+      select = "first",
+      visible_when = list(any = list(y_axis = c("value", "share")))
+    )
+  ),
+  axis_vars = list(
+    x_axis = list(var = "year"),
+    y_axis = list(
+      var = "value",
+      choices = c("value", "share"),
+      label = "Measure"
+    )
+  )
+)
+conditional_selector_html <- as.character(conditional_selector_ui)
+expect_true(
+  grepl("data-display-if=", conditional_selector_html, fixed = TRUE),
+  "Selectors with visible_when should render as Shiny conditional panels."
+)
+expect_true(
+  grepl('input[&quot;y_axis&quot;] === &quot;value&quot;', conditional_selector_html, fixed = TRUE),
+  "Conditional selector UI should embed the configured axis condition."
+)
+expect_true(
+  grepl('value=\"EIG\" selected', conditional_selector_html, fixed = TRUE) &&
+    !grepl('value=\"Gift\" selected', conditional_selector_html, fixed = TRUE),
+  "Checkbox select: first should render only the first value selected."
 )
 
 config_paths <- list.files("yaml", pattern = "^config_.*\\.yaml$", full.names = TRUE)

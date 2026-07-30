@@ -10,8 +10,7 @@ color:
   style: "rcartocolor::BluGrn"
   group: 
     - "iso3"
-    - "tax_type"
-    - "kinship"
+    - "tax_category"
     
 axis_vars:
   y_axis: 
@@ -56,41 +55,36 @@ fixed_selectors:
     choices:
       - "Yes"
       - "No"
-  tax_type:
-    label: "Type of tax"
-    selected: "Estate tax"
-    choices:
-      - "Gift tax"
-      - "Inheritance tax"
-      - "Estate tax"
-
 loose_selectors:
-  kinship:
-    label: "Kinship"
+  tax_category:
+    label: "Tax category"
     type: "sticky selector"
-    selected: "Everybody"
+    selected: "Inheritance or estate tax"
 
-  
-  
 #define the columns of the data table widget 
 dt.cols: 
   GEO_long: "Country name"
   GEO: "Country code"
   year: "Year"
   d4_concept_lab: "Variable"
-  tax_type: "Type of tax"
-  kinship: "Kinship"
+  tax_category: "Tax category"
   xrate_lab: "Currency & price adjustment"
   value: "Value"
   
 tooltip_vars:
   d4_concept_lab: "Tax feature:"
-  tax_type: "Type of tax:"
-  kinship: "Kinship:"
+  tax_category: "Tax category:"
   GEO_long: "Country:"
   year: "Year:"
   xrate_lab: "Currency & price adjustment:"
   value: "Value: "
+
+download.cols:
+  - "d2_sector_lab"
+  - "tax_type"
+  - "tax_type_view"
+  - "kinship"
+  - "revenue_tax_category"
 
 #other options 
 download.button: True

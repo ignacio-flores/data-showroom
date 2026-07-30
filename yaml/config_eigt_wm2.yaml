@@ -57,9 +57,11 @@ loose_selectors:
   GEO_long: 
     label: "Countries" 
     type: "sticky checkbox"
-  d2_sector_lab: 
-    label: "Type of Tax"
+  tax_category:
+    label: "Tax category"
     type: "sticky selector"
+    select: "first"
+    selected: "Estate, inheritance and gift taxes (EIG)"
   
 #define the columns of the data table widget 
 dt.cols: 
@@ -67,17 +69,24 @@ dt.cols:
   GEO: "Country code"
   year: "Year"
   d4_concept_lab: "Variable"
-  d2_sector_lab: "Type of tax"
+  tax_category: "Tax category"
   xrate_lab: "Currency & price adjustment"
   value: "Value"
   
 tooltip_vars:
   d4_concept_lab: "Tax feature:"
-  d2_sector_lab: "Type of tax:"
+  tax_category: "Tax category:"
   GEO_long: "Country:"
   year: "Year:"
   xrate_lab: "Currency & price adjustment:"
   value: "Value: "
+
+download.cols:
+  - "d2_sector_lab"
+  - "tax_type"
+  - "tax_type_view"
+  - "kinship"
+  - "revenue_tax_category"
 
 #other options 
 download.button: True

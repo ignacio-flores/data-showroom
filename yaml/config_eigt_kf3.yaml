@@ -4,6 +4,7 @@ data.wrangler: "custom_code/data_prep_eigt3.R"
 keep.col:
   - "GEO"
   - "GEO_long"
+  - "d2_sector"
   - "d2_sector_lab"
   - "d4_concept_lab"
   - "value"
@@ -19,20 +20,19 @@ scatter_options:
   label_max_auto: 20
   label_size: 12
   x_scale_selector: true
-  monetary_axes_use_usd_2023: true
 
 #define main plot variables
 axis_vars:
   x_axis:
     var: "total_revenue_from_tax_as_percent_of_total_tax_revenue"
     choices: c("top_marginal_rate", "exemption_threshold", "total_revenue_from_tax", "total_revenue_from_tax_as_percent_of_total_tax_revenue", "total_revenue_from_tax_as_percent_of_gross_domestic_product")
-    alt.names: c("Top Marginal Rates", "Exemption Thresholds (2023 USD millions)", "EIG Tax Revenue (2023 USD millions)", "EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+    alt.names: c("Top Marginal Rates", "Exemption Thresholds (millions, selected currency)", "Tax Revenue (millions, selected currency)", "Tax Revenue % Total Tax Revenue", "Tax Revenue % GDP")
     label: "X Axis"
     breaks: 10
   y_axis:
     var: "top_marginal_rate"
     choices: c("top_marginal_rate", "exemption_threshold", "total_revenue_from_tax", "total_revenue_from_tax_as_percent_of_total_tax_revenue", "total_revenue_from_tax_as_percent_of_gross_domestic_product")
-    alt.names: c("Top Marginal Rates", "Exemption Thresholds (2023 USD millions)", "EIG Tax Revenue (2023 USD millions)", "EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+    alt.names: c("Top Marginal Rates", "Exemption Thresholds (millions, selected currency)", "Tax Revenue (millions, selected currency)", "Tax Revenue % Total Tax Revenue", "Tax Revenue % GDP")
     label: "Y Axis"
 
 color:
@@ -47,47 +47,77 @@ fixed_selectors:
   year:
     label: "Year"
     selected: 2022
-  tax_type:
-    label: "Type of Tax"
-    selected: "Gift tax"
+  tax_type_view:
+    label: "Type of tax"
+    selected: "Inheritance or estate tax"
     choices:
-      - "Gift tax"
+      - "Inheritance or estate tax"
       - "Inheritance tax"
       - "Estate tax"
+      - "Gift tax"
+    visible_when: { any: { x_axis: ["top_marginal_rate", "exemption_threshold"], y_axis: ["top_marginal_rate", "exemption_threshold"] } }
+  revenue_tax_category:
+    label: "Revenue category"
+    selected: "Estate, inheritance and gift taxes (EIG)"
+    choices:
+      - "Estate, inheritance and gift taxes (EIG)"
+      - "Gift tax"
+    visible_when: { any: { x_axis: ["total_revenue_from_tax", "total_revenue_from_tax_as_percent_of_total_tax_revenue", "total_revenue_from_tax_as_percent_of_gross_domestic_product"], y_axis: ["total_revenue_from_tax", "total_revenue_from_tax_as_percent_of_total_tax_revenue", "total_revenue_from_tax_as_percent_of_gross_domestic_product"] } }
+  xrate_lab:
+    label: "Currency & Price Adjustment"
+    selected: "Euro adjusting for inflation"
+    choices:
+      - "National Currency"
+      - "National Currency adjusting for inflation"
+      - "USD"
+      - "USD adjusting for inflation"
+      - "Euro"
+      - "Euro adjusting for inflation"
+      - "Yuan"
+      - "Yuan adjusting for inflation"
+      - "PPP USD"
+      - "PPP Euro"
+      - "PPP Yuan"
 
 loose_selectors:
   geo_long:
     label: "Country"
     type: "sticky checkbox"
-  kinship:
-    label: "Kinship"
-    type: "sticky selector"
-    selected: "Children"
 
 
 #define the columns of the data table widget
 dt.cols:
   geo_long: "Country"
   year: "Year"
-  tax_type: "Type of Tax"
-  kinship: "Kinship"
+  tax_type_view: "Type of tax"
+  revenue_tax_category: "Revenue category"
+  xrate_lab: "Currency & price adjustment"
   top_marginal_rate: "Top Marginal Rates"
-  exemption_threshold: "Exemption Thresholds (2023 USD millions)"
-  total_revenue_from_tax: "EIG Tax Revenue (2023 USD millions)"
-  total_revenue_from_tax_as_percent_of_total_tax_revenue: "EIG Tax % Total Tax Revenue"
-  total_revenue_from_tax_as_percent_of_gross_domestic_product: "EIG Tax % GDP"
+  exemption_threshold: "Exemption Thresholds (millions, selected currency)"
+  total_revenue_from_tax: "Tax Revenue (millions, selected currency)"
+  total_revenue_from_tax_as_percent_of_total_tax_revenue: "Tax Revenue % Total Tax Revenue"
+  total_revenue_from_tax_as_percent_of_gross_domestic_product: "Tax Revenue % GDP"
 
 #define the information shown in the tooltip
 tooltip_vars:
   geo_long: "Country:"
   year: "Year:"
-  tax_type: "Type of Tax:"
-  kinship: "Kinship:"
+  tax_type_view: "Type of tax:"
+  revenue_tax_category: "Revenue category:"
+  xrate_lab: "Currency & price adjustment:"
   top_marginal_rate: "Top Marginal Rates:"
-  exemption_threshold: "Exemption Thresholds (2023 USD millions):"
-  total_revenue_from_tax: "EIG Tax Revenue (2023 USD millions):"
-  total_revenue_from_tax_as_percent_of_total_tax_revenue: "EIG Tax % Total Tax Revenue:"
-  total_revenue_from_tax_as_percent_of_gross_domestic_product: "EIG Tax % GDP:"
+  exemption_threshold: "Exemption Thresholds (millions, selected currency):"
+  total_revenue_from_tax: "Tax Revenue (millions, selected currency):"
+  total_revenue_from_tax_as_percent_of_total_tax_revenue: "Tax Revenue % Total Tax Revenue:"
+  total_revenue_from_tax_as_percent_of_gross_domestic_product: "Tax Revenue % GDP:"
+
+download.cols:
+  - "d2_sector"
+  - "d2_sector_lab"
+  - "tax_type"
+  - "kinship"
+  - "revenue_d2_sector"
+  - "revenue_d2_sector_lab"
 
 #other options
 download.button: True

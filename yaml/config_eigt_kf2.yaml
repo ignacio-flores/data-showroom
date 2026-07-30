@@ -3,6 +3,7 @@ data.file: "data/taxw_warehouse_meta_v2.csv"
 data.wrangler: "custom_code/data_prep_eigt2.R" 
 keep.col:
   - "GEO"
+  - "d2_sector_lab"
 
 #define plot type 
 gopts: "line"
@@ -23,7 +24,7 @@ color:
   style: "dichromat::DarkRedtoBlue_12"
   group: 
     - "GEO_long"
-    - "d2_sector_lab"
+    - "tax_category"
 
 #Define main selector 
 fixed_selectors:
@@ -39,19 +40,43 @@ fixed_selectors:
   d4_concept_lab: 
     label: "Tax Features"
     selected: "Total Revenue from Tax as % of Total Tax Revenue"
+    choices:
+      - "Top Marginal Rate"
+      - "Exemption Threshold"
+      - "Total Revenue from Tax"
+      - "Total Revenue from Tax as % of Total Tax Revenue"
+      - "Total Revenue from Tax as % of Gross Domestic Product"
+  xrate_lab:
+    label: "Currency & Price Adjustment"
+    selected: "Euro adjusting for inflation"
+    choices:
+      - "National Currency"
+      - "National Currency adjusting for inflation"
+      - "USD"
+      - "USD adjusting for inflation"
+      - "Euro"
+      - "Euro adjusting for inflation"
+      - "Yuan"
+      - "Yuan adjusting for inflation"
+      - "PPP USD"
+      - "PPP Euro"
+      - "PPP Yuan"
     
 loose_selectors: 
-  d2_sector_lab: 
-    label: "Tax type"
-    type: "sticky checkbox"
+  tax_category:
+    label: "Tax category"
+    type: "sticky selector"
+    select: "first"
+    selected: "Estate, inheritance and gift taxes (EIG)"
   
 #define the columns of the data table widget 
 dt.cols: 
-  GEO_long: "Country code"
+  GEO_long: "Country"
   year: "Year"
   d4_concept_lab: "Variable"
   value: "Value"
-  d2_sector_lab: "Tax type"
+  tax_category: "Tax category"
+  xrate_lab: "Currency & price adjustment"
   
 
 #define the information shown in the tooltip
@@ -60,7 +85,15 @@ tooltip_vars:
   year: "Year:"
   value: "Value:"  
   d4_concept_lab: "Concept:"
-  d2_sector_lab: "Tax type:"
+  tax_category: "Tax category:"
+  xrate_lab: "Currency & price adjustment:"
+
+download.cols:
+  - "d2_sector_lab"
+  - "tax_type"
+  - "tax_type_view"
+  - "kinship"
+  - "revenue_tax_category"
 
 #other options 
 download.button: True

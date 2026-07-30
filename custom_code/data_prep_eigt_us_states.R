@@ -5,6 +5,7 @@ library(tidyr)
 
 source("custom_code/helpers/eigt_preprocessing.R")
 source("custom_code/helpers/eigt_tax_kinship.R")
+source("custom_code/helpers/eigt_revenue_categories.R")
 
 input_file <- "data/taxw_warehouse_meta_v2.csv"
 long_output_file <- "data/taxw_us_state_long.qs"
@@ -12,16 +13,23 @@ ft_output_file <- "data/taxw_us_state_ft_wide.qs"
 
 usd_2023_label <- "USD (2023 prices)"
 
+tax_feature_concepts <- c(
+  "Tax Indicator",
+  "Top Marginal Rate",
+  "Exemption Threshold"
+)
+
 state_revenue_concepts <- c(
   "Total Revenue from Tax",
   "Total Revenue from Tax as % of Total Tax Revenue"
 )
 
-target_concepts <- state_revenue_concepts
+target_concepts <- c(tax_feature_concepts, state_revenue_concepts)
 revenue_concepts <- state_revenue_concepts
 status_concept <- "Tax Indicator"
 schedule_tax_types <- c("Gift tax", "Inheritance tax", "Estate tax")
 inheritance_estate_tax_types <- c("Inheritance tax", "Estate tax")
+state_panel_keys <- c("GEO", "GEO_long", "year")
 
 monetary_concepts <- c(
   "Exemption Threshold",
@@ -81,18 +89,24 @@ summarise_state_value <- function(value, concept) {
   if (length(vals) == 0) return(NA_real_)
 
   concept <- first_non_missing(concept)
-  if (concept %in% c("Tax Indicator", "Top Marginal Rate", "Exemption Threshold")) {
+  if (concept %in% tax_feature_concepts) {
     return(max(vals, na.rm = TRUE))
   }
 
   first_non_missing(vals)
 }
 
-keep_state_display_rows <- function(data) {
-  revenue_general_government <- data$d4_concept_lab %in% revenue_concepts &
-    data$kinship == "General government level"
+first_non_missing_character <- function(x) {
+  values <- as.character(x)
+  values <- values[!is.na(values)]
+  if (length(values) == 0) return(NA_character_)
+  values[[1]]
+}
 
-  data[revenue_general_government, , drop = FALSE]
+summarise_tax_active <- function(value) {
+  value <- suppressWarnings(as.numeric(value))
+  if (all(is.na(value))) return(NA)
+  any(!is.na(value) & value > 0)
 }
 
 load_us_cpi <- function() {
@@ -253,36 +267,172 @@ raw <- data.table::fread(
 
 schedule_status <- build_state_schedule_status(raw)
 
-long_data <- raw %>%
-  filter(d4_concept_lab %in% target_concepts) %>%
-  left_join(cpi, by = "year") %>%
+# Tax features use one canonical relationship regime per state-year-tax:
+# Children when present, otherwise Everybody. Raw tax and kinship fields remain
+# on the artifact as source provenance even though US1/US2 do not expose them.
+state_tax_data <- raw %>%
+  filter(d4_concept_lab %in% tax_feature_concepts) %>%
   mutate(
     value = suppressWarnings(as.numeric(value)),
     value = normalize_eigt_full_exemption_values(value, concept = d4_concept_lab),
-    value = if_else(!is.na(value) & value < 0, NA_real_, value),
-    value = adjust_usd_2023_value(value, d4_concept_lab, cpi),
-    xrate_lab = usd_2023_label
+    value = if_else(!is.na(value) & value < 0, NA_real_, value)
   ) %>%
-  select(-cpi) %>%
   group_by(
-    GEO, state_abbr, state_name, year, d4_concept_lab,
-    d2_sector_lab, xrate_lab
+    GEO, GEO_long, state_abbr, state_name, year,
+    d4_concept_lab, d2_sector_lab
   ) %>%
   summarise(
     value = summarise_state_value(value, d4_concept_lab),
+    source = first_non_missing_character(source),
+    varcode = first_non_missing_character(varcode),
     .groups = "drop"
   ) %>%
   add_eigt_tax_kinship("d2_sector_lab") %>%
-  keep_state_display_rows() %>%
-  mutate(show_zero = "Yes")
+  filter(tax_type %in% eigt_tax_type_choices) %>%
+  select_eigt_canonical_kinship(
+    key_cols = c(state_panel_keys, "tax_type"),
+    priority = eigt_visible_kinship_choices
+  )
 
-long_data <- bind_rows(
-  long_data,
-  long_data %>%
-    filter(!is.na(value), value != 0) %>%
-    mutate(show_zero = "No")
+# Complete the state-year-source-tax status spine only after canonical kinship
+# selection. A genuinely missing regime is an explicit zero with Everybody
+# provenance; this avoids synthetic Children rows displacing observed zeros.
+state_year_spine <- raw %>%
+  distinct(GEO, GEO_long, state_abbr, state_name, year)
+
+missing_state_status <- merge(
+  state_year_spine,
+  data.frame(
+    tax_type = eigt_tax_type_choices,
+    stringsAsFactors = FALSE
+  ),
+  by = NULL
 ) %>%
-  arrange(state_name, year, d4_concept_lab, d2_sector_lab, show_zero)
+  anti_join(
+    state_tax_data %>%
+      filter(d4_concept_lab == status_concept) %>%
+      distinct(across(all_of(state_panel_keys)), tax_type),
+    by = c(state_panel_keys, "tax_type")
+  ) %>%
+  left_join(
+    state_schedule_labels %>%
+      filter(kinship == "Everybody") %>%
+      transmute(
+        tax_type,
+        d2_sector_lab = d2_label
+      ),
+    by = "tax_type"
+  ) %>%
+  mutate(
+    d4_concept_lab = status_concept,
+    value = 0,
+    source = NA_character_,
+    varcode = NA_character_,
+    kinship = "Everybody"
+  )
+
+state_tax_data <- bind_rows(state_tax_data, missing_state_status)
+
+# Tax Indicator is the status spine used to choose the active source tax for
+# the combined inheritance-or-estate view. Zero indicators remain in the data.
+state_tax_status <- state_tax_data %>%
+  filter(d4_concept_lab == status_concept) %>%
+  group_by(across(all_of(c(state_panel_keys, "tax_type")))) %>%
+  summarise(
+    .tax_active = summarise_tax_active(value),
+    .groups = "drop"
+  )
+
+state_tax_views <- state_tax_data %>%
+  left_join(state_tax_status, by = c(state_panel_keys, "tax_type")) %>%
+  add_eigt_inheritance_estate_view(
+    view_col = "tax_type_view",
+    key_cols = state_panel_keys,
+    active_col = ".tax_active",
+    kinship_priority = eigt_visible_kinship_choices
+  ) %>%
+  filter(tax_type_view %in% eigt_tax_type_view_choices) %>%
+  mutate(
+    revenue_tax_category = NA_character_,
+    tax_category = as.character(tax_type_view)
+  )
+
+# Revenue categories follow their raw general-government sector. They are not
+# legal-regime views and must never be repeated under inheritance, estate, gift,
+# or the combined inheritance-or-estate feature view.
+state_revenue_data <- raw %>%
+  filter(
+    d4_concept_lab %in% revenue_concepts,
+    d2_sector_lab %in% names(eigt_revenue_sector_categories)
+  ) %>%
+  mutate(
+    value = suppressWarnings(as.numeric(value)),
+    value = if_else(!is.na(value) & value < 0, NA_real_, value)
+  ) %>%
+  group_by(
+    GEO, GEO_long, state_abbr, state_name, year,
+    d4_concept_lab, d2_sector_lab
+  ) %>%
+  summarise(
+    value = summarise_state_value(value, d4_concept_lab),
+    source = first_non_missing_character(source),
+    varcode = first_non_missing_character(varcode),
+    .groups = "drop"
+  ) %>%
+  add_eigt_tax_kinship("d2_sector_lab") %>%
+  add_eigt_revenue_tax_category("d2_sector_lab") %>%
+  filter(!is.na(revenue_tax_category)) %>%
+  mutate(
+    tax_type_view = NA_character_,
+    tax_category = revenue_tax_category
+  )
+
+long_data <- bind_rows(state_tax_views, state_revenue_data) %>%
+  left_join(cpi, by = "year") %>%
+  mutate(
+    value = adjust_usd_2023_value(value, d4_concept_lab, cpi),
+    xrate_lab = usd_2023_label,
+    tax_type_view = factor(
+      tax_type_view,
+      levels = eigt_tax_type_view_choices,
+      ordered = TRUE
+    ),
+    revenue_tax_category = factor(
+      revenue_tax_category,
+      levels = eigt_revenue_tax_category_choices,
+      ordered = TRUE
+    ),
+    tax_category = factor(
+      tax_category,
+      levels = eigt_tax_category_choices,
+      ordered = TRUE
+    )
+  ) %>%
+  select(-cpi)
+
+duplicate_state_rows <- long_data %>%
+  count(
+    across(all_of(c(
+      state_panel_keys, "d4_concept_lab", "tax_category", "xrate_lab"
+    ))),
+    name = ".rows"
+  ) %>%
+  filter(.rows > 1)
+
+if (nrow(duplicate_state_rows) > 0) {
+  stop("Duplicate EIGT US-state chart rows remain after normalization.", call. = FALSE)
+}
+
+long_data <- long_data %>%
+  mutate(show_zero = "Yes") %>%
+  bind_rows(
+    long_data %>%
+      filter(!is.na(value), value != 0) %>%
+      mutate(show_zero = "No")
+  ) %>%
+  arrange(
+    state_name, year, d4_concept_lab, tax_category, show_zero
+  )
 
 ft_data <- raw %>%
   select(GEO, GEO_long, state_abbr, state_name, year, source, varcode, value, d2_sector_lab) %>%

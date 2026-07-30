@@ -38,7 +38,22 @@ expect_equal(
 expect_equal(
   normalize_selector_type(config$loose_selectors$kinship$type),
   "very reactive checkbox",
-  "eigt-ft3 kinship should refresh after year changes."
+  "eigt-ft3 kinship should remain a very reactive checkbox."
+)
+expect_equal(
+  names(config$fixed_selectors),
+  c("GEO_long", "tax_type_view"),
+  "eigt-ft3 fixed selectors should start with Country then Tax type."
+)
+expect_equal(
+  names(config$loose_selectors),
+  c("kinship", "xrate_lab", "year"),
+  "eigt-ft3 loose selectors should run Kinship then Currency then Year."
+)
+expect_equal(
+  c(names(config$fixed_selectors), names(config$loose_selectors)),
+  c("GEO_long", "tax_type_view", "kinship", "xrate_lab", "year"),
+  "eigt-ft3 selector dependency order should be Country -> tax -> kinship -> currency -> year."
 )
 
 data <- qs::qread(config$data.file)
@@ -56,9 +71,26 @@ drawable_ft_rows <- function(country) {
 }
 
 india_rows <- drawable_ft_rows("India")
+india_kinships <- sort(unique(india_rows$kinship))
+india_kinship_selection <- loose_selector_next_selection(
+  "very reactive checkbox",
+  india_kinships,
+  initialized = FALSE
+)
+expect_equal(
+  india_kinship_selection,
+  "Everybody",
+  "India should initially select its only available kinship."
+)
+
+india_selected_rows <- india_rows[
+  india_rows$kinship %in% india_kinship_selection,
+  ,
+  drop = FALSE
+]
 india_latest <- loose_selector_next_selection(
   year_selector_type,
-  sort(unique(india_rows$year)),
+  sort(unique(india_selected_rows$year)),
   select_mode = "latest",
   initialized = FALSE
 )
@@ -68,17 +100,39 @@ expect_equal(
   "India should expose 1984 as the latest drawable FT year."
 )
 
-india_kinships <- sort(unique(india_rows$kinship[india_rows$year == india_latest]))
 expect_equal(
-  india_kinships,
+  sort(unique(india_selected_rows$kinship[india_selected_rows$year == india_latest])),
   "Everybody",
   "India's latest FT slice should only select Everybody."
 )
 
 ireland_rows <- drawable_ft_rows("Ireland")
+ireland_kinships <- sort(unique(ireland_rows$kinship))
+kinship_selection <- loose_selector_next_selection(
+  "very reactive checkbox",
+  ireland_kinships,
+  current_selection = india_kinship_selection,
+  initialized = TRUE,
+  refresh_all = TRUE
+)
+expect_equal(
+  kinship_selection,
+  ireland_kinships,
+  "Ireland should refresh all kinship choices after the fixed Country selector changes."
+)
+expect_true(
+  any(kinship_selection != "Everybody"),
+  "Ireland's refreshed kinships should not preserve Everybody as the sole stale choice."
+)
+
+ireland_selected_rows <- ireland_rows[
+  ireland_rows$kinship %in% kinship_selection,
+  ,
+  drop = FALSE
+]
 ireland_latest <- loose_selector_next_selection(
   year_selector_type,
-  sort(unique(ireland_rows$year)),
+  sort(unique(ireland_selected_rows$year)),
   current_selection = india_latest,
   select_mode = "latest",
   initialized = TRUE,
@@ -90,24 +144,15 @@ expect_equal(
   "Ireland should refresh to its latest drawable FT year after a fixed-selector change."
 )
 
-ireland_latest_rows <- ireland_rows[ireland_rows$year == ireland_latest, , drop = FALSE]
+ireland_latest_rows <- ireland_selected_rows[
+  ireland_selected_rows$year == ireland_latest,
+  ,
+  drop = FALSE
+]
 ireland_latest_kinships <- sort(unique(ireland_latest_rows$kinship))
-kinship_selection <- loose_selector_next_selection(
-  "very reactive checkbox",
-  ireland_latest_kinships,
-  current_selection = india_kinships,
-  initialized = TRUE,
-  refresh_all = TRUE
-)
-
-expect_equal(
-  kinship_selection,
-  ireland_latest_kinships,
-  "Ireland should refresh kinships to the latest-year choices instead of preserving India's Everybody selection."
-)
 expect_false(
-  "Everybody" %in% kinship_selection,
-  "Ireland's latest-year kinship selection should not include stale Everybody."
+  "Everybody" %in% ireland_latest_kinships,
+  "Ireland's final latest-year slice should not include stale Everybody rows."
 )
 
 final_rows <- ireland_latest_rows[

@@ -63,6 +63,9 @@ fixed_selectors:
       - "Estate tax"
 
 loose_selectors:
+  kinship:
+    label: "Kinship"
+    type: "very reactive checkbox"
   xrate_lab:
     label: "Currency"
     selected: "USD (2023 prices)"
@@ -71,9 +74,6 @@ loose_selectors:
     label: "Year"
     type: "very reactive selector"
     select: "latest"
-  kinship:
-    label: "Kinship"
-    type: "very reactive checkbox"
 
 
 #define the columns of the data table widget

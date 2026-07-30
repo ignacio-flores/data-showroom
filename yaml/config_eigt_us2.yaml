@@ -19,7 +19,7 @@ color:
   style: "dichromat::DarkRedtoBlue_12"
   group:
     - "state_name"
-    - "d2_sector_lab"
+    - "tax_category"
 
 fixed_selectors:
   state_name:
@@ -35,6 +35,9 @@ fixed_selectors:
     label: "Tax Feature"
     selected: "Total Revenue from Tax as % of Total Tax Revenue"
     choices:
+      - "Tax Indicator"
+      - "Top Marginal Rate"
+      - "Exemption Threshold"
       - "Total Revenue from Tax"
       - "Total Revenue from Tax as % of Total Tax Revenue"
   xrate_lab:
@@ -52,18 +55,18 @@ fixed_selectors:
       - "No"
 
 loose_selectors:
-  d2_sector_lab:
-    label: "Tax type"
-    type: "very reactive checkbox"
-    selected:
-      - "EIG Tax, general government level"
+  tax_category:
+    label: "Tax category"
+    type: "sticky selector"
+    select: "first"
+    selected: "Estate, inheritance and gift taxes (EIG)"
 
 dt.cols:
   state_name: "State"
   GEO: "State code"
   year: "Year"
   d4_concept_lab: "Variable"
-  d2_sector_lab: "Type of tax"
+  tax_category: "Tax category"
   value: "Value"
 
 tooltip_vars:
@@ -71,7 +74,16 @@ tooltip_vars:
   year: "Year:"
   value: "Value:"
   d4_concept_lab: "Tax feature:"
-  d2_sector_lab: "Type of tax:"
+  tax_category: "Tax category:"
+
+download.cols:
+  - "d2_sector_lab"
+  - "tax_type_view"
+  - "revenue_tax_category"
+  - "tax_type"
+  - "kinship"
+  - "source"
+  - "varcode"
 
 download.button: True
 hide.selectors: False

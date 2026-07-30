@@ -921,6 +921,346 @@ format_axis_number <- function(values,
   out
 }
 
+dual_axis_compact_hover_enabled <- function(dual_axis_options = NULL) {
+  if (is.null(dual_axis_options) || !is.list(dual_axis_options)) return(FALSE)
+  hover <- dual_axis_options$hover
+  if (is.null(hover) || !is.list(hover) || is.null(hover$mode)) return(FALSE)
+
+  mode <- as.character(hover$mode[[1]])
+  !is.na(mode) && identical(tolower(trimws(mode)), "compact")
+}
+
+dual_axis_hover_context_specs <- function(context_vars = NULL,
+                                          selected_vars = character(0),
+                                          excluded_vars = character(0),
+                                          available_vars = NULL) {
+  if (is.null(context_vars) || length(context_vars) == 0) return(list())
+
+  selected_vars <- unique(as.character(selected_vars))
+  selected_vars <- selected_vars[!is.na(selected_vars) & nzchar(selected_vars)]
+  excluded_vars <- unique(as.character(excluded_vars))
+  excluded_vars <- excluded_vars[!is.na(excluded_vars) & nzchar(excluded_vars)]
+  if (!is.null(available_vars)) {
+    available_vars <- unique(as.character(available_vars))
+  }
+
+  context_names <- names(context_vars)
+  if (is.null(context_names)) {
+    context_names <- rep("", length(context_vars))
+  }
+
+  specs <- list()
+  for (idx in seq_along(context_vars)) {
+    entry <- context_vars[[idx]]
+    configured_name <- context_names[[idx]]
+
+    if (is.list(entry)) {
+      var_name <- if (nzchar(configured_name)) configured_name else entry$var
+      label <- entry$label
+      show_for <- entry$show_for
+    } else {
+      var_name <- configured_name
+      label <- entry
+      show_for <- NULL
+    }
+
+    if (is.null(var_name) || length(var_name) == 0) next
+    var_name <- as.character(var_name[[1]])
+    if (is.na(var_name) || !nzchar(var_name)) next
+    if (var_name %in% excluded_vars) next
+    if (!is.null(available_vars) && !var_name %in% available_vars) next
+
+    show_for <- as.character(unlist(show_for, use.names = FALSE))
+    show_for <- show_for[!is.na(show_for) & nzchar(show_for)]
+    show_for_all <- any(tolower(show_for) %in% c("*", "all"))
+    if (length(show_for) > 0 &&
+        !show_for_all &&
+        !any(show_for %in% selected_vars)) {
+      next
+    }
+
+    if (is.null(label) || length(label) == 0 || is.na(label[[1]]) ||
+        !nzchar(as.character(label[[1]]))) {
+      label <- var_name
+    } else {
+      label <- as.character(label[[1]])
+    }
+
+    specs[[length(specs) + 1L]] <- list(
+      var = var_name,
+      label = label,
+      show_for = show_for
+    )
+  }
+
+  specs
+}
+
+dual_axis_hover_clean_label <- function(label) {
+  if (is.null(label) || length(label) == 0 || is.na(label[[1]])) return("")
+  sub("[[:space:]]*:+[[:space:]]*$", "", trimws(as.character(label[[1]])))
+}
+
+dual_axis_hover_format_values <- function(values,
+                                          var_name = NULL,
+                                          label = NULL,
+                                          axis_info = NULL,
+                                          force_numeric = FALSE) {
+  if (is.factor(values)) values <- as.character(values)
+
+  raw_values <- as.character(values)
+  missing <- is.na(values) | is.na(raw_values) | !nzchar(trimws(raw_values))
+  out <- rep(NA_character_, length(raw_values))
+
+  numeric_input <- isTRUE(force_numeric) || is.numeric(values) || is.integer(values)
+  if (numeric_input) {
+    numeric_values <- suppressWarnings(as.numeric(raw_values))
+    formatted <- format_axis_number(
+      numeric_values,
+      var_name = var_name,
+      label = label,
+      axis_info = axis_info
+    )
+    valid <- !missing & !is.na(formatted) & nzchar(formatted)
+    out[valid] <- formatted[valid]
+  } else {
+    out[!missing] <- raw_values[!missing]
+  }
+
+  out
+}
+
+dual_axis_hover_labeled_lines <- function(values,
+                                          var_name,
+                                          label,
+                                          axis_info = NULL,
+                                          force_numeric = FALSE) {
+  formatted <- dual_axis_hover_format_values(
+    values,
+    var_name = var_name,
+    label = label,
+    axis_info = axis_info,
+    force_numeric = force_numeric
+  )
+  clean_label <- dual_axis_hover_clean_label(label)
+
+  lines <- rep("", length(formatted))
+  present <- !is.na(formatted) & nzchar(formatted)
+  if (nzchar(clean_label)) {
+    lines[present] <- paste0(
+      "<b>", clean_label, "</b>: ", formatted[present]
+    )
+  } else {
+    lines[present] <- formatted[present]
+  }
+  lines
+}
+
+dual_axis_hover_join_lines <- function(lines) {
+  if (length(lines) == 0) return(character(0))
+  if (is.null(dim(lines))) return(as.character(lines))
+
+  apply(lines, 1, function(row) {
+    row <- as.character(row)
+    row <- row[!is.na(row) & nzchar(row)]
+    paste(row, collapse = "<br>")
+  })
+}
+
+dual_axis_hover_context_lines <- function(data,
+                                          context_vars = NULL,
+                                          selected_vars = character(0),
+                                          excluded_vars = character(0)) {
+  if (is.null(data) || nrow(data) == 0) return(character(0))
+
+  specs <- dual_axis_hover_context_specs(
+    context_vars,
+    selected_vars = selected_vars,
+    excluded_vars = excluded_vars,
+    available_vars = names(data)
+  )
+  if (length(specs) == 0) return(rep("", nrow(data)))
+
+  lines <- vapply(specs, function(spec) {
+    dual_axis_hover_labeled_lines(
+      data[[spec$var]],
+      var_name = spec$var,
+      label = spec$label
+    )
+  }, character(nrow(data)))
+
+  if (is.null(dim(lines))) {
+    lines <- matrix(
+      lines,
+      nrow = nrow(data),
+      ncol = length(specs)
+    )
+  }
+  dual_axis_hover_join_lines(lines)
+}
+
+dual_axis_compact_hover_carrier <- function(left_values,
+                                            right_values = NULL,
+                                            active_rows = NULL) {
+  left_numeric <- suppressWarnings(as.numeric(as.character(left_values)))
+  right_numeric <- suppressWarnings(as.numeric(as.character(right_values)))
+  row_count <- max(length(left_numeric), length(right_numeric), length(active_rows))
+  if (row_count == 0) {
+    return(list(y = numeric(0), yaxis = "y", enabled = FALSE))
+  }
+
+  if (length(left_numeric) == 0) left_numeric <- rep(NA_real_, row_count)
+  if (length(right_numeric) == 0) right_numeric <- rep(NA_real_, row_count)
+  if (is.null(active_rows)) active_rows <- rep(TRUE, row_count)
+  active_rows <- rep_len(as.logical(active_rows), row_count)
+  active_rows[is.na(active_rows)] <- FALSE
+
+  left_finite <- left_numeric[is.finite(left_numeric)]
+  right_finite <- right_numeric[is.finite(right_numeric)]
+  use_left_axis <- length(left_finite) > 0
+  axis_values <- if (use_left_axis) left_finite else right_finite
+  yaxis <- if (use_left_axis) "y" else "y2"
+
+  carrier_y <- rep(NA_real_, row_count)
+  if (length(axis_values) > 0 && any(active_rows)) {
+    # Reusing an observed finite value guarantees that the hover-only trace
+    # cannot expand the selected axis range.
+    carrier_y[active_rows] <- axis_values[[1]]
+  }
+
+  list(
+    y = carrier_y,
+    yaxis = yaxis,
+    enabled = any(is.finite(carrier_y))
+  )
+}
+
+add_dual_axis_compact_context_trace <- function(pp,
+                                                data,
+                                                x_var,
+                                                context_template,
+                                                carrier_y,
+                                                carrier_yaxis = "y") {
+  if (is.null(pp) || is.null(data) || nrow(data) == 0 ||
+      is.null(x_var) || !x_var %in% names(data)) {
+    return(pp)
+  }
+
+  context_template <- rep_len(as.character(context_template), nrow(data))
+  carrier_y <- rep_len(suppressWarnings(as.numeric(carrier_y)), nrow(data))
+  active <- is.finite(carrier_y) &
+    !is.na(context_template) &
+    nzchar(context_template) &
+    context_template != "<extra></extra>"
+  if (!any(active)) return(pp)
+
+  carrier_data <- data[active, , drop = FALSE]
+  carrier_data$.dual_axis_hover_y <- carrier_y[active]
+  carrier_data$.dual_axis_hover_context <- context_template[active]
+  transparent <- "rgba(0,0,0,0)"
+
+  plotly::add_trace(
+    pp,
+    data = carrier_data,
+    x = ~get(x_var),
+    y = ~.dual_axis_hover_y,
+    type = "scatter",
+    mode = "markers",
+    name = "",
+    showlegend = FALSE,
+    yaxis = if (identical(carrier_yaxis, "y2")) "y2" else NULL,
+    marker = list(
+      color = transparent,
+      size = 1,
+      line = list(color = transparent, width = 0)
+    ),
+    hovertemplate = ~.dual_axis_hover_context
+  )
+}
+
+dual_axis_compact_hover_templates <- function(data,
+                                              x_var,
+                                              y_var,
+                                              y_var_lab,
+                                              y2_var = NULL,
+                                              y2_var_lab = NULL,
+                                              context_vars = NULL,
+                                              y_axis_info = NULL,
+                                              y2_axis_info = NULL) {
+  if (is.null(data) || nrow(data) == 0) {
+    return(list(
+      left = character(0),
+      right = character(0),
+      include_right = !is.null(y2_var) && !identical(y_var, y2_var)
+    ))
+  }
+
+  selected_vars <- unique(c(y_var, y2_var))
+  selected_vars <- selected_vars[
+    !is.na(selected_vars) & nzchar(as.character(selected_vars))
+  ]
+  include_right <- !is.null(y2_var) &&
+    length(y2_var) > 0 &&
+    !is.na(y2_var[[1]]) &&
+    nzchar(as.character(y2_var[[1]])) &&
+    !identical(as.character(y_var), as.character(y2_var))
+
+  left_lines <- dual_axis_hover_labeled_lines(
+    data[[y_var]],
+    var_name = y_var,
+    label = y_var_lab,
+    axis_info = y_axis_info,
+    force_numeric = TRUE
+  )
+  right_lines <- if (isTRUE(include_right) && y2_var %in% names(data)) {
+    dual_axis_hover_labeled_lines(
+      data[[y2_var]],
+      var_name = y2_var,
+      label = y2_var_lab,
+      axis_info = y2_axis_info,
+      force_numeric = TRUE
+    )
+  } else {
+    rep("", nrow(data))
+  }
+
+  context_lines <- dual_axis_hover_context_lines(
+    data,
+    context_vars = context_vars,
+    selected_vars = selected_vars,
+    excluded_vars = unique(c(x_var, y_var, y2_var))
+  )
+
+  metric_present <- nzchar(left_lines) |
+    (isTRUE(include_right) & nzchar(right_lines))
+  context_present <- nzchar(context_lines)
+  carrier <- dual_axis_compact_hover_carrier(
+    data[[y_var]],
+    if (isTRUE(include_right) && y2_var %in% names(data)) {
+      data[[y2_var]]
+    } else {
+      NULL
+    },
+    active_rows = metric_present & context_present
+  )
+  context_templates <- rep("<extra></extra>", nrow(data))
+  active_context <- metric_present & context_present
+  context_templates[active_context] <- paste0(
+    context_lines[active_context],
+    "<extra></extra>"
+  )
+
+  list(
+    left = paste0(left_lines, "<extra></extra>"),
+    right = paste0(right_lines, "<extra></extra>"),
+    context = context_templates,
+    include_right = include_right,
+    context_carrier_y = carrier$y,
+    context_carrier_yaxis = carrier$yaxis,
+    include_context = carrier$enabled
+  )
+}
+
 axis_numeric_values <- function(values) {
   if (is.factor(values)) values <- as.character(values)
   suppressWarnings(as.numeric(values))
@@ -1285,7 +1625,8 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              x_scale = NULL, scatter_options = NULL, map_options = NULL,
                              show.grid = TRUE,
                              overlap_offset = NULL,
-                             x_axis_info = NULL, y_axis_info = NULL, y2_axis_info = NULL) {
+                             x_axis_info = NULL, y_axis_info = NULL, y2_axis_info = NULL,
+                             dual_axis_options = NULL) {
   moduleServer(id, function(input, output, session) {
     
     stack_active <- reactive({
@@ -1316,6 +1657,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       y_var_lab <- resolveValue(y_var_lab)
       y2_var <- resolveValue(y2_var)
       y2_var_lab <- resolveValue(y2_var_lab)
+      dual_axis_options <- resolveValue(dual_axis_options)
       x_scale <- resolveValue(x_scale)
       if (is.null(x_scale)) x_scale <- "regular"
       show.grid <- resolveValue(show.grid)
@@ -1441,7 +1783,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       }
 
       #define tooltip
-      if (!is.null(tooltip_vars)) {
+      compact_dual_hover <- "dual_axis_line" %in% gopts &&
+        dual_axis_compact_hover_enabled(dual_axis_options)
+
+      if (!is.null(tooltip_vars) && !isTRUE(compact_dual_hover)) {
         # Check if names are provided
         if (is.null(names(tooltip_vars))) {
           # No labels provided, use variable names as labels
@@ -1524,28 +1869,53 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         axis_left_col <- "#2C6DB2"
         axis_right_col <- "#E6A21A"
 
-        fmt_num <- function(v) {
-          ifelse(
-            is.na(v),
-            "NA",
-            formatC(as.numeric(v), format = "f", digits = 2, big.mark = ",")
+        if (isTRUE(compact_dual_hover)) {
+          compact_templates <- dual_axis_compact_hover_templates(
+            df,
+            x_var = x_var,
+            y_var = y_var,
+            y_var_lab = left_name,
+            y2_var = y2_var,
+            y2_var_lab = right_name,
+            context_vars = dual_axis_options$hover$context_vars,
+            y_axis_info = y_axis_info,
+            y2_axis_info = y2_axis_info
+          )
+          hover_left <- compact_templates$left
+          hover_right <- compact_templates$right
+          right_ok <- right_ok && isTRUE(compact_templates$include_right)
+        } else {
+          fmt_num <- function(v) {
+            ifelse(
+              is.na(v),
+              "NA",
+              formatC(as.numeric(v), format = "f", digits = 2, big.mark = ",")
+            )
+          }
+
+          configured_hover <- if ("tooltip_text" %in% names(df)) {
+            ifelse(
+              is.na(df$tooltip_text) | !nzchar(df$tooltip_text),
+              "",
+              paste0("<br>", df$tooltip_text)
+            )
+          } else {
+            rep("", nrow(df))
+          }
+
+          hover_left <- paste0(
+            "<b>", left_name, "</b>: ", fmt_num(df[[y_var]]),
+            "<br><b>", x_name, "</b>: ", df[[x_var]],
+            configured_hover,
+            "<extra></extra>"
+          )
+          hover_right <- paste0(
+            "<b>", right_name, "</b>: ", fmt_num(df[[y2_var]]),
+            "<br><b>", x_name, "</b>: ", df[[x_var]],
+            configured_hover,
+            "<extra></extra>"
           )
         }
-
-        hover_left <- paste0(
-          "<b>", left_name, "</b>: ", fmt_num(df[[y_var]]),
-          "<br><b>", x_name, "</b>: ", df[[x_var]],
-          if ("GEO_long" %in% names(df)) paste0("<br><b>Country</b>: ", df$GEO_long) else "",
-          if ("d2_label" %in% names(df)) paste0("<br><b>Tax type</b>: ", df$d2_label) else "",
-          "<extra></extra>"
-        )
-        hover_right <- paste0(
-          "<b>", right_name, "</b>: ", fmt_num(df[[y2_var]]),
-          "<br><b>", x_name, "</b>: ", df[[x_var]],
-          if ("GEO_long" %in% names(df)) paste0("<br><b>Country</b>: ", df$GEO_long) else "",
-          if ("d2_label" %in% names(df)) paste0("<br><b>Tax type</b>: ", df$d2_label) else "",
-          "<extra></extra>"
-        )
 
         # Start with an empty widget and add only explicit traces.
         # Initializing with x but no y creates an unintended default "trace 0".
@@ -1582,6 +1952,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
               marker = list(color = axis_right_col, size = 5),
               hovertemplate = hover_right
             )
+        }
+
+        if (isTRUE(compact_dual_hover) &&
+            isTRUE(compact_templates$include_context)) {
+          pp <- add_dual_axis_compact_context_trace(
+            pp,
+            data = df,
+            x_var = x_var,
+            context_template = compact_templates$context,
+            carrier_y = compact_templates$context_carrier_y,
+            carrier_yaxis = compact_templates$context_carrier_yaxis
+          )
         }
 
         pp <- pp %>%

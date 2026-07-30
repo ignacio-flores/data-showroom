@@ -17,7 +17,8 @@ createViz <- function(graph = NULL,
                       data.wrangler = NULL, 
                       gopts = "line",
                       plot_height = 700,
-                      download.button = F, 
+                      download.button = F,
+                      download.cols = NULL,
                       hide.legend = F,
                       hide.selectors = F, 
                       listen = F,
@@ -28,6 +29,7 @@ createViz <- function(graph = NULL,
                       area_stack_toggle = FALSE,  
                       area_stack_default = TRUE,
                       scatter_options = NULL,
+                      dual_axis_options = NULL,
                       value_transform = NULL,
                       map_options = NULL,
                       meta.layout = NULL,
@@ -111,6 +113,9 @@ createViz <- function(graph = NULL,
   toc()  
 
   is_dual_mode <- "dual_axis_line" %in% gopts
+  dual_hover_context_columns <- dual_axis_hover_context_columns(
+    dual_axis_options
+  )
   is_dynamic_scatter <- isTRUE(scatter_options$enabled) &&
     ("point" %in% gopts) &&
     !is_dual_mode
@@ -297,7 +302,8 @@ createViz <- function(graph = NULL,
         axis_vars,
         num.conversion,
         extra_layer,
-        scatter_options = if (is_dynamic_scatter) scatter_options else NULL
+        scatter_options = if (is_dynamic_scatter) scatter_options else NULL,
+        dual_axis_options = if (is_dual_mode) dual_axis_options else NULL
       )
     ),
     
@@ -477,6 +483,27 @@ createViz <- function(graph = NULL,
       }
     })
 
+    if (is_dual_mode &&
+        dual_axis_prevents_duplicate_metrics(dual_axis_options)) {
+      observeEvent(input$y_axis, {
+        y2_state <- dual_axis_y2_choice_state(
+          y_axis_value = input$y_axis,
+          y2_choices = selector_axis_input_choices(axis_vars$y2_axis),
+          current_selection = isolate(input$y2_axis),
+          configured_default = axis_vars$y2_axis$var,
+          prevent_duplicate_metrics = TRUE
+        )
+
+        freezeReactiveValue(input, "y2_axis")
+        updateSelectInput(
+          session,
+          inputId = "y2_axis",
+          choices = y2_state$choices,
+          selected = y2_state$selected
+        )
+      }, ignoreInit = TRUE)
+    }
+
     selected_x_lab <- reactive({
       if (!is_dynamic_scatter) return(axis_vars$x_axis$label)
       var_name <- selected_x_var()
@@ -547,12 +574,14 @@ createViz <- function(graph = NULL,
 
         cols_to_keep <- unique(c(
           names(dt.cols),
+          download.cols,
           axis_vars$x_axis$var,
           selector_vars,
           names(loose_selectors),
           y_candidates,
           if (!is.null(color_var)) color_var,
           names(tooltip_vars),
+          dual_hover_context_columns,
           facet_var,
           facet_label_var
         ))
@@ -595,11 +624,13 @@ createViz <- function(graph = NULL,
 
         cols_to_keep <- unique(c(
           names(dt.cols),
+          download.cols,
           axis_candidates,
           selector_vars,
           names(loose_selectors),
           if (!is.null(color_var)) color_var,
           names(tooltip_vars),
+          dual_hover_context_columns,
           facet_var,
           facet_label_var
         ))
@@ -625,7 +656,13 @@ createViz <- function(graph = NULL,
         selector_vars = names(fixed_selectors),
         dt_cols = names(dt.cols), tooltip_vars, value_scale = "normal",
         extra_layer = extra_layer,
-        extra_keep_vars = unique(c(facet_var, facet_label_var, names(loose_selectors)))
+        extra_keep_vars = unique(c(
+          facet_var,
+          facet_label_var,
+          names(loose_selectors),
+          download.cols,
+          dual_hover_context_columns
+        ))
       )
     }
     
@@ -879,7 +916,8 @@ createViz <- function(graph = NULL,
                      overlap_offset = overlap_offset,
                      x_axis_info = axis_vars$x_axis,
                      y_axis_info = axis_vars$y_axis,
-                     y2_axis_info = axis_vars$y2_axis)
+                     y2_axis_info = axis_vars$y2_axis,
+                     dual_axis_options = dual_axis_options)
     
     # Render table
     output$tableOrMessageUI <- renderUI({

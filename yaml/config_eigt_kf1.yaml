@@ -2,10 +2,35 @@
 data.file: "data/taxw_wide.qs"
 data.wrangler: "custom_code/data_prep_eigt_kf1_dual.R"
 keep.col:
+  - "GEO"
+  - "d2_code"
   - "d2_label"
+  - "status"
+  - "toprat"
+  - "exempt"
+  - "revenu"
+  - "prorev"
+  - "revgdp"
 
 #define plot type
 gopts: "dual_axis_line"
+
+dual_axis_options:
+  prevent_duplicate_metrics: true
+  hover:
+    mode: "compact"
+    context_vars:
+      GEO_long:
+        label: "Country"
+      tax_type_view:
+        label: "Type of tax"
+        show_for: ["toprat", "exempt"]
+      revenue_tax_category:
+        label: "Revenue category"
+        show_for: ["revenu", "prorev", "revgdp"]
+      xrate_lab:
+        label: "Currency"
+        show_for: ["revenu", "exempt"]
 
 #define main plot variables
 axis_vars:
@@ -16,56 +41,80 @@ axis_vars:
   y_axis:
     var: "prorev"
     label: "Left Axis"
-    choices: c("prorev", "revgdp")
-    alt.names: c("EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+    choices: c("revenu", "prorev", "revgdp")
+    alt.names: c("Tax Revenue (millions, selected currency)", "Tax Revenue % Total Tax Revenue", "Tax Revenue % GDP")
   y2_axis:
     var: "toprat"
     label: "Right Axis"
-    choices: c("toprat", "prorev", "revgdp")
-    alt.names: c("Top Marginal Rate", "EIG Tax % Total Tax Revenue", "EIG Tax % GDP")
+    choices: c("toprat", "exempt", "prorev", "revgdp")
+    alt.names: c("Top Marginal Rate", "Exemption Threshold (millions, selected currency)", "Tax Revenue % Total Tax Revenue", "Tax Revenue % GDP")
 
 color:
   var: "GEO_long"
   label: "Country"
   style: "dichromat::DarkRedtoBlue_12"
+  group:
+    - "GEO_long"
+    - "tax_type_view"
+    - "revenue_tax_category"
 
 #Define main selectors
 fixed_selectors:
   GEO_long:
     label: "Country"
     selected: "United States"
-  tax_type:
-    label: "Tax type"
-    selected: "Gift tax"
+  tax_type_view:
+    label: "Type of tax"
+    selected: "Inheritance or estate tax"
     choices:
-      - "Gift tax"
+      - "Inheritance or estate tax"
       - "Inheritance tax"
       - "Estate tax"
-
-loose_selectors:  
-  kinship:
-    label: "Kinship"
-    type: "sticky selector"
-    selected: "Children"
+      - "Gift tax"
+    visible_when: { any: { y2_axis: ["toprat", "exempt"] } }
+  revenue_tax_category:
+    label: "Revenue category"
+    selected: "Estate, inheritance and gift taxes (EIG)"
+    choices:
+      - "Estate, inheritance and gift taxes (EIG)"
+      - "Gift tax"
+    visible_when: { any: { y_axis: ["revenu", "prorev", "revgdp"], y2_axis: ["prorev", "revgdp"] } }
+  xrate_lab:
+    label: "Currency & Price Adjustment"
+    selected: "Euro adjusting for inflation"
+    choices:
+      - "National Currency"
+      - "National Currency adjusting for inflation"
+      - "USD"
+      - "USD adjusting for inflation"
+      - "Euro"
+      - "Euro adjusting for inflation"
+      - "Yuan"
+      - "Yuan adjusting for inflation"
+      - "PPP USD"
+      - "PPP Euro"
+      - "PPP Yuan"
 
 #define the columns of the data table widget
 dt.cols:
   GEO_long: "Country"
   year: "Year"
-  tax_type: "Tax type"
-  kinship: "Kinship"
-  prorev: "EIG Tax % Total Tax Revenue"
-  revgdp: "EIG Tax % GDP"
+  tax_type_view: "Type of tax"
+  revenue_tax_category: "Revenue category"
+  xrate_lab: "Currency & price adjustment"
+  revenu: "Tax Revenue (millions, selected currency)"
+  prorev: "Tax Revenue % Total Tax Revenue"
+  revgdp: "Tax Revenue % GDP"
   toprat: "Top Marginal Rate"
+  exempt: "Exemption Threshold (millions, selected currency)"
 
-#define the information shown in the tooltip
-tooltip_vars:
-  GEO_long: "Country:"
-  year: "Year:"
-  d2_label: "Tax type:"
-  prorev: "EIG Tax % Total Tax Revenue:"
-  revgdp: "EIG Tax % GDP:"
-  toprat: "Top Marginal Rate:"
+download.cols:
+  - "d2_code"
+  - "d2_label"
+  - "tax_type"
+  - "kinship"
+  - "revenue_d2_code"
+  - "revenue_d2_label"
 
 #other options
 download.button: True

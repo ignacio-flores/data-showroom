@@ -19,6 +19,9 @@ axis_cols <- unique(c(
   extract_axis_columns(axis_vars$y_axis),
   extract_axis_columns(axis_vars$y2_axis)
 ))
+dual_hover_context_cols <- dual_axis_hover_context_columns(
+  dual_axis_options
+)
 
 # Define new columns if necessary
 if (!is.null(new.cols)) {
@@ -30,7 +33,9 @@ if (!is.null(new.cols)) {
     names(fixed_selectors),
     names(loose_selectors),
     names(dt.cols),
+    download.cols,
     names(tooltip_vars),
+    dual_hover_context_cols,
     facet_var,
     facet_label_var,
     "source"
@@ -43,7 +48,9 @@ if (!is.null(new.cols)) {
       names(fixed_selectors),
       names(loose_selectors),
       names(dt.cols),
+      download.cols,
       names(tooltip_vars),
+      dual_hover_context_cols,
       facet_var,
       facet_label_var,
       color_var, "source"
@@ -55,6 +62,8 @@ if (!is.null(new.cols)) {
       names(fixed_selectors),
       names(loose_selectors),
       names(dt.cols),
+      download.cols,
+      dual_hover_context_cols,
       facet_var,
       facet_label_var,
       color_var,
