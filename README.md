@@ -130,6 +130,8 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/ineq_warehouse_meta_v1_2.csv`
 - `data/taxw_wm_ready.qs`
 - `data/taxw_wm2_ready.qs`
+- `data/taxw_kf2_ready.qs`
+- `data/taxw_kf3_ready.qs`
 - `data/taxw_us_state_long.qs`
 - `data/taxw_us_state_ft_wide.qs`
 - `data/methodological_table.xlsx`
@@ -137,6 +139,11 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/supplementary_var_long.csv`
 
 The `eigt_wm1` config uses the prepared `data/taxw_wm_ready.qs` artifact. The `eigt_wm2` config uses `data/taxw_wm2_ready.qs`, which retains general-government revenue rows for the animated bar chart. The `eigt_us*` configs use the US-state artifacts. Other `eigt_*` configs reference additional files such as `data/taxw_wide_viz.csv` and `data/taxw_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
+
+The `eigt_kf2` and `eigt_kf3` configs use chart-ready `data/taxw_kf2_ready.qs`
+and `data/taxw_kf3_ready.qs` artifacts. The deployment tool rebuilds these
+from the warehouse source when needed, keeping the 1.9 GB source CSV and its
+normalization work out of worker startup.
 
 ## How configuration works
 
@@ -157,6 +164,7 @@ Common keys:
 | `loose_selectors` | Selectors whose choices react to the current filtered data |
 | `dt.cols` | Columns shown in the data table and their labels |
 | `tooltip_vars` | Variables shown in plot hover text |
+| `bar_options` | Optional fixed-axis scale selector and automatic compressed-scale rules for bar plots |
 | `dual_axis_options` | Optional compact hover and duplicate-metric rules for `dual_axis_line` plots |
 | `facet_var` | Optional faceting variable |
 | `extra_layer` | Optional overlay series such as a net wealth line on top of stacked areas |
@@ -270,6 +278,34 @@ with its axis number format, and appends applicable context once. A context
 entry without `show_for` is always included; otherwise it is included when
 either active metric is listed. Configurations without `dual_axis_options`
 retain the existing dual-axis behavior.
+
+Animated bar charts can opt into a fixed adaptive scale:
+
+```yaml
+bar_options:
+  axis_scale_selector: true
+  axis_scale_default: "auto"
+  auto_log_ratio: 50
+  animation_transition_ms: 500
+  animation_frame_ms: 1400
+  animation_easing: "cubic-in-out"
+  category_labels: "bar"
+  axis_range_padding: 0.02
+```
+
+`Auto` compares the maximum with the median nonzero value in the filtered
+top-20 data. With at least three finite values, ratios at or above the
+configured threshold use a signed compressed coordinate
+`sign(x) * log10(1 + abs(x))`; otherwise the chart stays linear. The numeric
+range remains fixed throughout playback, and users can override Auto with
+Linear or a true Logarithmic axis. Compressed ticks retain round original values
+and the plot uses a small scale note instead of changing the measure title.
+Configurations without `bar_options` retain fixed-linear
+bar behavior. Animated bars can additionally configure transition and frame
+timing, use Plotly easing, attach automatically positioned category names to
+their bars, and configure fixed-range padding. Their legacy
+defaults are a 400 ms transition, an 800 ms frame, linear easing, inside labels,
+and 5% padding.
 
 Line and step charts can opt into visual-only offsets for overlapping series:
 

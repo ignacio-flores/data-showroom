@@ -6,6 +6,16 @@ gopts:
   - "bar"
   - "hbar"
   - "animate"
+
+bar_options:
+  axis_scale_selector: true
+  axis_scale_default: "auto"
+  auto_log_ratio: 50
+  animation_transition_ms: 500
+  animation_frame_ms: 1400
+  animation_easing: "cubic-in-out"
+  category_labels: "bar"
+  axis_range_padding: 0.02
   
 axis_vars:
   y_axis: 

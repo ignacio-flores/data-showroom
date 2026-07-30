@@ -578,6 +578,7 @@ createSelectors <- function(data,
                             num.conversion = NULL,
                             extra_layer = NULL,
                             scatter_options = NULL,
+                            bar_options = NULL,
                             dual_axis_options = NULL) {
   # Helper: parse 'c("a","b")' strings into vectors
   parseChoices <- selector_parse_choices
@@ -591,9 +592,12 @@ createSelectors <- function(data,
   hasY          <- !is.null(axis_vars) && !is.null(axis_vars$y_axis$choices)
   hasY2         <- !is.null(axis_vars) && !is.null(axis_vars$y2_axis$choices)
   hasXScale     <- isTRUE(scatter_options$x_scale_selector)
+  hasBarScale   <- isTRUE(bar_options$axis_scale_selector)
   axisCount     <- sum(c(hasX, hasY, hasY2))
   convCount     <- if (!is.null(num.conversion)) 1 else 0
-  totalControls <- baseCount + axisCount + convCount + if (hasXScale) 1 else 0
+  totalControls <- baseCount + axisCount + convCount +
+    if (hasXScale) 1 else 0 +
+    if (hasBarScale) 1 else 0
   columns       <- min(totalControls, 4)
   colWidth      <- 12 / columns
   
@@ -635,6 +639,34 @@ createSelectors <- function(data,
                label = "X Axis Scale",
                choices = c("Regular Scale" = "regular", "Log Scale" = "log"),
                selected = "regular"
+             )
+      )
+    ))
+  }
+
+  if (hasBarScale) {
+    bar_scale_default <- if (
+      !is.null(bar_options$axis_scale_default) &&
+      length(bar_options$axis_scale_default) == 1 &&
+      !is.na(bar_options$axis_scale_default) &&
+      tolower(as.character(bar_options$axis_scale_default)) %in%
+        c("auto", "linear", "log")
+    ) {
+      tolower(as.character(bar_options$axis_scale_default))
+    } else {
+      "linear"
+    }
+    axisInputs <- c(axisInputs, list(
+      column(width = colWidth,
+             selectInput(
+               inputId = "bar_axis_scale",
+               label = "Axis scale",
+               choices = c(
+                 "Auto" = "auto",
+                 "Linear" = "linear",
+                 "Logarithmic" = "log"
+               ),
+               selected = bar_scale_default
              )
       )
     ))

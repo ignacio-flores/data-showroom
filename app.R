@@ -46,6 +46,7 @@ createViz(
   area_stack_toggle = area_stack_toggle, 
   area_stack_default = area_stack_default,
   scatter_options = scatter_options,
+  bar_options = bar_options,
   dual_axis_options = dual_axis_options,
   value_transform = value_transform,
   map_options = map_options,

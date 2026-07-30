@@ -29,6 +29,7 @@ createViz <- function(graph = NULL,
                       area_stack_toggle = FALSE,  
                       area_stack_default = TRUE,
                       scatter_options = NULL,
+                      bar_options = NULL,
                       dual_axis_options = NULL,
                       value_transform = NULL,
                       map_options = NULL,
@@ -119,6 +120,7 @@ createViz <- function(graph = NULL,
   is_dynamic_scatter <- isTRUE(scatter_options$enabled) &&
     ("point" %in% gopts) &&
     !is_dual_mode
+  is_bar_mode <- "bar" %in% gopts
   metadata_tab_label <- if (isTRUE(substr(graph, 1, 4) == "topo")) {
     "Metadata"
   } else {
@@ -303,6 +305,7 @@ createViz <- function(graph = NULL,
         num.conversion,
         extra_layer,
         scatter_options = if (is_dynamic_scatter) scatter_options else NULL,
+        bar_options = if (is_bar_mode) bar_options else NULL,
         dual_axis_options = if (is_dual_mode) dual_axis_options else NULL
       )
     ),
@@ -471,6 +474,21 @@ createViz <- function(graph = NULL,
         input$x_axis_scale
       } else {
         "regular"
+      }
+    })
+
+    selected_bar_axis_scale <- reactive({
+      options <- normalize_bar_options(bar_options)
+      if (is_bar_mode &&
+          isTRUE(options$axis_scale_selector) &&
+          !is.null(input$bar_axis_scale) &&
+          nzchar(input$bar_axis_scale)) {
+        normalize_bar_axis_scale_mode(
+          input$bar_axis_scale,
+          fallback = options$axis_scale_default
+        )
+      } else {
+        options$axis_scale_default
       }
     })
 
@@ -911,6 +929,8 @@ createViz <- function(graph = NULL,
                      extra_layer, color_style, plot_height, groupvars,
                      x_scale = if (is_dynamic_scatter) selected_x_scale else NULL,
                      scatter_options = if (is_dynamic_scatter) scatter_options else NULL,
+                     bar_axis_scale = if (is_bar_mode) selected_bar_axis_scale else NULL,
+                     bar_options = if (is_bar_mode) bar_options else NULL,
                      map_options = map_options,
                      show.grid = show.grid,
                      overlap_offset = overlap_offset,

@@ -1368,6 +1368,474 @@ axis_number_tick_values <- function(values, n = NULL) {
   ticks[ticks >= value_range[[1]] & ticks <= value_range[[2]]]
 }
 
+bar_axis_scale_modes <- c("auto", "linear", "log")
+plotly_animation_easing_modes <- c(
+  "linear",
+  "quad-in", "quad-out", "quad-in-out",
+  "cubic-in", "cubic-out", "cubic-in-out",
+  "sin-in", "sin-out", "sin-in-out",
+  "exp-in", "exp-out", "exp-in-out",
+  "circle-in", "circle-out", "circle-in-out",
+  "elastic-in", "elastic-out", "elastic-in-out",
+  "back-in", "back-out", "back-in-out",
+  "bounce-in", "bounce-out", "bounce-in-out"
+)
+
+normalize_bar_axis_scale_mode <- function(mode, fallback = "linear") {
+  if (is.null(fallback) || length(fallback) != 1 || is.na(fallback)) {
+    fallback <- "linear"
+  }
+  fallback <- tolower(trimws(as.character(fallback)))
+  if (!fallback %in% bar_axis_scale_modes) fallback <- "linear"
+
+  if (is.null(mode) || length(mode) != 1 || is.na(mode)) return(fallback)
+  mode <- tolower(trimws(as.character(mode)))
+  if (!mode %in% bar_axis_scale_modes) fallback else mode
+}
+
+normalize_bar_options <- function(bar_options = NULL) {
+  if (is.null(bar_options)) {
+    return(list(
+      axis_scale_selector = FALSE,
+      axis_scale_default = "linear",
+      auto_log_ratio = 50,
+      animation_transition_ms = 400,
+      animation_frame_ms = 800,
+      animation_easing = "linear",
+      category_labels = "inside",
+      axis_range_padding = 0.05
+    ))
+  }
+
+  default_mode <- normalize_bar_axis_scale_mode(
+    bar_options$axis_scale_default,
+    fallback = "linear"
+  )
+  auto_log_ratio <- suppressWarnings(as.numeric(bar_options$auto_log_ratio))
+  if (length(auto_log_ratio) != 1 ||
+      !is.finite(auto_log_ratio) ||
+      auto_log_ratio <= 1) {
+    auto_log_ratio <- 50
+  }
+  animation_transition_ms <- suppressWarnings(as.numeric(
+    bar_options$animation_transition_ms
+  ))
+  if (length(animation_transition_ms) != 1 ||
+      !is.finite(animation_transition_ms) ||
+      animation_transition_ms < 0) {
+    animation_transition_ms <- 400
+  }
+  animation_frame_ms <- suppressWarnings(as.numeric(
+    bar_options$animation_frame_ms
+  ))
+  if (length(animation_frame_ms) != 1 ||
+      !is.finite(animation_frame_ms) ||
+      animation_frame_ms <= 0) {
+    animation_frame_ms <- 800
+  }
+  animation_easing <- bar_options$animation_easing
+  if (is.null(animation_easing) ||
+      length(animation_easing) != 1 ||
+      is.na(animation_easing)) {
+    animation_easing <- "linear"
+  }
+  animation_easing <- tolower(trimws(as.character(animation_easing)))
+  if (!animation_easing %in% plotly_animation_easing_modes) {
+    animation_easing <- "linear"
+  }
+  category_labels <- bar_options$category_labels
+  if (is.null(category_labels) ||
+      length(category_labels) != 1 ||
+      is.na(category_labels)) {
+    category_labels <- "inside"
+  }
+  category_labels <- tolower(trimws(as.character(category_labels)))
+  if (!category_labels %in% c("inside", "bar", "axis")) {
+    category_labels <- "inside"
+  }
+  axis_range_padding <- suppressWarnings(as.numeric(
+    bar_options$axis_range_padding
+  ))
+  if (length(axis_range_padding) != 1 ||
+      !is.finite(axis_range_padding) ||
+      axis_range_padding < 0 ||
+      axis_range_padding > 1) {
+    axis_range_padding <- 0.05
+  }
+
+  list(
+    axis_scale_selector = isTRUE(bar_options$axis_scale_selector),
+    axis_scale_default = default_mode,
+    auto_log_ratio = auto_log_ratio,
+    animation_transition_ms = animation_transition_ms,
+    animation_frame_ms = animation_frame_ms,
+    animation_easing = animation_easing,
+    category_labels = category_labels,
+    axis_range_padding = axis_range_padding
+  )
+}
+
+validate_bar_options <- function(bar_options = NULL, gopts = NULL) {
+  if (is.null(bar_options)) return(invisible(TRUE))
+  if (!is.list(bar_options)) {
+    stop("bar_options must be a list.", call. = FALSE)
+  }
+  if (!"bar" %in% gopts) {
+    stop("bar_options can only be used with bar plots.", call. = FALSE)
+  }
+
+  selector <- bar_options$axis_scale_selector
+  if (!is.null(selector) &&
+      (!is.logical(selector) || length(selector) != 1 || is.na(selector))) {
+    stop(
+      "bar_options$axis_scale_selector must be TRUE or FALSE.",
+      call. = FALSE
+    )
+  }
+
+  default_mode <- bar_options$axis_scale_default
+  if (!is.null(default_mode)) {
+    default_mode <- tolower(trimws(as.character(default_mode)))
+    if (length(default_mode) != 1 ||
+        is.na(default_mode) ||
+        !default_mode %in% bar_axis_scale_modes) {
+      stop(
+        "bar_options$axis_scale_default must be 'auto', 'linear', or 'log'.",
+        call. = FALSE
+      )
+    }
+  }
+
+  auto_log_ratio <- bar_options$auto_log_ratio
+  if (!is.null(auto_log_ratio)) {
+    auto_log_ratio <- suppressWarnings(as.numeric(auto_log_ratio))
+    if (length(auto_log_ratio) != 1 ||
+        !is.finite(auto_log_ratio) ||
+        auto_log_ratio <= 1) {
+      stop(
+        "bar_options$auto_log_ratio must be one finite number greater than 1.",
+        call. = FALSE
+      )
+    }
+  }
+
+  animation_transition_ms <- bar_options$animation_transition_ms
+  if (!is.null(animation_transition_ms)) {
+    animation_transition_ms <- suppressWarnings(as.numeric(
+      animation_transition_ms
+    ))
+    if (length(animation_transition_ms) != 1 ||
+        !is.finite(animation_transition_ms) ||
+        animation_transition_ms < 0) {
+      stop(
+        paste0(
+          "bar_options$animation_transition_ms must be one finite ",
+          "non-negative number."
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  animation_frame_ms <- bar_options$animation_frame_ms
+  if (!is.null(animation_frame_ms)) {
+    animation_frame_ms <- suppressWarnings(as.numeric(animation_frame_ms))
+    if (length(animation_frame_ms) != 1 ||
+        !is.finite(animation_frame_ms) ||
+        animation_frame_ms <= 0) {
+      stop(
+        paste0(
+          "bar_options$animation_frame_ms must be one finite ",
+          "positive number."
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  animation_easing <- bar_options$animation_easing
+  if (!is.null(animation_easing)) {
+    animation_easing <- tolower(trimws(as.character(animation_easing)))
+    if (length(animation_easing) != 1 ||
+        is.na(animation_easing) ||
+        !animation_easing %in% plotly_animation_easing_modes) {
+      stop(
+        paste0(
+          "bar_options$animation_easing must be a supported Plotly ",
+          "easing mode."
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  category_labels <- bar_options$category_labels
+  if (!is.null(category_labels)) {
+    category_labels <- tolower(trimws(as.character(category_labels)))
+    if (length(category_labels) != 1 ||
+        is.na(category_labels) ||
+        !category_labels %in% c("inside", "bar", "axis")) {
+      stop(
+        "bar_options$category_labels must be 'inside', 'bar', or 'axis'.",
+        call. = FALSE
+      )
+    }
+  }
+
+  axis_range_padding <- bar_options$axis_range_padding
+  if (!is.null(axis_range_padding)) {
+    axis_range_padding <- suppressWarnings(as.numeric(axis_range_padding))
+    if (length(axis_range_padding) != 1 ||
+        !is.finite(axis_range_padding) ||
+        axis_range_padding < 0 ||
+        axis_range_padding > 1) {
+      stop(
+        paste0(
+          "bar_options$axis_range_padding must be one finite number ",
+          "between 0 and 1."
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  invisible(TRUE)
+}
+
+resolve_bar_axis_scale <- function(values,
+                                   requested_mode = NULL,
+                                   bar_options = NULL) {
+  options <- normalize_bar_options(bar_options)
+  requested_mode <- normalize_bar_axis_scale_mode(
+    requested_mode,
+    fallback = options$axis_scale_default
+  )
+
+  numeric_values <- axis_numeric_values(values)
+  finite_values <- numeric_values[is.finite(numeric_values)]
+  nonzero_values <- finite_values[finite_values != 0]
+  ratio <- NA_real_
+  if (length(nonzero_values) > 0) {
+    median_nonzero <- stats::median(nonzero_values)
+    if (is.finite(median_nonzero) && median_nonzero > 0) {
+      ratio <- max(nonzero_values) / median_nonzero
+    }
+  }
+
+  resolved_mode <- requested_mode
+  if (identical(requested_mode, "auto")) {
+    resolved_mode <- if (
+      length(finite_values) >= 3 &&
+      is.finite(ratio) &&
+      ratio >= options$auto_log_ratio
+    ) {
+      "compressed"
+    } else {
+      "linear"
+    }
+  } else if (
+    identical(requested_mode, "log") &&
+    any(finite_values <= 0)
+  ) {
+    # A true logarithmic axis cannot represent non-positive observations.
+    # Preserve every value by falling back to the signed compressed scale.
+    resolved_mode <- "compressed"
+  }
+
+  list(
+    requested = requested_mode,
+    resolved = resolved_mode,
+    ratio = ratio,
+    finite_count = length(finite_values),
+    threshold = options$auto_log_ratio
+  )
+}
+
+bar_pseudo_log_transform <- function(values) {
+  numeric_values <- axis_numeric_values(values)
+  sign(numeric_values) * log10(1 + abs(numeric_values))
+}
+
+bar_pseudo_log_tick_values <- function(values, max_ticks = 7L) {
+  numeric_values <- axis_numeric_values(values)
+  finite_values <- numeric_values[is.finite(numeric_values)]
+  if (length(finite_values) == 0) return(NULL)
+
+  max_ticks <- suppressWarnings(as.integer(max_ticks))
+  if (length(max_ticks) != 1 || is.na(max_ticks) || max_ticks < 3) {
+    max_ticks <- 7L
+  }
+
+  nonzero_abs <- abs(finite_values[finite_values != 0])
+  if (length(nonzero_abs) == 0) return(0)
+
+  exponents <- seq(
+    floor(log10(min(nonzero_abs))),
+    ceiling(log10(max(nonzero_abs)))
+  )
+  magnitudes <- 10^exponents
+  magnitudes <- magnitudes[
+    magnitudes >= min(nonzero_abs) & magnitudes <= max(nonzero_abs)
+  ]
+  if (length(magnitudes) == 0) {
+    magnitudes <- unique(range(nonzero_abs))
+  }
+
+  has_negative <- any(finite_values < 0)
+  has_positive <- any(finite_values > 0)
+  available_magnitude_ticks <- if (has_negative && has_positive) {
+    max(1L, floor((max_ticks - 1L) / 2L))
+  } else {
+    max(1L, max_ticks - 1L)
+  }
+  if (length(magnitudes) > available_magnitude_ticks) {
+    keep <- unique(round(seq(
+      1,
+      length(magnitudes),
+      length.out = available_magnitude_ticks
+    )))
+    magnitudes <- magnitudes[keep]
+  }
+
+  ticks <- c(
+    if (has_negative) -rev(magnitudes) else numeric(0),
+    0,
+    if (has_positive) magnitudes else numeric(0)
+  )
+  range_values <- range(c(0, finite_values), na.rm = TRUE)
+  ticks <- ticks[ticks >= range_values[[1]] & ticks <= range_values[[2]]]
+  unique(ticks)
+}
+
+bar_log_tick_values <- function(values, max_ticks = 7L) {
+  numeric_values <- axis_numeric_values(values)
+  positive_values <- numeric_values[
+    is.finite(numeric_values) & numeric_values > 0
+  ]
+  if (length(positive_values) == 0) return(NULL)
+
+  max_ticks <- suppressWarnings(as.integer(max_ticks))
+  if (length(max_ticks) != 1 || is.na(max_ticks) || max_ticks < 2) {
+    max_ticks <- 7L
+  }
+
+  value_range <- range(positive_values)
+  exponents <- seq(
+    floor(log10(value_range[[1]])),
+    ceiling(log10(value_range[[2]]))
+  )
+  ticks <- sort(as.vector(outer(c(1, 2, 5), 10^exponents)))
+  ticks <- unique(ticks[
+    is.finite(ticks) &
+      ticks >= value_range[[1]] &
+      ticks <= value_range[[2]]
+  ])
+
+  if (length(ticks) == 0) ticks <- unique(value_range)
+  if (length(ticks) > max_ticks) {
+    keep <- unique(round(seq(1, length(ticks), length.out = max_ticks)))
+    ticks <- ticks[keep]
+  }
+  ticks
+}
+
+bar_log_numeric_range <- function(values, padding = 0.05) {
+  numeric_values <- axis_numeric_values(values)
+  positive_values <- numeric_values[
+    is.finite(numeric_values) & numeric_values > 0
+  ]
+  if (length(positive_values) == 0) return(NULL)
+
+  log_range <- range(log10(positive_values))
+  span <- diff(log_range)
+  if (!is.finite(span) || span <= 0) span <- 1
+
+  padding <- suppressWarnings(as.numeric(padding))
+  if (length(padding) != 1 || !is.finite(padding) || padding < 0) {
+    padding <- 0.05
+  }
+  log_range + c(-1, 1) * span * padding
+}
+
+bar_axis_measure_label <- function(data, fallback = "Value") {
+  if (!is.null(data) &&
+      is.data.frame(data) &&
+      "d4_concept_lab" %in% names(data)) {
+    labels <- unique(as.character(data$d4_concept_lab))
+    labels <- labels[!is.na(labels) & nzchar(trimws(labels))]
+    if (length(labels) == 1) return(labels[[1]])
+  }
+
+  fallback <- as.character(fallback)
+  fallback <- fallback[!is.na(fallback) & nzchar(trimws(fallback))]
+  if (length(fallback) > 0) fallback[[1]] else "Value"
+}
+
+bar_axis_currency_prefix <- function(data) {
+  if (is.null(data) ||
+      !is.data.frame(data) ||
+      !"d4_concept_lab" %in% names(data) ||
+      !"xrate_lab" %in% names(data)) {
+    return("")
+  }
+
+  concepts <- unique(as.character(data$d4_concept_lab))
+  concepts <- concepts[!is.na(concepts) & nzchar(concepts)]
+  monetary_concepts <- c("Exemption Threshold", "Total Revenue from Tax")
+  if (length(concepts) != 1 || !concepts[[1]] %in% monetary_concepts) {
+    return("")
+  }
+
+  currencies <- unique(as.character(data$xrate_lab))
+  currencies <- currencies[!is.na(currencies) & nzchar(currencies)]
+  if (length(currencies) != 1) return("")
+
+  currency <- currencies[[1]]
+  if (grepl("Euro", currency, fixed = TRUE)) return("\u20ac")
+  if (grepl("USD", currency, fixed = TRUE)) return("$")
+  if (grepl("Yuan", currency, fixed = TRUE)) return("\u00a5")
+  ""
+}
+
+bar_axis_apply_tick_prefix <- function(axis, tick_prefix = "") {
+  if (is.null(tick_prefix) ||
+      length(tick_prefix) != 1 ||
+      is.na(tick_prefix) ||
+      !nzchar(tick_prefix) ||
+      is.null(axis$ticktext)) {
+    return(axis)
+  }
+  axis$ticktext <- paste0(tick_prefix, axis$ticktext)
+  axis
+}
+
+animated_bar_numeric_range <- function(values, padding = 0.05) {
+  numeric_values <- axis_numeric_values(values)
+  numeric_values <- numeric_values[is.finite(numeric_values)]
+  if (length(numeric_values) == 0) return(NULL)
+
+  range_values <- range(c(0, numeric_values), na.rm = TRUE)
+  value_span <- diff(range_values)
+  if (!is.finite(value_span) || value_span <= 0) {
+    return(c(0, 1))
+  }
+
+  padding <- suppressWarnings(as.numeric(padding))
+  if (length(padding) != 1 || !is.finite(padding) || padding < 0) {
+    padding <- 0.05
+  }
+  padding_value <- value_span * padding
+
+  if (range_values[[1]] < 0) {
+    range_values[[1]] <- range_values[[1]] - padding_value
+  }
+  if (range_values[[2]] > 0) {
+    range_values[[2]] <- range_values[[2]] + padding_value
+  }
+
+  range_values
+}
+
 plotly_number_axis_layout <- function(axis = list(),
                                       values,
                                       var_name = NULL,
@@ -1415,6 +1883,221 @@ plotly_number_axis_layout <- function(axis = list(),
   axis$tickformat <- NULL
   axis$ticksuffix <- NULL
   axis
+}
+
+animated_bar_numeric_axis_layout <- function(values,
+                                             axis = list(),
+                                             var_name = NULL,
+                                             label = NULL,
+                                             axis_info = NULL,
+                                             n = NULL,
+                                             padding = 0.05,
+                                             fixed_across_years = FALSE,
+                                             tick_prefix = "") {
+  axis_range <- animated_bar_numeric_range(values, padding = padding)
+  if (!is.null(label) &&
+      length(label) == 1 &&
+      !is.na(label) &&
+      nzchar(trimws(as.character(label)))) {
+    axis$title <- as.character(label)
+  }
+  axis$autorange <- is.null(axis_range)
+  axis$rangemode <- "tozero"
+  axis$range <- axis_range
+
+  axis <- plotly_axis_style(axis) %>%
+    plotly_number_axis_layout(
+      values = values,
+      var_name = var_name,
+      label = label,
+      axis_info = axis_info,
+      n = n
+    )
+  bar_axis_apply_tick_prefix(axis, tick_prefix)
+}
+
+bar_pseudo_log_axis_layout <- function(values,
+                                       axis = list(),
+                                       var_name = NULL,
+                                       label = NULL,
+                                       axis_info = NULL,
+                                       n = NULL,
+                                       padding = 0.05,
+                                       fixed_across_years = FALSE,
+                                       tick_prefix = "") {
+  transformed_values <- bar_pseudo_log_transform(values)
+  axis_range <- animated_bar_numeric_range(
+    transformed_values,
+    padding = padding
+  )
+  original_ticks <- bar_pseudo_log_tick_values(values, max_ticks = n)
+  axis_label <- if (
+    !is.null(label) &&
+    length(label) == 1 &&
+    !is.na(label) &&
+    nzchar(trimws(as.character(label)))
+  ) {
+    as.character(label)
+  } else {
+    "Value"
+  }
+
+  axis$title <- axis_label
+  axis$autorange <- is.null(axis_range)
+  axis$rangemode <- "tozero"
+  axis$range <- axis_range
+  axis$exponentformat <- "none"
+  axis$separatethousands <- TRUE
+
+  if (!is.null(original_ticks) && length(original_ticks) > 0) {
+    spec <- axis_number_format_spec(var_name, label, axis_info)
+    axis$tickmode <- "array"
+    axis$tickvals <- bar_pseudo_log_transform(original_ticks)
+    axis$ticktext <- format_axis_number(original_ticks, spec = spec)
+    axis$tickformat <- NULL
+    axis$ticksuffix <- NULL
+  }
+
+  bar_axis_apply_tick_prefix(plotly_axis_style(axis), tick_prefix)
+}
+
+bar_log_axis_layout <- function(values,
+                                axis = list(),
+                                var_name = NULL,
+                                label = NULL,
+                                axis_info = NULL,
+                                n = NULL,
+                                padding = 0.05,
+                                fixed_across_years = FALSE,
+                                tick_prefix = "") {
+  positive_values <- axis_numeric_values(values)
+  positive_values <- positive_values[
+    is.finite(positive_values) & positive_values > 0
+  ]
+  axis_range <- bar_log_numeric_range(positive_values, padding = padding)
+  original_ticks <- bar_log_tick_values(positive_values, max_ticks = n)
+  axis_label <- if (
+    !is.null(label) &&
+    length(label) == 1 &&
+    !is.na(label) &&
+    nzchar(trimws(as.character(label)))
+  ) {
+    as.character(label)
+  } else {
+    "Value"
+  }
+
+  axis$title <- axis_label
+  axis$type <- "log"
+  axis$autorange <- is.null(axis_range)
+  axis$range <- axis_range
+  axis$rangemode <- NULL
+  axis$exponentformat <- "none"
+  axis$separatethousands <- TRUE
+
+  if (!is.null(original_ticks) && length(original_ticks) > 0) {
+    spec <- axis_number_format_spec(var_name, label, axis_info)
+    axis$tickmode <- "array"
+    axis$tickvals <- original_ticks
+    axis$ticktext <- format_axis_number(original_ticks, spec = spec)
+    axis$tickformat <- NULL
+    axis$ticksuffix <- NULL
+  }
+
+  bar_axis_apply_tick_prefix(plotly_axis_style(axis), tick_prefix)
+}
+
+fixed_bar_numeric_axis_layout <- function(values,
+                                          resolved_scale = "linear",
+                                          axis = list(),
+                                          var_name = NULL,
+                                          label = NULL,
+                                          axis_info = NULL,
+                                          n = NULL,
+                                          padding = 0.05,
+                                          fixed_across_years = FALSE,
+                                          tick_prefix = "") {
+  if (identical(resolved_scale, "compressed")) {
+    return(bar_pseudo_log_axis_layout(
+      values = values,
+      axis = axis,
+      var_name = var_name,
+      label = label,
+      axis_info = axis_info,
+      n = n,
+      padding = padding,
+      fixed_across_years = fixed_across_years,
+      tick_prefix = tick_prefix
+    ))
+  }
+  if (identical(resolved_scale, "log")) {
+    return(bar_log_axis_layout(
+      values = values,
+      axis = axis,
+      var_name = var_name,
+      label = label,
+      axis_info = axis_info,
+      n = n,
+      padding = padding,
+      fixed_across_years = fixed_across_years,
+      tick_prefix = tick_prefix
+    ))
+  }
+
+  animated_bar_numeric_axis_layout(
+    values = values,
+    axis = axis,
+    var_name = var_name,
+    label = label,
+    axis_info = axis_info,
+    n = n,
+    padding = padding,
+    fixed_across_years = fixed_across_years,
+    tick_prefix = tick_prefix
+  )
+}
+
+animated_bar_category_axis_layout <- function(levels,
+                                              horizontal = TRUE,
+                                              show_labels = FALSE,
+                                              bound_categories = FALSE,
+                                              automargin = TRUE,
+                                              axis = list()) {
+  levels <- as.character(levels)
+  levels <- levels[!is.na(levels) & nzchar(levels)]
+  ordered_levels <- if (isTRUE(horizontal)) rev(levels) else levels
+  category_count <- length(ordered_levels)
+
+  axis$categoryorder <- "array"
+  axis$categoryarray <- ordered_levels
+  if (isTRUE(bound_categories)) {
+    axis$type <- "category"
+    axis$autorange <- FALSE
+    axis$range <- if (category_count > 0) {
+      c(-0.5, category_count - 0.5)
+    } else {
+      c(-0.5, 0.5)
+    }
+  }
+  axis$automargin <- isTRUE(automargin)
+  axis$showticklabels <- isTRUE(show_labels)
+  if (isTRUE(show_labels)) axis$tickangle <- 0
+
+  plotly_axis_style(axis)
+}
+
+animated_bar_category_label_margin <- function(labels,
+                                               font_size = plot_text_style$axis_tick_size,
+                                               min_margin = 110,
+                                               max_margin = 300,
+                                               padding = 38) {
+  labels <- as.character(labels)
+  labels <- labels[!is.na(labels) & nzchar(labels)]
+  if (length(labels) == 0) return(min_margin)
+
+  label_width <- max(nchar(labels, type = "width"))
+  estimated_width <- label_width * as.numeric(font_size) * 0.58 + padding
+  as.integer(round(max(min_margin, min(max_margin, estimated_width))))
 }
 
 plotly_axis_layout_names <- function(layout, axis_prefix) {
@@ -1623,6 +2306,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                              hide.legend, gopts, xnum_breaks, extra_layer, color_style,
                              plot_height, groupvars, stacked_default = FALSE,
                              x_scale = NULL, scatter_options = NULL, map_options = NULL,
+                             bar_axis_scale = NULL, bar_options = NULL,
                              show.grid = TRUE,
                              overlap_offset = NULL,
                              x_axis_info = NULL, y_axis_info = NULL, y2_axis_info = NULL,
@@ -1660,6 +2344,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       dual_axis_options <- resolveValue(dual_axis_options)
       x_scale <- resolveValue(x_scale)
       if (is.null(x_scale)) x_scale <- "regular"
+      bar_options <- normalize_bar_options(resolveValue(bar_options))
+      bar_axis_scale <- normalize_bar_axis_scale_mode(
+        resolveValue(bar_axis_scale),
+        fallback = bar_options$axis_scale_default
+      )
       show.grid <- resolveValue(show.grid)
       if (is.null(show.grid)) show.grid <- TRUE
       overlap_offset <- normalize_overlap_offset(resolveValue(overlap_offset))
@@ -2984,6 +3673,30 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         use_anim <- ("animate" %in% gopts) &&
           "year" %in% names(df) &&
           dplyr::n_distinct(df$year) > 1
+        category_labels_on_axis <- identical(
+          bar_options$category_labels,
+          "axis"
+        )
+        category_labels_follow_bars <- identical(
+          bar_options$category_labels,
+          "bar"
+        )
+        animation_transition_ms <- bar_options$animation_transition_ms
+        animation_frame_ms <- bar_options$animation_frame_ms
+        animation_easing <- bar_options$animation_easing
+        axis_range_padding <- bar_options$axis_range_padding
+        deterministic_animation_frames <- use_anim && (
+          category_labels_on_axis ||
+            category_labels_follow_bars ||
+            identical(animation_transition_ms, 0)
+        )
+
+        # Animated category ordering is supplied explicitly per frame. Keeping
+        # character values avoids carrying selection-wide factor levels into
+        # Plotly's persistent categorical-axis state.
+        if (deterministic_animation_frames) {
+          df[[x_var]] <- as.character(df[[x_var]])
+        }
         
         # Choose top-N size ----------------------------------------------------------- 
         top_k <- 20   # CHANGE
@@ -2995,7 +3708,11 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             dplyr::summarise(.val = sum(.data[[y_var]], na.rm = TRUE), .groups = "drop")
           top_by_year <- totals %>%
             dplyr::group_by(year) %>%
-            dplyr::arrange(dplyr::desc(.val), .by_group = TRUE) %>%
+            dplyr::arrange(
+              dplyr::desc(.val),
+              .data[[x_var]],
+              .by_group = TRUE
+            ) %>%
             dplyr::slice_head(n = top_k) %>%
             dplyr::ungroup()
           df <- dplyr::semi_join(df, top_by_year, by = c("year", x_var))
@@ -3003,7 +3720,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           totals <- df %>%
             dplyr::group_by(.data[[x_var]]) %>%
             dplyr::summarise(.val = sum(.data[[y_var]], na.rm = TRUE), .groups = "drop") %>%
-            dplyr::arrange(dplyr::desc(.val))
+            dplyr::arrange(dplyr::desc(.val), .data[[x_var]])
           top_global <- dplyr::slice_head(totals, n = top_k)
           df <- dplyr::semi_join(df, top_global, by = x_var)
         }
@@ -3011,19 +3728,41 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         if (!has_plot_rows(df)) {
           return(no_data_plotly(height = plot_height))
         }
+
+        # Resolve one scale for the complete displayed top-20 selection. The
+        # numeric coordinate may be transformed, but all data-facing values
+        # (order, hover, table, and download) remain on the original scale.
+        bar_scale_state <- resolve_bar_axis_scale(
+          df[[y_var]],
+          requested_mode = bar_axis_scale,
+          bar_options = bar_options
+        )
+        bar_resolved_scale <- bar_scale_state$resolved
+        bar_numeric_values <- df[[y_var]]
+        bar_numeric_axis_label <- bar_axis_measure_label(df, y_var_lab)
+        bar_numeric_tick_prefix <- bar_axis_currency_prefix(df)
+        bar_plot_var <- y_var
+        if (identical(bar_resolved_scale, "compressed")) {
+          bar_plot_var <- make.unique(
+            c(names(df), ".bar_plot_value")
+          )[[ncol(df) + 1]]
+          df[[bar_plot_var]] <- bar_pseudo_log_transform(df[[y_var]])
+        }
         
         # 3) compute ordering (now based on the filtered df) --------------------------
-        ord_df <- df %>%
-          dplyr::group_by(.data[[x_var]]) %>%
-          dplyr::summarise(.val = sum(.data[[y_var]], na.rm = TRUE), .groups = "drop") %>%
-          { 
-            if ("hbar" %in% gopts) {
-              dplyr::arrange(., .val)                 # ascending if horiz (we reverse in categoryarray below)
-            } else {
-              dplyr::arrange(., dplyr::desc(.val))
+        if (!use_anim || !deterministic_animation_frames) {
+          ord_df <- df %>%
+            dplyr::group_by(.data[[x_var]]) %>%
+            dplyr::summarise(.val = sum(.data[[y_var]], na.rm = TRUE), .groups = "drop") %>%
+            {
+              if ("hbar" %in% gopts) {
+                dplyr::arrange(., .val, .data[[x_var]])
+              } else {
+                dplyr::arrange(., dplyr::desc(.val), .data[[x_var]])
+              }
             }
-          }
-        df[[x_var]] <- factor(df[[x_var]], levels = ord_df[[x_var]])
+          df[[x_var]] <- factor(df[[x_var]], levels = ord_df[[x_var]])
+        }
         
         # Dynamic height (now capped by top_k)
         if (use_anim && "year" %in% names(df)) {
@@ -3038,13 +3777,19 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         max_n_cats <- min(max_n_cats, top_k)                                            # CHANGE
         px_per_bar <- 22L
         dyn_height <- max(plot_height, 80 + px_per_bar * max_n_cats)
+        category_label_margin <- if (horiz && category_labels_on_axis) {
+          animated_bar_category_label_margin(df[[x_var]])
+        } else {
+          NULL
+        }
+        category_axis_automargin <- is.null(category_label_margin)
         
         # Per-year levels (from filtered df)
         if (use_anim) {
           ord_by_year <- df %>%
             dplyr::group_by(year, .data[[x_var]]) %>%
             dplyr::summarise(.val = sum(.data[[y_var]], na.rm = TRUE), .groups = "drop") %>%
-            dplyr::arrange(year, dplyr::desc(.val)) %>%
+            dplyr::arrange(year, dplyr::desc(.val), .data[[x_var]]) %>%
             dplyr::group_by(year) %>%
             dplyr::summarise(levels = list(.data[[x_var]]), .groups = "drop")
           levs_by_year <- setNames(ord_by_year$levels, as.character(ord_by_year$year))
@@ -3052,8 +3797,35 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         }
         
         # Aesthetics
-        x_aes <- if (horiz) ~get(y_var) else ~get(x_var)
-        y_aes <- if (horiz) ~get(x_var) else ~get(y_var)
+        x_aes <- if (horiz) ~get(bar_plot_var) else ~get(x_var)
+        y_aes <- if (horiz) ~get(x_var) else ~get(bar_plot_var)
+        text_aes <- if (category_labels_on_axis) NULL else ~get(x_var)
+        bar_text_position <- if (category_labels_on_axis) {
+          "none"
+        } else if (category_labels_follow_bars) {
+          "auto"
+        } else {
+          "inside"
+        }
+        bar_clip_text <- category_labels_on_axis ||
+          category_labels_follow_bars
+        scale_annotation <- if (identical(bar_resolved_scale, "compressed")) {
+          list(list(
+            text = "Compressed scale",
+            x = 1,
+            y = 1,
+            xref = "paper",
+            yref = "paper",
+            xanchor = "right",
+            yanchor = "top",
+            showarrow = FALSE,
+            font = plotly_font(12, color = "#666666"),
+            bgcolor = "rgba(255,255,255,0.8)",
+            borderpad = 3
+          ))
+        } else {
+          NULL
+        }
         
         # Plot
         pp <- plot_ly(
@@ -3063,11 +3835,13 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           y           = y_aes,
           colors      = color_style,
           showlegend  = !hide.legend,
-          text        = ~get(x_var),
+          text        = text_aes,
           hovertext   = ~tooltip_text,
-          textposition = "inside",
+          textposition = bar_text_position,
+          insidetextanchor = if (category_labels_follow_bars) "start" else NULL,
+          constraintext = if (category_labels_follow_bars) "none" else NULL,
           textfont    = plotly_font(plot_text_style$data_label_size),
-          cliponaxis  = FALSE,
+          cliponaxis  = bar_clip_text,
           orientation = if (horiz) "h" else "v",
           height      = dyn_height,
           frame       = if (use_anim) ~as.factor(year) else NULL,
@@ -3078,25 +3852,46 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             font = plotly_font(plot_text_style$legend_size),
             hoverlabel = plotly_hoverlabel_style(),
             xaxis   = if (horiz) {
-              plotly_axis_style(list(
-                title = y_var_lab,
-                zeroline = FALSE,
-                showticklabels = TRUE,
-                autorange = TRUE,
-                rangemode = "tozero"
-              )) %>%
-                plotly_number_axis_layout(
-                  values = df[[y_var]],
+              if (use_anim ||
+                  category_labels_follow_bars ||
+                  bar_resolved_scale %in% c("compressed", "log")) {
+                fixed_bar_numeric_axis_layout(
+                  values = bar_numeric_values,
+                  resolved_scale = bar_resolved_scale,
+                  axis = list(
+                    title = y_var_lab,
+                    zeroline = FALSE,
+                    showticklabels = TRUE
+                  ),
                   var_name = y_var,
-                  label = y_var_lab,
-                  axis_info = y_axis_info
+                  label = bar_numeric_axis_label,
+                  axis_info = y_axis_info,
+                  padding = axis_range_padding,
+                  fixed_across_years = deterministic_animation_frames,
+                  tick_prefix = bar_numeric_tick_prefix
                 )
+              } else {
+                plotly_axis_style(list(
+                  title = y_var_lab,
+                  zeroline = FALSE,
+                  showticklabels = TRUE,
+                  autorange = TRUE,
+                  rangemode = "tozero"
+                )) %>%
+                  plotly_number_axis_layout(
+                    values = df[[y_var]],
+                    var_name = y_var,
+                    label = bar_numeric_axis_label,
+                    axis_info = y_axis_info
+                  )
+              }
             } else {
               plotly_axis_style(list(
                 title = x_var_lab,
                 zeroline = FALSE,
-                showticklabels = FALSE,
+                showticklabels = category_labels_on_axis,
                 autorange = TRUE,
+                automargin = TRUE,
                 rangemode = "tozero"
               ))
             },
@@ -3105,50 +3900,88 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 title = x_var_lab,
                 zeroline = FALSE,
                 autorange = TRUE,
-                automargin = TRUE,
-                showticklabels = FALSE
+                automargin = category_axis_automargin,
+                showticklabels = category_labels_on_axis,
+                tickangle = if (category_labels_on_axis) 0 else NULL
               ))
             } else {
-              plotly_axis_style(list(
-                title = y_var_lab,
-                zeroline = FALSE,
-                autorange = TRUE,
-                automargin = TRUE,
-                showticklabels = TRUE
-              )) %>%
-                plotly_number_axis_layout(
-                  values = df[[y_var]],
+              if (use_anim ||
+                  category_labels_follow_bars ||
+                  bar_resolved_scale %in% c("compressed", "log")) {
+                fixed_bar_numeric_axis_layout(
+                  values = bar_numeric_values,
+                  resolved_scale = bar_resolved_scale,
+                  axis = list(
+                    title = y_var_lab,
+                    zeroline = FALSE,
+                    automargin = TRUE,
+                    showticklabels = TRUE
+                  ),
                   var_name = y_var,
-                  label = y_var_lab,
-                  axis_info = y_axis_info
+                  label = bar_numeric_axis_label,
+                  axis_info = y_axis_info,
+                  padding = axis_range_padding,
+                  fixed_across_years = deterministic_animation_frames,
+                  tick_prefix = bar_numeric_tick_prefix
                 )
+              } else {
+                plotly_axis_style(list(
+                  title = y_var_lab,
+                  zeroline = FALSE,
+                  autorange = TRUE,
+                  automargin = TRUE,
+                  showticklabels = TRUE
+                )) %>%
+                  plotly_number_axis_layout(
+                    values = df[[y_var]],
+                    var_name = y_var,
+                    label = bar_numeric_axis_label,
+                    axis_info = y_axis_info
+                  )
+              }
             },
             legend  = if (!hide.legend) plotly_legend_style(list(
               orientation = "h", x = 0.5, xanchor = "center", y = -0.2
-            )) else list()
+            )) else list(),
+            margin = if (!is.null(category_label_margin)) {
+              list(l = category_label_margin)
+            } else {
+              NULL
+            },
+            annotations = scale_annotation
           )
         
         # Initial category order for first frame (reverse for horizontal so largest at top)
         if (use_anim) {
           if (horiz) {
-            pp <- pp %>% layout(yaxis = plotly_axis_style(list(
-              categoryorder = "array",
-              categoryarray = rev(levs_by_year[[first_year]]),
-              automargin = TRUE
-            )))
+            pp <- pp %>% layout(yaxis = animated_bar_category_axis_layout(
+              levs_by_year[[first_year]],
+              horizontal = TRUE,
+              show_labels = category_labels_on_axis,
+              bound_categories = deterministic_animation_frames,
+              automargin = category_axis_automargin,
+              axis = list(title = x_var_lab, zeroline = FALSE)
+            ))
           } else {
-            pp <- pp %>% layout(xaxis = plotly_axis_style(list(
-              categoryorder = "array",
-              categoryarray = levs_by_year[[first_year]],
-              automargin = TRUE
-            )))
+            pp <- pp %>% layout(xaxis = animated_bar_category_axis_layout(
+              levs_by_year[[first_year]],
+              horizontal = FALSE,
+              show_labels = category_labels_on_axis,
+              bound_categories = deterministic_animation_frames,
+              axis = list(title = x_var_lab, zeroline = FALSE)
+            ))
           }
         }
         
         # Anim controls
         if (use_anim) {
           pp <- pp %>%
-            animation_opts(frame = 800, transition = 400, easing = "linear", redraw = TRUE) %>%
+            animation_opts(
+              frame = animation_frame_ms,
+              transition = animation_transition_ms,
+              easing = animation_easing,
+              redraw = TRUE
+            ) %>%
             animation_slider(
               currentvalue = list(
                 prefix = "Year: ",
@@ -3158,48 +3991,36 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             )
         }
         
-        # Per-frame category order (on filtered top-N) + numeric autorange each frame
+        # Per-frame layouts contain category ordering only. The numeric range
+        # lives in the main layout so every frame shares one fixed scale.
+        if (use_anim) {
+          # Plotly materializes animation frames only during plotly_build().
+          # Build before attaching frame-specific category layouts.
+          pp <- plotly_build(pp)
+        }
         if (use_anim && length(pp$x$frames) > 0) {
           for (i in seq_along(pp$x$frames)) {
             yr <- pp$x$frames[[i]]$name
             levs <- levs_by_year[[as.character(yr)]]
-            frame_df <- df
-            if ("year" %in% names(df)) {
-              frame_df <- df[as.character(df$year) == as.character(yr), , drop = FALSE]
-              if (!has_plot_rows(frame_df)) frame_df <- df
-            }
             if (!is.null(levs)) {
               if (horiz) {
-                pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(
-                  categoryorder = "array",
-                  categoryarray = rev(levs),
-                  automargin = TRUE
-                ))
-                pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(
-                  autorange = TRUE,
-                  rangemode = "tozero"
-                )) %>%
-                  plotly_number_axis_layout(
-                    values = frame_df[[y_var]],
-                    var_name = y_var,
-                    label = y_var_lab,
-                    axis_info = y_axis_info
+                pp$x$frames[[i]]$layout$yaxis <-
+                  animated_bar_category_axis_layout(
+                    levs,
+                    horizontal = TRUE,
+                    show_labels = category_labels_on_axis,
+                    bound_categories = deterministic_animation_frames,
+                    automargin = category_axis_automargin,
+                    axis = list(title = x_var_lab, zeroline = FALSE)
                   )
               } else {
-                pp$x$frames[[i]]$layout$xaxis <- plotly_axis_style(list(
-                  categoryorder = "array",
-                  categoryarray = levs,
-                  automargin = TRUE
-                ))
-                pp$x$frames[[i]]$layout$yaxis <- plotly_axis_style(list(
-                  autorange = TRUE,
-                  rangemode = "tozero"
-                )) %>%
-                  plotly_number_axis_layout(
-                    values = frame_df[[y_var]],
-                    var_name = y_var,
-                    label = y_var_lab,
-                    axis_info = y_axis_info
+                pp$x$frames[[i]]$layout$xaxis <-
+                  animated_bar_category_axis_layout(
+                    levs,
+                    horizontal = FALSE,
+                    show_labels = category_labels_on_axis,
+                    bound_categories = deterministic_animation_frames,
+                    axis = list(title = x_var_lab, zeroline = FALSE)
                   )
               }
             }

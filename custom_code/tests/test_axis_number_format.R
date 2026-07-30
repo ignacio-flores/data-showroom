@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 
+library(shiny)
 source("modules/PlotServer.R")
 
 fail <- function(message) {
@@ -195,6 +196,82 @@ expect_no_scientific(
 expect_true(
   any(grepl("M$", hbar_plot$x$layout$xaxis$ticktext)),
   "Horizontal bar numeric x-axis labels should use compact suffixes."
+)
+
+animated_axis <- animated_bar_numeric_axis_layout(
+  values = c(5, 100),
+  axis = list(title = "Value"),
+  var_name = "value",
+  label = "Value"
+)
+expect_equal(
+  animated_axis$range,
+  c(0, 105),
+  "Animated positive bar axes should explicitly cover a later frame maximum."
+)
+expect_equal(
+  animated_axis$autorange,
+  FALSE,
+  "Animated bar axes should use an explicit range instead of retained autorange state."
+)
+
+mixed_animation_range <- animated_bar_numeric_range(c(-20, 80))
+expect_equal(
+  mixed_animation_range,
+  c(-25, 85),
+  "Animated bar ranges should pad both sides when values cross zero."
+)
+
+animation_data <- data.frame(
+  country = rep(c("A", "B"), 2),
+  year = rep(c(2020, 2021), each = 2),
+  value = c(10, 5, 100, 50)
+)
+shiny::testServer(
+  plotModuleServer,
+  args = list(
+    filtered_data_func = shiny::reactive(animation_data),
+    x_var = "country",
+    x_var_lab = "",
+    y_var = "value",
+    y_var_lab = "",
+    color_var = NULL,
+    color_var_lab = NULL,
+    facet_var = NULL,
+    facet_var_lab = NULL,
+    tooltip_vars = list(
+      country = "Country:",
+      year = "Year:",
+      value = "Value:"
+    ),
+    hide.legend = TRUE,
+    gopts = c("bar", "hbar", "animate"),
+    xnum_breaks = NULL,
+    extra_layer = NULL,
+    color_style = NULL,
+    plot_height = 700,
+    groupvars = NULL
+  ),
+  {
+    payload <- jsonlite::fromJSON(output$valuePlot, simplifyVector = FALSE)
+    initial_range <- as.numeric(unlist(payload$x$layout$xaxis$range))
+    frame_numeric_axes <- lapply(
+      payload$x$frames,
+      function(frame) frame$layout$xaxis
+    )
+    expect_equal(
+      initial_range,
+      c(0, 105),
+      "The animation should start with the range required by its highest value."
+    )
+    expect_true(
+      all(vapply(frame_numeric_axes, is.null, logical(1))),
+      paste0(
+        "Animation frames should not duplicate the numeric x-axis; ",
+        "they inherit the fixed range from the main layout."
+      )
+    )
+  }
 )
 
 colorbar <- plotly_colorbar_style(

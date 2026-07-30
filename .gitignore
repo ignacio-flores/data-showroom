@@ -11,6 +11,8 @@ data/taxw_wide*
 data/taxw_ft_wide.qs
 data/taxw_wm_ready.qs
 data/taxw_wm2_ready.qs
+data/taxw_kf2_ready.qs
+data/taxw_kf3_ready.qs
 data/taxw_us_state_long.qs
 data/taxw_us_state_ft_wide.qs
 data/inhe_warehouse*

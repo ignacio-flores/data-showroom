@@ -15,6 +15,11 @@ validate_dual_axis_options(
   gopts = gopts
 )
 
+validate_bar_options(
+  bar_options = bar_options,
+  gopts = gopts
+)
+
 #Parse color
 if (!("bar" %in% gopts)) {
   if(is.null(color$var)) {

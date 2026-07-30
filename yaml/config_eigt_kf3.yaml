@@ -1,13 +1,7 @@
 #define data source
-data.file: "data/taxw_warehouse_meta_v2.csv"
-data.wrangler: "custom_code/data_prep_eigt3.R"
+data.file: "data/taxw_kf3_ready.qs"
 keep.col:
-  - "GEO"
-  - "GEO_long"
-  - "d2_sector"
-  - "d2_sector_lab"
-  - "d4_concept_lab"
-  - "value"
+  - "geo"
 
 #define plot type
 gopts: "point"

@@ -57,10 +57,20 @@ expect_false(
   "Missing GEO codes should not be treated as subregions."
 )
 
+###############################################################################
+# Prebuilt dashboard artifacts
+
 kf2_config <- yaml::read_yaml("yaml/config_eigt_kf2.yaml")
+kf3_config <- yaml::read_yaml("yaml/config_eigt_kf3.yaml")
 expect_true(
-  "GEO" %in% kf2_config$keep.col,
-  "eigt-kf2 should retain GEO for subregion filtering in its wrangler."
+  identical(kf2_config$data.file, "data/taxw_kf2_ready.qs") &&
+    is.null(kf2_config$data.wrangler),
+  "eigt-kf2 should load its chart-ready artifact without startup wrangling."
+)
+expect_true(
+  identical(kf3_config$data.file, "data/taxw_kf3_ready.qs") &&
+    is.null(kf3_config$data.wrangler),
+  "eigt-kf3 should load its chart-ready artifact without startup wrangling."
 )
 
 normalized <- normalize_eigt_full_exemption_values(
@@ -161,6 +171,20 @@ expect_equal(
   wm2_config$data.file,
   "data/taxw_wm2_ready.qs",
   "eigt-wm2 should use the WM artifact that keeps revenue rows."
+)
+expect_true(
+  identical(wm2_config$bar_options$axis_scale_selector, TRUE) &&
+    identical(wm2_config$bar_options$axis_scale_default, "auto") &&
+    identical(as.numeric(wm2_config$bar_options$auto_log_ratio), 50) &&
+    identical(as.numeric(wm2_config$bar_options$animation_transition_ms), 500) &&
+    identical(as.numeric(wm2_config$bar_options$animation_frame_ms), 1400) &&
+    identical(wm2_config$bar_options$animation_easing, "cubic-in-out") &&
+    identical(wm2_config$bar_options$category_labels, "bar") &&
+    identical(as.numeric(wm2_config$bar_options$axis_range_padding), 0.02),
+  paste0(
+    "eigt-wm2 should opt into automatic scaling, paced deterministic frames, ",
+    "bar-attached labels, and two-percent range padding."
+  )
 )
 
 if (file.exists(wm2_config$data.file)) {
