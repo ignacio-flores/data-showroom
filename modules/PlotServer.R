@@ -7,12 +7,12 @@ require(scales)
 plot_text_style <- list(
   family = "Arial",
   color = "black",
-  axis_title_size = 16,
-  axis_tick_size = 16,
-  legend_size = 16,
-  hover_size = 18,
-  facet_size = 18,
-  data_label_size = 16
+  axis_title_size = 20,
+  axis_tick_size = 20,
+  legend_size = 20,
+  hover_size = 20,
+  facet_size = 20,
+  data_label_size = 20
 )
 
 plotly_font <- function(size = plot_text_style$legend_size,
@@ -3819,7 +3819,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             xanchor = "right",
             yanchor = "top",
             showarrow = FALSE,
-            font = plotly_font(12, color = "#666666"),
+            font = plotly_font(plot_text_style$data_label_size, color = "#666666"),
             bgcolor = "rgba(255,255,255,0.8)",
             borderpad = 3
           ))

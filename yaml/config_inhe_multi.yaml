@@ -52,7 +52,7 @@ fixed_selectors:
      choices: c("Ratio", "Aggregate")
   d5_dboard_specific_lab:
     label: "Valutation"
-    type: "Economic Flow"   
+    selected: "Economic Flow"
 
 #define loose selectors 
 loose_selectors:

@@ -64,6 +64,51 @@ recipe_for_output <- function(path, data_sources) {
   NULL
 }
 
+recipe_dependency_names <- function(recipes) {
+  output_owner <- character()
+  for (recipe in recipes) {
+    duplicate_outputs <- intersect(names(output_owner), recipe$outputs)
+    if (length(duplicate_outputs)) {
+      stop(sprintf(
+        "Multiple recipes produce the same output(s): %s",
+        paste(duplicate_outputs, collapse = ", ")
+      ))
+    }
+    output_owner[recipe$outputs] <- recipe$name
+  }
+
+  dependencies <- lapply(recipes, function(recipe) {
+    owners <- unname(output_owner[recipe$inputs])
+    unique(owners[!is.na(owners)])
+  })
+  names(dependencies) <- vapply(recipes, `[[`, character(1), "name")
+  dependencies
+}
+
+order_recipes_by_dependencies <- function(recipes) {
+  if (!length(recipes)) return(recipes)
+
+  dependencies <- recipe_dependency_names(recipes)
+  remaining <- names(dependencies)
+  ordered <- character()
+
+  while (length(remaining)) {
+    ready <- remaining[vapply(remaining, function(name) {
+      all(!dependencies[[name]] %in% remaining)
+    }, logical(1))]
+    if (!length(ready)) {
+      stop(sprintf(
+        "Recipe dependency cycle detected among: %s",
+        paste(remaining, collapse = ", ")
+      ))
+    }
+    ordered <- c(ordered, ready)
+    remaining <- setdiff(remaining, ready)
+  }
+
+  recipes[ordered]
+}
+
 collect_preparation_requirements <- function(selected, data_sources) {
   required_data <- unique(unlist(
     lapply(selected, target_required_data_paths, data_sources = data_sources),
@@ -90,10 +135,12 @@ collect_preparation_requirements <- function(selected, data_sources) {
     }
   }
 
+  recipes <- order_recipes_by_dependencies(data_sources$recipes[recipe_names])
+
   list(
     required_data = required_data,
     direct_files = direct_files,
-    recipes = data_sources$recipes[recipe_names]
+    recipes = recipes
   )
 }
 
@@ -182,7 +229,10 @@ input_mtime_for_recipe <- function(path, data_sources, planned = FALSE) {
   file_mtime(path)
 }
 
-analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
+analyze_recipe <- function(recipe,
+                            data_sources,
+                            planned = FALSE,
+                            generated_outputs = character()) {
   outputs_exist <- file.exists(recipe$outputs)
   missing_outputs <- recipe$outputs[!outputs_exist]
   input_mtimes <- do.call(c, lapply(
@@ -194,7 +244,9 @@ analyze_recipe <- function(recipe, data_sources, planned = FALSE) {
   oldest_output <- if (all(is.na(output_mtimes))) as.POSIXct(NA) else min(output_mtimes, na.rm = TRUE)
   input_missing <- recipe$inputs[!vapply(recipe$inputs, function(path) {
     mapping <- data_sources$files[[path]]
-    file.exists(path) || (!is.null(mapping) && file.exists(mapping$source))
+    file.exists(path) ||
+      path %in% generated_outputs ||
+      (!is.null(mapping) && file.exists(mapping$source))
   }, logical(1))]
 
   if (length(input_missing)) {
@@ -260,7 +312,14 @@ build_preparation_plan <- function(selected, data_sources, planned = TRUE) {
   requirements <- collect_preparation_requirements(selected, data_sources)
   direct <- lapply(requirements$direct_files, analyze_direct_file, data_sources = data_sources)
   names(direct) <- requirements$direct_files
-  recipes <- lapply(requirements$recipes, analyze_recipe, data_sources = data_sources, planned = planned)
+  generated_outputs <- unique(unlist(lapply(requirements$recipes, `[[`, "outputs"), use.names = FALSE))
+  recipes <- lapply(
+    requirements$recipes,
+    analyze_recipe,
+    data_sources = data_sources,
+    planned = planned,
+    generated_outputs = generated_outputs
+  )
 
   list(
     requirements = requirements,
@@ -493,8 +552,19 @@ prepare_deployment_data <- function(selected,
     }
   }
 
+  recipe_dependencies <- recipe_dependency_names(prep_plan$requirements$recipes)
+  generated_outputs <- unique(unlist(
+    lapply(prep_plan$requirements$recipes, `[[`, "outputs"),
+    use.names = FALSE
+  ))
+  rebuilt_recipes <- character()
   for (recipe in prep_plan$requirements$recipes) {
-    status <- analyze_recipe(recipe, data_sources, planned = FALSE)
+    status <- analyze_recipe(
+      recipe,
+      data_sources,
+      planned = FALSE,
+      generated_outputs = generated_outputs
+    )
     if (isTRUE(status$error)) {
       stop(sprintf(
         "Cannot run recipe %s; missing inputs: %s",
@@ -504,7 +574,10 @@ prepare_deployment_data <- function(selected,
     }
     should_run <- identical(status$status, "missing-output")
     if (identical(status$status, "stale-output")) {
-      should_run <- recipe_refresh_decisions[[recipe$name]]
+      should_run <- any(recipe_dependencies[[recipe$name]] %in% rebuilt_recipes)
+      if (!should_run) {
+        should_run <- recipe_refresh_decisions[[recipe$name]]
+      }
       if (is.null(should_run)) {
         should_run <- resolve_stale_decision(
           recipe$name,
@@ -518,6 +591,7 @@ prepare_deployment_data <- function(selected,
     if (isTRUE(should_run)) {
       if (!isTRUE(quiet)) cat(sprintf("Running recipe %s (%s)\n", recipe$name, recipe$script))
       run_recipe(recipe)
+      rebuilt_recipes <- c(rebuilt_recipes, recipe$name)
     } else if (!isTRUE(quiet)) {
       cat(sprintf("Using cached artifacts for recipe %s\n", recipe$name))
     }

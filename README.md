@@ -134,16 +134,24 @@ checkout, large/generated files may be ignored and need to be rebuilt locally:
 - `data/taxw_kf3_ready.qs`
 - `data/taxw_us_state_long.qs`
 - `data/taxw_us_state_ft_wide.qs`
+- `data/warehouse_meta_v2.csv`
+- `data/inhe_warehouse_meta_v2.csv`
+- `data/ineq_warehouse_meta_v2.csv`
+- `data/taxw_warehouse_meta_v2.csv`
+- `data/topo_warehouse_meta_v2.csv`
 - `data/methodological_table.xlsx`
 - `data/dictionary.xlsx`
 - `data/supplementary_var_long.csv`
 
 The `eigt_wm1` config uses the prepared `data/taxw_wm_ready.qs` artifact. The `eigt_wm2` config uses `data/taxw_wm2_ready.qs`, which retains general-government revenue rows for the animated bar chart. The `eigt_us*` configs use the US-state artifacts. Other `eigt_*` configs reference additional files such as `data/taxw_wide_viz.csv` and `data/taxw_warehouse_meta_v1_2.csv`, which are not currently committed here. Those presets will need the missing source data before they can run.
 
-The `eigt_kf2` and `eigt_kf3` configs use chart-ready `data/taxw_kf2_ready.qs`
-and `data/taxw_kf3_ready.qs` artifacts. The deployment tool rebuilds these
-from the warehouse source when needed, keeping the 1.9 GB source CSV and its
-normalization work out of worker startup.
+The deployment tool copies the canonical warehouse once, then derives the four
+dashboard-family CSVs from its `d1_dashboard` classification before rebuilding
+any chart-ready artifacts. The canonical warehouse is preparation-only and is
+never included in a published app bundle. The `eigt_kf2` and `eigt_kf3`
+configs use chart-ready `data/taxw_kf2_ready.qs` and
+`data/taxw_kf3_ready.qs`, keeping warehouse normalization work out of worker
+startup.
 
 ## How configuration works
 

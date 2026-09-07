@@ -6,18 +6,9 @@ source_roots:
     env: "DATA_SHOWROOM_GCWEALTH_ROOT"
 
 files:
-  data/inhe_warehouse_meta_v2.csv:
+  data/warehouse_meta_v2.csv:
     root: gcwealth
-    path: output/databases/dashboards/inhe_warehouse_meta_v2.csv
-  data/ineq_warehouse_meta_v2.csv:
-    root: gcwealth
-    path: output/databases/dashboards/ineq_warehouse_meta_v2.csv
-  data/taxw_warehouse_meta_v2.csv:
-    root: gcwealth
-    path: output/databases/dashboards/taxw_warehouse_meta_v2.csv
-  data/topo_warehouse_meta_v2.csv:
-    root: gcwealth
-    path: output/databases/dashboards/topo_warehouse_meta_v2.csv
+    path: output/databases/warehouse/warehouse_meta_v2.csv
   data/supplementary_var_long.csv:
     root: gcwealth
     path: output/databases/supplementary_variables/supplementary_var_long.csv
@@ -29,6 +20,16 @@ files:
     path: handmade_tables/dictionary.xlsx
 
 recipes:
+  dashboard_warehouse_slices:
+    script: custom_code/prepare_warehouse_dashboard_slices.R
+    inputs:
+      - data/warehouse_meta_v2.csv
+      - custom_code/helpers/warehouse_dashboard_slices.R
+    outputs:
+      - data/inhe_warehouse_meta_v2.csv
+      - data/ineq_warehouse_meta_v2.csv
+      - data/taxw_warehouse_meta_v2.csv
+      - data/topo_warehouse_meta_v2.csv
   topo_bundle:
     script: custom_code/prepare_topo_bundle.R
     inputs:
