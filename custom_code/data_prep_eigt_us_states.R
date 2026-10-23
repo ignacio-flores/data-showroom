@@ -21,12 +21,14 @@ tax_feature_concepts <- c(
 
 state_revenue_concepts <- c(
   "Total Revenue from Tax",
-  "Total Revenue from Tax as % of Total Tax Revenue"
+  "Total Revenue from Tax as % of Total Tax Revenue",
+  "Total Revenue from Tax as % of Gross Domestic Product"
 )
 
 target_concepts <- c(tax_feature_concepts, state_revenue_concepts)
 revenue_concepts <- state_revenue_concepts
 status_concept <- "Tax Indicator"
+state_revenue_sector <- "EIG Tax, regional government level"
 schedule_tax_types <- c("Gift tax", "Inheritance tax", "Estate tax")
 inheritance_estate_tax_types <- c("Inheritance tax", "Estate tax")
 state_panel_keys <- c("GEO", "GEO_long", "year")
@@ -209,7 +211,7 @@ create_zero_schedule_rows <- function(status_rows, reference_cols) {
   zero_rows[, reference_cols, drop = FALSE]
 }
 
-apply_state_tax_indicator_to_schedules <- function(ft_data, status_lookup) {
+complete_state_ft_schedules <- function(ft_data, status_lookup) {
   ft_data <- ft_data %>%
     add_eigt_tax_kinship("d2_label") %>%
     left_join(
@@ -225,19 +227,31 @@ apply_state_tax_indicator_to_schedules <- function(ft_data, status_lookup) {
       )
     )
 
-  inherited_or_estate_levy <- status_lookup %>%
-    filter(tax_type %in% inheritance_estate_tax_types) %>%
-    group_by(GEO, year, kinship) %>%
-    summarise(has_inheritance_or_estate_tax = any(tax_indicator == 1), .groups = "drop")
+  drawable_schedules <- ft_data %>%
+    group_by(GEO, year, tax_type, kinship) %>%
+    summarise(
+      drawable = is_drawable_ft_schedule(typtax, exempt, adjmrt),
+      .groups = "drop"
+    ) %>%
+    filter(drawable)
 
   inheritance_estate_zero_rows <- status_lookup %>%
-    filter(tax_type == "Estate tax") %>%
-    left_join(inherited_or_estate_levy, by = c("GEO", "year", "kinship")) %>%
-    filter(!has_inheritance_or_estate_tax) %>%
-    select(-has_inheritance_or_estate_tax)
+    filter(tax_type == "Estate tax", kinship == "Children") %>%
+    anti_join(
+      drawable_schedules %>%
+        filter(tax_type %in% inheritance_estate_tax_types) %>%
+        distinct(GEO, year),
+      by = c("GEO", "year")
+    )
 
   gift_zero_rows <- status_lookup %>%
-    filter(tax_type == "Gift tax", tax_indicator == 0)
+    filter(tax_type == "Gift tax", kinship == "Children", tax_indicator == 0) %>%
+    anti_join(
+      drawable_schedules %>%
+        filter(tax_type == "Gift tax") %>%
+        distinct(GEO, year),
+      by = c("GEO", "year")
+    )
 
   zero_schedule_rows <- bind_rows(
     inheritance_estate_zero_rows,
@@ -245,9 +259,7 @@ apply_state_tax_indicator_to_schedules <- function(ft_data, status_lookup) {
   ) %>%
     create_zero_schedule_rows(names(ft_data))
 
-  ft_data %>%
-    filter(!tax_type %in% schedule_tax_types | tax_indicator == 1) %>%
-    bind_rows(zero_schedule_rows)
+  bind_rows(ft_data, zero_schedule_rows)
 }
 
 cpi <- load_us_cpi()
@@ -343,27 +355,40 @@ state_tax_status <- state_tax_data %>%
     .groups = "drop"
   )
 
-state_tax_views <- state_tax_data %>%
-  left_join(state_tax_status, by = c(state_panel_keys, "tax_type")) %>%
+state_tax_data <- state_tax_data %>%
+  left_join(state_tax_status, by = c(state_panel_keys, "tax_type"))
+
+# Status describes the state's own tax. Rates and thresholds can still have
+# values for a federal estate tax when that status is zero. Select the combined
+# source separately for each metric, using a positive value when one exists.
+state_status_views <- state_tax_data %>%
+  filter(d4_concept_lab == status_concept) %>%
   add_eigt_inheritance_estate_view(
     view_col = "tax_type_view",
     key_cols = state_panel_keys,
     active_col = ".tax_active",
     kinship_priority = eigt_visible_kinship_choices
-  ) %>%
+  )
+
+state_metric_views <- state_tax_data %>%
+  filter(d4_concept_lab != status_concept) %>%
+  add_eigt_inheritance_estate_metric_view(key_cols = state_panel_keys)
+
+state_tax_views <- bind_rows(state_status_views, state_metric_views) %>%
   filter(tax_type_view %in% eigt_tax_type_view_choices) %>%
   mutate(
     revenue_tax_category = NA_character_,
     tax_category = as.character(tax_type_view)
-  )
+  ) %>%
+  select(-.tax_active)
 
-# Revenue categories follow their raw general-government sector. They are not
+# Revenue categories follow their raw regional-government sector. They are not
 # legal-regime views and must never be repeated under inheritance, estate, gift,
 # or the combined inheritance-or-estate feature view.
 state_revenue_data <- raw %>%
   filter(
     d4_concept_lab %in% revenue_concepts,
-    d2_sector_lab %in% names(eigt_revenue_sector_categories)
+    d2_sector_lab == state_revenue_sector
   ) %>%
   mutate(
     value = suppressWarnings(as.numeric(value)),
@@ -379,13 +404,42 @@ state_revenue_data <- raw %>%
     varcode = first_non_missing_character(varcode),
     .groups = "drop"
   ) %>%
-  add_eigt_tax_kinship("d2_sector_lab") %>%
-  add_eigt_revenue_tax_category("d2_sector_lab") %>%
-  filter(!is.na(revenue_tax_category)) %>%
   mutate(
+    tax_type = NA_character_,
+    kinship = "Regional government level",
+    revenue_tax_category = eigt_revenue_tax_category_eig,
     tax_type_view = NA_character_,
     tax_category = revenue_tax_category
   )
+
+# The source has positive state EIG revenue in 2017–2020, but reports every
+# available GDP-share observation as zero in those years. Treat those years as
+# unavailable for this measure instead of presenting missing shares as zeros.
+unavailable_gdp_years <- state_revenue_data %>%
+  group_by(year) %>%
+  summarise(
+    has_positive_revenue = any(
+      d4_concept_lab == "Total Revenue from Tax" & value > 0,
+      na.rm = TRUE
+    ),
+    has_gdp_share = any(
+      d4_concept_lab == "Total Revenue from Tax as % of Gross Domestic Product"
+    ),
+    has_positive_gdp_share = any(
+      d4_concept_lab == "Total Revenue from Tax as % of Gross Domestic Product" &
+        value > 0,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) %>%
+  filter(has_positive_revenue, has_gdp_share, !has_positive_gdp_share) %>%
+  pull(year)
+
+state_revenue_data <- state_revenue_data %>%
+  filter(!(
+    d4_concept_lab == "Total Revenue from Tax as % of Gross Domestic Product" &
+      year %in% unavailable_gdp_years
+  ))
 
 long_data <- bind_rows(state_tax_views, state_revenue_data) %>%
   left_join(cpi, by = "year") %>%
@@ -472,15 +526,36 @@ if (length(monetary_ft_cols) > 0) {
 ft_data <- ft_data %>%
   mutate(xrate_lab = usd_2023_label) %>%
   select(-cpi) %>%
-  apply_state_tax_indicator_to_schedules(schedule_status) %>%
-  filter(kinship == "Children")
+  complete_state_ft_schedules(schedule_status) %>%
+  filter(
+    tax_type %in% schedule_tax_types,
+    kinship %in% eigt_visible_kinship_choices
+  )
 
 ft_data <- ft_data %>%
   group_by(GEO, year, d2_label) %>%
   mutate(.drawable_ft_schedule = is_drawable_ft_schedule(typtax, exempt, adjmrt)) %>%
   ungroup() %>%
   filter(.drawable_ft_schedule) %>%
-  select(-.drawable_ft_schedule) %>%
+  select(-.drawable_ft_schedule)
+
+# Use a positive observed schedule before a zero fallback; among equally
+# informative schedules, keep the established Children-then-Everybody order.
+chosen_kinships <- ft_data %>%
+  group_by(GEO, year, tax_type, kinship) %>%
+  summarise(
+    has_positive_rate = any(!is.na(adjmrt) & adjmrt > 0),
+    .groups = "drop"
+  ) %>%
+  mutate(kinship_rank = match(kinship, eigt_visible_kinship_choices)) %>%
+  group_by(GEO, year, tax_type) %>%
+  arrange(desc(has_positive_rate), kinship_rank, .by_group = TRUE) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(GEO, year, tax_type, kinship)
+
+ft_data <- ft_data %>%
+  semi_join(chosen_kinships, by = c("GEO", "year", "tax_type", "kinship")) %>%
   arrange(state_name, year, d2_label, d5_code)
 
 qs::qsave(long_data, long_output_file, preset = "fast")

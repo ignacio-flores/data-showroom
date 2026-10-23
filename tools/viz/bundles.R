@@ -151,6 +151,22 @@ file_mtime <- function(path) {
   file.info(path)$mtime
 }
 
+file_size <- function(path) {
+  if (!file.exists(path)) {
+    return(NA_real_)
+  }
+  as.numeric(file.info(path)$size)
+}
+
+file_ends_with_newline <- function(path) {
+  size <- file_size(path)
+  if (is.na(size) || size == 0) return(FALSE)
+  con <- file(path, open = "rb")
+  on.exit(close(con), add = TRUE)
+  seek(con, where = size - 1)
+  identical(readBin(con, what = "raw", n = 1L), as.raw(0x0A))
+}
+
 newer_than <- function(left, right) {
   !is.na(left) && !is.na(right) && left > right
 }
@@ -174,6 +190,7 @@ analyze_direct_file <- function(path, data_sources) {
 
   source_exists <- file.exists(mapping$source)
   source_mtime <- file_mtime(mapping$source)
+  source_size <- file_size(mapping$source)
   if (!source_exists) {
     return(list(
       path = path,
@@ -198,14 +215,22 @@ analyze_direct_file <- function(path, data_sources) {
     ))
   }
 
-  if (newer_than(source_mtime, local_mtime)) {
+  local_size <- file_size(path)
+  incomplete_csv <- grepl("\\.csv$", path, ignore.case = TRUE) &&
+    !is.na(source_size) && !is.na(local_size) &&
+    local_size < source_size &&
+    file_ends_with_newline(mapping$source) &&
+    !file_ends_with_newline(path)
+  if (incomplete_csv || newer_than(source_mtime, local_mtime)) {
     return(list(
       path = path,
       source = mapping$source,
       local_mtime = local_mtime,
       source_mtime = source_mtime,
+      local_size = local_size,
+      source_size = source_size,
       status = "stale-cache",
-      action = "needs refresh decision",
+      action = if (incomplete_csv) "needs refresh decision (incomplete CSV)" else "needs refresh decision",
       error = FALSE
     ))
   }
@@ -410,12 +435,20 @@ print_preparation_plan <- function(prep_plan, data_sources, dry_run = FALSE) {
 }
 
 stale_detail_direct <- function(item) {
+  size_detail <- if (!is.null(item$local_size) && !is.null(item$source_size) &&
+                     !is.na(item$local_size) && !is.na(item$source_size) &&
+                     item$local_size != item$source_size) {
+    sprintf("\n  size:   local %.0f bytes; source %.0f bytes", item$local_size, item$source_size)
+  } else {
+    ""
+  }
   sprintf(
-    "  local:  %s (%s)\n  source: %s (%s)",
+    "  local:  %s (%s)\n  source: %s (%s)%s",
     item$path,
     format_time(item$local_mtime),
     item$source,
-    format_time(item$source_mtime)
+    format_time(item$source_mtime),
+    size_detail
   )
 }
 
@@ -483,9 +516,22 @@ copy_source_file <- function(item, data_sources) {
     stop(sprintf("No source mapping for %s.", item$path))
   }
   dir.create(dirname(item$path), recursive = TRUE, showWarnings = FALSE)
-  ok <- file.copy(mapping$source, item$path, overwrite = TRUE, copy.date = TRUE)
+  staged <- tempfile(
+    pattern = paste0(".", basename(item$path), ".partial-"),
+    tmpdir = dirname(item$path)
+  )
+  on.exit(unlink(staged), add = TRUE)
+  source_size <- file_size(mapping$source)
+  ok <- file.copy(mapping$source, staged, overwrite = FALSE, copy.date = TRUE)
   if (!isTRUE(ok)) {
-    stop(sprintf("Failed to copy %s to %s.", mapping$source, item$path))
+    stop(sprintf("Failed to stage %s for %s.", mapping$source, item$path))
+  }
+  if (is.na(source_size) || file_size(staged) != source_size ||
+      file_size(mapping$source) != source_size) {
+    stop(sprintf("Incomplete or changing source copy for %s; cached file was preserved.", item$path))
+  }
+  if (!file.rename(staged, item$path)) {
+    stop(sprintf("Failed to replace cached file %s; previous cache was preserved.", item$path))
   }
 }
 

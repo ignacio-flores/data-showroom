@@ -20,6 +20,22 @@ data <- data %>%
   ) %>%
   filter(`_sum_rate` != 0 | `_full_exemption_schedule`) %>%
   ungroup() %>%
-  add_eigt_tax_kinship("d2_label") %>%
-  add_eigt_inheritance_estate_view("tax_type_view") %>%
+  add_eigt_tax_kinship("d2_label")
+
+if ("state_abbr" %in% names(data)) {
+  data <- data %>%
+    group_by(GEO, year, tax_type) %>%
+    mutate(.schedule_positive = any(!is.na(adjmrt) & adjmrt > 0)) %>%
+    ungroup() %>%
+    add_eigt_inheritance_estate_view(
+      "tax_type_view",
+      key_cols = c("GEO", "GEO_long", "year"),
+      active_col = ".schedule_positive"
+    ) %>%
+    select(-.schedule_positive)
+} else {
+  data <- add_eigt_inheritance_estate_view(data, "tax_type_view")
+}
+
+data <- data %>%
   select(-`_sum_rate`, -`_full_exemption_schedule`)

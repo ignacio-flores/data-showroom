@@ -92,7 +92,8 @@ createViz <- function(graph = NULL,
         ),
         currency_selector = value_transform$currency_selector %||% "xrate_lab",
         columns = value_transform$columns,
-        scale_divisor = value_transform$scale_divisor %||% 1
+        scale_divisor = value_transform$scale_divisor %||% 1,
+        apply_when = value_transform$apply_when
       )
       selector_groups <- inject_currency_selector_group_choices(
         fixed_selectors,
@@ -438,7 +439,8 @@ createViz <- function(graph = NULL,
           currency_label = currency_label,
           columns = value_transform_state$columns,
           scale_divisor = value_transform_state$scale_divisor,
-          currency_selector = value_transform_state$currency_selector
+          currency_selector = value_transform_state$currency_selector,
+          apply_when = value_transform_state$apply_when
         )
       } else {
         materialize_currency_unit(

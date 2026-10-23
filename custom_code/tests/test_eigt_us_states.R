@@ -3,6 +3,7 @@
 library(dplyr)
 library(qs)
 library(yaml)
+source("modules/create_selectors.R")
 
 fail <- function(message) {
   stop(message, call. = FALSE)
@@ -101,7 +102,8 @@ expected_state_concepts <- c(
   "Top Marginal Rate",
   "Exemption Threshold",
   "Total Revenue from Tax",
-  "Total Revenue from Tax as % of Total Tax Revenue"
+  "Total Revenue from Tax as % of Total Tax Revenue",
+  "Total Revenue from Tax as % of Gross Domestic Product"
 )
 
 expected_tax_views <- c(
@@ -120,19 +122,34 @@ expect_equal(
   "US map should default to total revenue from tax as a share of total tax revenue."
 )
 expect_equal(
-  us1_config$fixed_selectors$d4_concept_lab$choices,
+  unlist(us1_config$fixed_selectors$d4_concept_lab$choices, use.names = FALSE),
   expected_state_concepts,
-  "US map should expose the ordered state tax features without the GDP share."
+  "US map should expose all six ordered state tax features."
 )
 expect_equal(
-  us2_config$fixed_selectors$d4_concept_lab$choices,
-  expected_state_concepts,
-  "US trend graph should expose the ordered state tax features without the GDP share."
+  names(us1_config$fixed_selectors$d4_concept_lab$choices)[[1]],
+  "Tax Status",
+  "US map should display Tax Status for the tax indicator feature."
+)
+expect_equal(
+  unlist(us2_config$fixed_selectors$d4_concept_lab$choices, use.names = FALSE),
+  expected_state_concepts[-1],
+  "US trend graph should expose the five ordered tax features without Tax Status."
 )
 expect_equal(
   names(us1_config$loose_selectors),
-  "tax_category",
-  "US map should expose one feature-dependent tax-category selector."
+  c("year", "tax_category"),
+  "US map should expose year and feature-dependent tax-category selectors."
+)
+expect_equal(
+  us1_config$loose_selectors$year$type,
+  "reactive selector",
+  "US map year should react to the chosen tax feature."
+)
+expect_equal(
+  us1_config$loose_selectors$year$select,
+  "latest",
+  "US map should select the latest year with data for each feature."
 )
 expect_equal(
   names(us2_config$loose_selectors),
@@ -230,7 +247,7 @@ if (file.exists(us1_config$data.file)) {
   expect_set_equal(
     unique(long_data$d4_concept_lab),
     expected_state_concepts,
-    "State long data should contain the five approved state tax features."
+    "State long data should contain the six approved state tax features."
   )
   expect_true(
     all(c(
@@ -324,16 +341,16 @@ if (file.exists(us1_config$data.file)) {
   )
 
   revenue_rows <- chart_rows %>%
-    filter(d4_concept_lab %in% expected_state_concepts[4:5])
+    filter(d4_concept_lab %in% expected_state_concepts[4:6])
   expect_set_equal(
     unique(revenue_rows$d2_sector_lab),
-    "EIG Tax, general government level",
-    "Only the general EIG revenue series should feed normalized state views."
+    "EIG Tax, regional government level",
+    "Only the regional EIG revenue series should feed normalized state views."
   )
   expect_set_equal(
     unique(revenue_rows$kinship),
-    "General government level",
-    "State revenue should retain its raw general-government relationship."
+    "Regional government level",
+    "State revenue should retain its raw regional-government relationship."
   )
   expect_set_equal(
     as.character(unique(revenue_rows$revenue_tax_category)),
@@ -350,6 +367,48 @@ if (file.exists(us1_config$data.file)) {
     "State revenue rows should never be assigned to a legal tax view."
   )
 
+  gdp_rows <- revenue_rows %>%
+    filter(d4_concept_lab == "Total Revenue from Tax as % of Gross Domestic Product")
+  expect_equal(
+    max(gdp_rows$year),
+    2016,
+    "State GDP-share series should end in 2016, its latest year with usable values."
+  )
+  expect_true(
+    any(gdp_rows$value > 0, na.rm = TRUE),
+    "State GDP-share series should retain positive observations."
+  )
+  trend_gdp <- filter_fixed(
+    long_data,
+    modifyList(us2_config$fixed_selectors, list(
+      d4_concept_lab = list(
+        selected = "Total Revenue from Tax as % of Gross Domestic Product"
+      )
+    ))
+  ) %>%
+    filter(tax_category == expected_eig_revenue_category)
+  expect_true(
+    nrow(trend_gdp) > 0 && any(trend_gdp$value > 0, na.rm = TRUE),
+    "US trend GDP-share selection should produce positive values."
+  )
+  expect_equal(
+    max(trend_gdp$year),
+    2016,
+    "US trend GDP-share selection should end at the latest usable year."
+  )
+  expect_equal(
+    loose_selector_next_selection(
+      "reactive selector",
+      sort(unique(gdp_rows$year)),
+      current_selection = 2020,
+      select_mode = "latest",
+      initialized = TRUE,
+      refresh_selection = TRUE
+    ),
+    max(gdp_rows$year),
+    "Choosing GDP share should move the map year to 2016."
+  )
+
   us1_start <- filter_fixed(long_data, us1_config$fixed_selectors) %>%
     filter(tax_category == us1_config$loose_selectors$tax_category$selected)
   expect_true(nrow(us1_start) > 0, "eigt-us1 startup filters should produce rows.")
@@ -357,6 +416,29 @@ if (file.exists(us1_config$data.file)) {
   us2_start <- filter_fixed(long_data, us2_config$fixed_selectors) %>%
     filter(tax_category %in% us2_config$loose_selectors$tax_category$selected)
   expect_true(nrow(us2_start) > 0, "eigt-us2 startup filters should produce rows.")
+
+  for (feature in c("Top Marginal Rate", "Exemption Threshold")) {
+    trend_combined <- filter_fixed(
+      long_data,
+      modifyList(us2_config$fixed_selectors, list(
+        d4_concept_lab = list(selected = feature)
+      ))
+    ) %>%
+      filter(
+        year == 2020,
+        tax_category == "Inheritance or estate tax",
+        state_name %in% c("California", "Florida", "Texas")
+      )
+    expect_set_equal(
+      trend_combined$state_name,
+      c("California", "Florida", "Texas"),
+      paste("US trend combined view should include non-levying states for", feature)
+    )
+    expect_true(
+      all(trend_combined$value > 0) && all(trend_combined$tax_type == "Estate tax"),
+      paste("US trend combined view should use the federal estate value for", feature)
+    )
+  }
 } else {
   message("Skipping US-state long artifact checks; ", us1_config$data.file, " is not present.")
 }
@@ -370,8 +452,18 @@ if (file.exists(us3_config$data.file)) {
   expect_equal(length(unique(ft_data$state_abbr)), 51L, "State FT data should include 50 states plus DC.")
   expect_set_equal(
     unique(ft_data$kinship),
-    "Children",
-    "State FT data should use a single canonical schedule variant."
+    c("Children", "Everybody"),
+    "State FT data should use Everybody when no Children schedule is available."
+  )
+  duplicate_schedule_variants <- ft_data %>%
+    filter(tax_type_view != "Inheritance or estate tax") %>%
+    distinct(GEO, year, tax_type, kinship) %>%
+    count(GEO, year, tax_type, name = ".kinships") %>%
+    filter(.kinships > 1)
+  expect_equal(
+    nrow(duplicate_schedule_variants),
+    0L,
+    "Each state-year source tax should use one schedule variant."
   )
 
   ft_start <- filter_fixed(ft_data, us3_config$fixed_selectors)
@@ -385,16 +477,35 @@ if (file.exists(us3_config$data.file)) {
     group_by(state_name) %>%
     summarise(max_rate = max(adjmrt, na.rm = TRUE), .groups = "drop")
 
-  zero_tax_states <- c("California", "Texas")
+  federal_estate_states <- c("California", "Texas")
   positive_tax_states <- c("Massachusetts", "New York", "Washington")
 
   expect_true(
-    all(zero_tax_states %in% default_rates$state_name),
-    "eigt-us3 default should include zero-tax comparison states."
+    all(federal_estate_states %in% default_rates$state_name),
+    "eigt-us3 default should include states without their own estate tax."
   )
   expect_true(
-    all(default_rates$max_rate[default_rates$state_name %in% zero_tax_states] == 0),
-    "Non-levying default states should show a flat zero state-tax schedule."
+    all(default_rates$max_rate[default_rates$state_name %in% federal_estate_states] > 0),
+    "Non-levying default states should show their federal estate schedule."
+  )
+  federal_default_rows <- ft_start %>%
+    filter(state_name %in% federal_estate_states)
+  expect_true(
+    all(federal_default_rows$tax_indicator == 0) &&
+      all(federal_default_rows$tax_type == "Estate tax") &&
+      all(federal_default_rows$kinship == "Everybody"),
+    "Federal estate brackets should remain visible despite zero own-tax status."
+  )
+  federal_positive_brackets <- federal_default_rows %>%
+    filter(adjmrt > 0)
+  expect_set_equal(
+    federal_positive_brackets$state_name,
+    federal_estate_states,
+    "Federal estate rates should remain drawable for both comparison states."
+  )
+  expect_true(
+    all(federal_positive_brackets$adjlbo > 0),
+    "Federal estate rates should retain their exemption threshold on the x-axis."
   )
   expect_true(
     all(positive_tax_states %in% default_rates$state_name),
@@ -416,13 +527,13 @@ if (file.exists(us3_config$data.file)) {
 
   expect_true(
     all(c("California", "Florida", "Texas") %in% latest_combined$state_name),
-    "Non-levying states should still have explicit zero schedules in the combined view."
+    "Non-levying states should remain in the combined schedule view."
   )
   expect_true(
     all(latest_combined$max_rate[
       latest_combined$state_name %in% c("California", "Florida", "Texas")
-    ] == 0),
-    "California, Florida, and Texas should not show positive state schedules."
+    ] > 0),
+    "California, Florida, and Texas should show the federal estate schedule."
   )
   expect_true(
     all(latest_combined$max_rate[

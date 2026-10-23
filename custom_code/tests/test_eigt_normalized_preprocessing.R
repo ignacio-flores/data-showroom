@@ -651,6 +651,32 @@ preview_data <- run_preview_wrangler(
   wide_input,
   preview_config
 )
+legacy_wide_input <- wide_input
+legacy_revenue <- legacy_wide_input$d2_code %in% c("tg", "gg")
+legacy_wide_input$d2_code[legacy_wide_input$d2_code == "tg"] <- "ta"
+legacy_wide_input$d2_code[legacy_wide_input$d2_code == "gg"] <- "ga"
+legacy_wide_input$d2_label[legacy_revenue] <- NA_character_
+legacy_preview <- run_preview_wrangler(
+  "custom_code/data_prep_eigt_kf1_dual.R",
+  legacy_wide_input,
+  preview_config
+)
+expect_numeric_equal(
+  legacy_preview %>%
+    filter(year == 2020,
+           revenue_tax_category == eigt_revenue_tax_category_eig) %>%
+    pull(prorev) %>% unique(),
+  5,
+  "Older ta-coded EIG revenue should remain available on the left axis."
+)
+expect_numeric_equal(
+  legacy_preview %>%
+    filter(year == 2020,
+           revenue_tax_category == eigt_revenue_tax_category_gift) %>%
+    pull(prorev) %>% unique(),
+  99,
+  "Older ga-coded gift revenue should remain available on the left axis."
+)
 expect_equal(
   as.character(unique(preview_data$xrate_lab)),
   preview_config$fixed_selectors$xrate_lab$selected,

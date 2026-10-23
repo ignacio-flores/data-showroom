@@ -28,12 +28,12 @@ fixed_selectors:
     label: "Select Tax Feature"
     selected: "Top Marginal Rate"
     choices:
-      - "Tax Indicator"
-      - "Top Marginal Rate"
-      - "Exemption Threshold"
-      - "Total Revenue from Tax"
-      - "Total Revenue from Tax as % of Total Tax Revenue"
-      - "Total Revenue from Tax as % of Gross Domestic Product"
+      "Tax Status": "Tax Indicator"
+      "Top Marginal Rate": "Top Marginal Rate"
+      "Exemption Threshold": "Exemption Threshold"
+      "Total Revenue from Tax": "Total Revenue from Tax"
+      "Total Revenue from Tax as % of Total Tax Revenue": "Total Revenue from Tax as % of Total Tax Revenue"
+      "Total Revenue from Tax as % of GDP": "Total Revenue from Tax as % of Gross Domestic Product"
   xrate_lab:
     label: "Currency & Price Adjustment"
     selected: "Euro adjusting for inflation"

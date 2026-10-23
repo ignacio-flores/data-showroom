@@ -12,8 +12,21 @@ keep.col:
   - "d4_concept_lab"
   - "d5_dboard_specific_lab"
 
+value_transform:
+  type: "currency_columns"
+  bundle.file: "data/currency_conversion_bundle.qs"
+  currency_selector: "xrate_lab"
+  columns: ["inheritances_gifts_aggregate"]
+
 #define plot type
 gopts: "dual_axis_line"
+dual_axis_options:
+  prevent_duplicate_metrics: true
+  hover:
+    mode: "compact"
+    context_vars:
+      GEO_long:
+        label: "Country"
 plot_height: 700
 hide.selectors: False
 hide.legend: False
@@ -48,6 +61,13 @@ fixed_selectors:
     label: "Country"
     selected: "France"
 
+loose_selectors:
+  xrate_lab:
+    label: "Currency & price adjustment"
+    selected: "Local currency, nominal prices"
+    type: "sticky selector"
+    visible_when: { any: { y_axis: ["inheritances_gifts_aggregate"], y2_axis: ["inheritances_gifts_aggregate"] } }
+
 #define the columns of the data table widget
 dt.cols:
   GEO: "Country code"
@@ -56,15 +76,7 @@ dt.cols:
   inheritances_gifts_ratio: "Inheritances & gifts ratio"
   average_effective_tax_rate: "Average effective tax rate"
   inheritances_gifts_aggregate: "Inheritances & gifts aggregate"
+  xrate_lab: "Aggregate currency"
   legend: "Source"
 
 table.display: True
-
-#define the information shown in the tooltip
-tooltip_vars:
-  GEO_long: "Country:"
-  year: "Year:"
-  inheritances_gifts_ratio: "Inheritances & gifts ratio:"
-  average_effective_tax_rate: "Average effective tax rate:"
-  inheritances_gifts_aggregate: "Inheritances & gifts aggregate:"
-  legend: "Source:"

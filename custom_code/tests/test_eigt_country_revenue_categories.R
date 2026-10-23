@@ -43,12 +43,16 @@ mapped <- map_eigt_revenue_tax_category(c(
   "Gift Tax, general government level",
   "tg",
   "GG",
+  "ta",
+  "GA",
   "Estate Tax for Children",
   NA_character_
 ))
 expect_identical(
   mapped,
   c(
+    eigt_revenue_tax_category_eig,
+    eigt_revenue_tax_category_gift,
     eigt_revenue_tax_category_eig,
     eigt_revenue_tax_category_gift,
     eigt_revenue_tax_category_eig,

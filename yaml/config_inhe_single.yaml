@@ -2,6 +2,13 @@
 data.file: "data/inhe_warehouse_meta_v2.csv"
 data.wrangler: "custom_code/dictionary_loader_inhe.R"
 
+value_transform:
+  type: "currency_columns"
+  bundle.file: "data/currency_conversion_bundle.qs"
+  currency_selector: "xrate_lab"
+  columns: ["value"]
+  apply_when: { column: "d3_vartype_lab", equals: "Aggregate" }
+
 #define plot type 
 gopts: 
  - "line"
@@ -47,6 +54,11 @@ fixed_selectors:
 
 #define loose selectors 
 loose_selectors:
+   xrate_lab:
+    label: "Currency & price adjustment"
+    selected: "Local currency, nominal prices"
+    type: "sticky selector"
+    visible_when: { any: { d3_vartype_lab: ["Aggregate"] } }
    legend: 
     label: "Source"
     type: "reactive checkbox"
@@ -64,6 +76,7 @@ dt.cols:
   year: "Year"
   GEO_long: "Country"
   value: "Value"
+  xrate_lab: "Aggregate currency"
   d4_concept_lab: "Concept"
   d5_dboard_specific_lab: "Valuation"
   legend: "Source"

@@ -14,7 +14,10 @@ eigt_revenue_sector_categories <- c(
 
 eigt_revenue_sector_code_categories <- c(
   "tg" = eigt_revenue_tax_category_eig,
-  "gg" = eigt_revenue_tax_category_gift
+  "gg" = eigt_revenue_tax_category_gift,
+  # Older taxw_wide.qs files use these codes and have no d2_label.
+  "ta" = eigt_revenue_tax_category_eig,
+  "ga" = eigt_revenue_tax_category_gift
 )
 
 # A single-feature selector uses the same field for policy and revenue rows.

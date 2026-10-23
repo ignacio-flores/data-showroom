@@ -172,6 +172,7 @@ Common keys:
 | `loose_selectors` | Selectors whose choices react to the current filtered data |
 | `dt.cols` | Columns shown in the data table and their labels |
 | `tooltip_vars` | Variables shown in plot hover text |
+| `value_transform` | Optional currency and unit conversion; `apply_when` limits column conversion to matching rows |
 | `bar_options` | Optional fixed-axis scale selector and automatic compressed-scale rules for bar plots |
 | `dual_axis_options` | Optional compact hover and duplicate-metric rules for `dual_axis_line` plots |
 | `facet_var` | Optional faceting variable |
@@ -183,6 +184,11 @@ Common keys:
 | `hide.selectors` | Hide controls, useful for embedded views |
 | `listen` | Listen for external JavaScript messages |
 | `meta.loc` | Show metadata in a tab or below the visualization |
+
+Cartesian x-axis labels default to horizontal. For year x-axes,
+`axis_vars.x_axis.breaks` controls the requested spacing and `max_ticks` caps
+the visible labels (five by default). `tick_angle` can override the angle in
+degrees. The embedded previews set the five-tick, horizontal rule explicitly.
 
 ### Minimal example
 
@@ -378,6 +384,14 @@ Rscript custom_code/data_prep_eigt_wide.R
 Rscript custom_code/prepare_currency_bundle.R
 Rscript custom_code/tests/check_eigt_ft_currency_equivalence.R
 ```
+
+Inheritance presets use the same currency bundle for aggregate amounts.
+Their currency selector offers nominal and 2023-price views, including market
+exchange-rate and PPP currencies. In the long-form inheritance presets,
+`value_transform.apply_when` selects `d3_vartype_lab: Aggregate`, so changing
+currency leaves ratios and tax rates unchanged. The dual-axis preset converts
+only `inheritances_gifts_aggregate` and uses compact hover text for the two
+selected measures.
 
 ## Deployment
 

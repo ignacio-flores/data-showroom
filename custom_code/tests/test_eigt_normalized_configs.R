@@ -85,6 +85,25 @@ configs <- setNames(
   target_ids
 )
 
+wm1_choices <- configs$wm1$fixed_selectors$d4_concept_lab$choices
+expect_identical(names(wm1_choices)[[1]], "Tax Status",
+                 "World map should label the indicator as Tax Status.")
+expect_identical(unname(unlist(wm1_choices, use.names = FALSE))[[1]],
+                 "Tax Indicator", "World map should retain the source concept value.")
+expect_true(
+  !"Tax Indicator" %in% unlist(configs$wm2$fixed_selectors$d4_concept_lab$choices,
+                                use.names = FALSE),
+  "The animated horizontal bar chart should not offer Tax Status."
+)
+for (target_id in c("wm1", "wm2", "kf2", "us1", "us2")) {
+  choices <- configs[[target_id]]$fixed_selectors$d4_concept_lab$choices
+  expect_identical(
+    as.character(choices[["Total Revenue from Tax as % of GDP"]]),
+    "Total Revenue from Tax as % of Gross Domestic Product",
+    paste(target_id, "should abbreviate GDP in the selector while retaining the data value.")
+  )
+}
+
 selector_info <- function(config, name) {
   if (name %in% names(config$fixed_selectors)) {
     return(config$fixed_selectors[[name]])

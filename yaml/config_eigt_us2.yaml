@@ -3,6 +3,11 @@ data.file: "data/taxw_us_state_long.qs"
 
 #define plot type
 gopts: "line"
+overlap_offset:
+  enabled: true
+  amount: 0.003
+  axis: "y"
+  mode: "group_index"
 
 axis_vars:
   x_axis:
@@ -35,11 +40,11 @@ fixed_selectors:
     label: "Tax Feature"
     selected: "Total Revenue from Tax as % of Total Tax Revenue"
     choices:
-      - "Tax Indicator"
-      - "Top Marginal Rate"
-      - "Exemption Threshold"
-      - "Total Revenue from Tax"
-      - "Total Revenue from Tax as % of Total Tax Revenue"
+      "Top Marginal Rate": "Top Marginal Rate"
+      "Exemption Threshold": "Exemption Threshold"
+      "Total Revenue from Tax": "Total Revenue from Tax"
+      "Total Revenue from Tax as % of Total Tax Revenue": "Total Revenue from Tax as % of Total Tax Revenue"
+      "Total Revenue from Tax as % of GDP": "Total Revenue from Tax as % of Gross Domestic Product"
   xrate_lab:
     label: "Currency"
     hidden: True

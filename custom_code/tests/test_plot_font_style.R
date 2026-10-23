@@ -128,6 +128,10 @@ expect_equal(
   FALSE,
   "Typography pass should preserve the requested grid visibility."
 )
+expect_true(
+  pp$x$layout$xaxis$tickangle == 0,
+  "Cartesian x-axis labels should default to horizontal."
+)
 expect_font(
   pp$x$layout$yaxis$titlefont,
   plot_text_style$axis_title_size,

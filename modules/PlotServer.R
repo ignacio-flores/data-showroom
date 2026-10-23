@@ -197,6 +197,26 @@ plotly_legend_style <- function(legend = list()) {
   legend
 }
 
+display_metric_label <- function(label) {
+  if (is.null(label)) return(NULL)
+  gsub("Gross Domestic Product", "GDP", label, fixed = TRUE)
+}
+
+plotly_colorbar_title <- function(title, width = 30L) {
+  title <- display_metric_label(title)
+  if (is.null(title) || length(title) != 1L || is.na(title) ||
+      nchar(title) <= width) return(title)
+
+  # Revenue share titles read more naturally with the measure on one line.
+  parts <- strsplit(title, " as % of ", fixed = TRUE)[[1]]
+  if (length(parts) == 2L) {
+    lines <- c(parts[[1]], paste0("as % of ", parts[[2]]))
+    if (all(nchar(lines) <= width)) return(paste(lines, collapse = "<br>"))
+  }
+
+  paste(strwrap(title, width = width), collapse = "<br>")
+}
+
 plotly_colorbar_style <- function(title = NULL,
                                   values = NULL,
                                   var_name = NULL,
@@ -205,7 +225,7 @@ plotly_colorbar_style <- function(title = NULL,
                                   n = NULL) {
   colorbar <- list(
     title = list(
-      text = title,
+      text = plotly_colorbar_title(title),
       font = plotly_font(plot_text_style$legend_size)
     ),
     tickfont = plotly_font(plot_text_style$legend_size)
@@ -222,6 +242,55 @@ plotly_colorbar_style <- function(title = NULL,
   }
 
   colorbar
+}
+
+is_eigt_status_map <- function(data, value_var) {
+  if (!"d4_concept_lab" %in% names(data) || !value_var %in% names(data)) {
+    return(FALSE)
+  }
+  concepts <- as.character(data$d4_concept_lab)
+  values <- suppressWarnings(as.numeric(as.character(data[[value_var]])))
+  length(concepts) > 0 && !anyNA(concepts) &&
+    all(concepts == "Tax Indicator") &&
+    all(is.na(values) | values %in% c(0, 1))
+}
+
+eigt_status_map_colors <- function() {
+  c("No" = "#F28E8E", "Yes" = "#2C7FB8")
+}
+
+format_eigt_tooltip_value <- function(value, name, concept = NULL,
+                                      axis_spec = NULL) {
+  if (identical(name, "d4_concept_lab") && identical(value, "Tax Indicator")) {
+    return("Tax Status")
+  }
+  if (identical(name, "d4_concept_lab")) return(display_metric_label(value))
+  if (identical(name, "value") && identical(concept, "Tax Indicator")) {
+    status <- suppressWarnings(as.numeric(value))
+    if (!is.na(status) && status %in% c(0, 1)) {
+      return(if (status == 0) "No" else "Yes")
+    }
+  }
+  if (is_year_axis_var(name)) return(format_year_axis_value(value))
+
+  numeric_value <- suppressWarnings(as.numeric(value))
+  if (!is.na(numeric_value)) {
+    if (is.list(axis_spec) && identical(axis_spec$format, "percent")) {
+      return(format_axis_number(numeric_value, spec = axis_spec))
+    }
+    if (identical(name, "value") &&
+        identical(concept, "Total Revenue from Tax as % of Gross Domestic Product")) {
+      digits <- if (numeric_value == 0) 2L else {
+        max(2L, min(8L, 1L - floor(log10(abs(numeric_value)))))
+      }
+      return(format_axis_number(
+        numeric_value,
+        spec = list(format = "percent", digits = digits)
+      ))
+    }
+    return(formatC(numeric_value, format = "f", big.mark = ",", digits = 2))
+  }
+  value
 }
 
 plotly_trace_legend_key <- function(trace) {
@@ -443,6 +512,9 @@ plotly_typography_layout <- function(layout = list(), show_grid = NULL) {
   axis_names <- names(layout)[grepl("^[xy]axis[0-9]*$", names(layout))]
   for (axis_name in axis_names) {
     layout[[axis_name]] <- plotly_typography_axis(layout[[axis_name]], show_grid = show_grid)
+    if (startsWith(axis_name, "x") && is.null(layout[[axis_name]]$tickangle)) {
+      layout[[axis_name]]$tickangle <- 0
+    }
   }
 
   layout$legend <- plotly_typography_legend(layout$legend)
@@ -772,6 +844,126 @@ axis_number_digits_override <- function(axis_info, var_name) {
   NULL
 }
 
+axis_single_data_label <- function(data, column) {
+  if (!is.data.frame(data) || !column %in% names(data)) return(NULL)
+  labels <- unique(trimws(as.character(data[[column]])))
+  labels <- labels[!is.na(labels) & nzchar(labels)]
+  if (length(labels) == 1) labels[[1]] else NULL
+}
+
+axis_generic_label <- function(label) {
+  if (is.null(label) || length(label) == 0 || is.na(label[[1]])) return(TRUE)
+  tolower(trimws(as.character(label[[1]]))) %in%
+    c("", "value", "x axis", "y axis", "left axis", "right axis")
+}
+
+inheritance_axis_currency_label <- function(currency) {
+  if (identical(currency, "Local currency, nominal prices")) {
+    return("LCU, nominal")
+  }
+  if (identical(currency, "Local currency (2023 prices)")) {
+    return("LCU, 2023 prices")
+  }
+  sub(", Market Exchange rate, nominal prices$", ", nominal", currency)
+}
+
+axis_display_presentation <- function(data, var_name, label = NULL,
+                                      axis_info = NULL) {
+  info <- if (is.list(axis_info)) axis_info else list()
+  if (is.null(var_name) || length(var_name) != 1 || is.na(var_name)) {
+    return(list(label = label, axis_info = info))
+  }
+  derived_label <- NULL
+  number_format <- NULL
+  number_scale <- NULL
+  inheritance_aggregate <- FALSE
+  axis_title <- NULL
+
+  if (identical(var_name, "value") && "pop_lab" %in% names(data)) {
+    # Topo's national-income unit is a fraction; its other units are amounts.
+    concept <- axis_single_data_label(data, "d4_concept_lab")
+    unit <- axis_single_data_label(data, "pop_lab")
+    base <- if (!is.null(concept)) concept else "Assets and debt"
+    if (identical(unit, "Ratio to National Income")) {
+      derived_label <- paste0(base, " (% of national income)")
+      number_format <- "percent"
+      number_scale <- 100
+    } else {
+      derived_label <- if (!is.null(unit)) paste0(base, " (", unit, ")") else base
+      number_format <- "compact"
+    }
+  } else if (identical(var_name, "value") &&
+             "tax_category" %in% names(data)) {
+    # EIGT rates and revenue shares are already stored in percentage points.
+    concept <- axis_single_data_label(data, "d4_concept_lab")
+    derived_label <- if (identical(concept, "Tax Indicator")) {
+      "Tax Status"
+    } else if (!is.null(concept)) {
+      concept
+    } else {
+      "Tax feature"
+    }
+    if (!is.null(concept) && grepl("rate|%", concept, ignore.case = TRUE)) {
+      number_format <- "percent"
+    }
+  } else if (identical(var_name, "value") &&
+             "d3_vartype_lab" %in% names(data)) {
+    type <- axis_single_data_label(data, "d3_vartype_lab")
+    concept <- axis_single_data_label(data, "d4_concept_lab")
+    if (!is.null(type) && type %in% c("Ratio", "Rate", "Aggregate")) {
+      inheritance_aggregate <- identical(type, "Aggregate")
+      # Inheritance ratios and effective tax rates are stored as fractions.
+      derived_label <- if (identical(type, "Rate") && !is.null(concept)) {
+        concept
+      } else if (!is.null(concept)) {
+        paste(concept, tolower(type))
+      } else {
+        paste("Inheritances and gifts", tolower(type))
+      }
+      if (type %in% c("Ratio", "Rate")) {
+        number_format <- "percent"
+        number_scale <- 100
+      }
+    } else {
+      # Inequality shares and ownership rates are percentage points.
+      derived_label <- if (!is.null(type)) type else if (!is.null(concept)) {
+        concept
+      } else {
+        "Inequality measure"
+      }
+      if (!is.null(type) &&
+          type %in% c("Share of Total Net Wealth", "Ownership Rate")) {
+        number_format <- "percent"
+      }
+    }
+  } else if (var_name %in%
+             c("inheritances_gifts_ratio", "average_effective_tax_rate")) {
+    number_format <- "percent"
+    number_scale <- 100
+  } else if (identical(var_name, "inheritances_gifts_aggregate")) {
+    inheritance_aggregate <- TRUE
+  }
+
+  if (axis_generic_label(label) && !is.null(derived_label)) label <- derived_label
+  label <- display_metric_label(label)
+  if (inheritance_aggregate) {
+    currency <- axis_single_data_label(data, "xrate_lab")
+    if (!is.null(currency) && !is.null(label)) {
+      metric <- sub("[[:space:]]+aggregate$", "", label, ignore.case = TRUE)
+      unit <- inheritance_axis_currency_label(currency)
+      label <- paste(metric, unit, sep = ": ")
+      axis_title <- paste(metric, unit, sep = "<br>")
+    }
+  }
+  if (is.null(info$number_format) && !is.null(number_format)) {
+    info$number_format <- number_format
+  }
+  if (is.null(info$number_scale) && !is.null(number_scale)) {
+    info$number_scale <- number_scale
+  }
+  list(label = label, axis_title = axis_title, axis_info = info)
+}
+
 axis_number_format_spec <- function(var_name = NULL,
                                     label = NULL,
                                     axis_info = NULL) {
@@ -816,7 +1008,12 @@ axis_number_format_spec <- function(var_name = NULL,
     }
   }
 
-  list(format = style, digits = digits, inferred_percent = inferred_percent)
+  scale <- if (is.list(axis_info)) axis_info$number_scale else NULL
+  scale <- suppressWarnings(as.numeric(scale))
+  if (length(scale) != 1 || !is.finite(scale) || scale <= 0) scale <- 1
+
+  list(format = style, digits = digits, scale = scale,
+       inferred_percent = inferred_percent)
 }
 
 axis_default_digits <- function(values, style) {
@@ -824,6 +1021,10 @@ axis_default_digits <- function(values, style) {
   values <- values[is.finite(values) & values > 0]
   if (length(values) == 0) return(0L)
   max_value <- max(values, na.rm = TRUE)
+
+  if (max_value < 0.01) {
+    return(min(8L, max(2L, as.integer(1L - floor(log10(max_value))))))
+  }
 
   if (identical(style, "percent")) {
     has_fraction <- any(abs(values - round(values)) > sqrt(.Machine$double.eps))
@@ -864,6 +1065,10 @@ format_axis_number <- function(values,
   digits <- spec$digits
 
   numeric_values <- suppressWarnings(as.numeric(values))
+  display_scale <- suppressWarnings(as.numeric(spec$scale))
+  if (length(display_scale) != 1 || !is.finite(display_scale) ||
+      display_scale <= 0) display_scale <- 1
+  numeric_values <- numeric_values * display_scale
   out <- rep(NA_character_, length(numeric_values))
   finite <- is.finite(numeric_values)
   if (!any(finite)) return(out)
@@ -2195,8 +2400,21 @@ year_axis_breaks <- function(values, n = NULL) {
   pretty_breaks <- pretty_breaks[is.finite(pretty_breaks)]
   breaks <- sort(unique(as.integer(round(pretty_breaks))))
   breaks <- breaks[breaks >= min_year & breaks <= max_year]
-  breaks <- sort(unique(c(min_year, breaks, max_year)))
+  breaks <- sort(unique(c(min_year, breaks)))
   breaks[is.finite(breaks)]
+}
+
+limit_year_axis_breaks <- function(breaks, max_ticks = NULL) {
+  if (is.null(max_ticks)) max_ticks <- 5L
+  max_ticks <- suppressWarnings(as.integer(max_ticks))
+  if (length(max_ticks) != 1 || is.na(max_ticks) || max_ticks < 1 ||
+      is.null(breaks) || length(breaks) <= max_ticks) {
+    return(breaks)
+  }
+
+  if (max_ticks == 1L) return(breaks[[1]])
+  step <- ceiling((length(breaks) - 1L) / (max_ticks - 1L))
+  breaks[seq.int(1L, length(breaks), by = step)]
 }
 
 year_axis_tick_text <- function(breaks) {
@@ -2234,12 +2452,18 @@ plotly_year_xaxis_layout <- function(axis,
     axis_info = axis_info,
     axis_range = axis_range
   )
-  breaks <- year_axis_breaks(tick_values, n = n)
+  breaks <- limit_year_axis_breaks(
+    year_axis_breaks(tick_values, n = n),
+    max_ticks = axis_info$max_ticks
+  )
   if (is.null(breaks) || length(breaks) == 0) return(axis)
 
   axis$tickmode <- "array"
   axis$tickvals <- breaks
   axis$ticktext <- year_axis_tick_text(breaks)
+  if (!is.null(axis_info$tick_angle)) {
+    axis$tickangle <- axis_info$tick_angle
+  }
   axis$tickformat <- NULL
   axis$ticksuffix <- NULL
   axis
@@ -2341,6 +2565,33 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
       y_var_lab <- resolveValue(y_var_lab)
       y2_var <- resolveValue(y2_var)
       y2_var_lab <- resolveValue(y2_var_lab)
+      x_presentation <- axis_display_presentation(
+        df, x_var, x_var_lab, x_axis_info
+      )
+      x_var_lab <- x_presentation$label
+      x_axis_info <- x_presentation$axis_info
+      y_presentation <- axis_display_presentation(
+        df, y_var, y_var_lab, y_axis_info
+      )
+      y_var_lab <- y_presentation$label
+      y_axis_title <- if (!is.null(y_presentation$axis_title)) {
+        y_presentation$axis_title
+      } else {
+        y_var_lab
+      }
+      y_axis_info <- y_presentation$axis_info
+      if (!is.null(y2_var)) {
+        y2_presentation <- axis_display_presentation(
+          df, y2_var, y2_var_lab, y2_axis_info
+        )
+        y2_var_lab <- y2_presentation$label
+        y2_axis_title <- if (!is.null(y2_presentation$axis_title)) {
+          y2_presentation$axis_title
+        } else {
+          y2_var_lab
+        }
+        y2_axis_info <- y2_presentation$axis_info
+      }
       dual_axis_options <- resolveValue(dual_axis_options)
       x_scale <- resolveValue(x_scale)
       if (is.null(x_scale)) x_scale <- "regular"
@@ -2459,7 +2710,10 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
 
       # Define x-axis breaks dynamically
       if (is_year_x_axis) {
-        breaks_x <- year_axis_breaks(x_tick_values, n = xnum_breaks)
+        breaks_x <- limit_year_axis_breaks(
+          year_axis_breaks(x_tick_values, n = xnum_breaks),
+          max_ticks = x_axis_info$max_ticks
+        )
       } else if (!is.null(xnum_breaks)) {
         if (!is.null(x_axis_range)) {
           breaks_x <- axis_number_tick_values(x_tick_values, n = xnum_breaks)
@@ -2481,24 +2735,28 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           # No labels provided, use variable names as labels
           tooltip_vars <- setNames(tooltip_vars, tooltip_vars)
         }
-        
-        format_tooltip_value <- function(value, name) {
-          if (is_year_axis_var(name)) {
-            return(format_year_axis_value(value))
+        tooltip_axis_specs <- list()
+        for (axis in list(
+          list(var = x_var, label = x_var_lab, info = x_axis_info),
+          list(var = y_var, label = y_var_lab, info = y_axis_info),
+          list(var = y2_var, label = y2_var_lab, info = y2_axis_info)
+        )) {
+          if (!is.null(axis$var) && axis$var %in% names(tooltip_vars)) {
+            tooltip_axis_specs[[axis$var]] <- axis_number_format_spec(
+              axis$var, axis$label, axis$info
+            )
           }
-
-          numeric_value <- suppressWarnings(as.numeric(value))
-          if (!is.na(numeric_value)) {
-            return(formatC(numeric_value, format = "f", big.mark = ",", digits = 2))
-          }
-
-          value
         }
 
         # Construct tooltip text using labels explicitly
         df$tooltip_text <- apply(df[, names(tooltip_vars), drop = FALSE], 1, function(row) {
           paste(sapply(names(tooltip_vars), function(name) {
-            paste(tooltip_vars[[name]], " ", format_tooltip_value(row[[name]], name))
+            concept <- if ("d4_concept_lab" %in% names(row)) row[["d4_concept_lab"]] else NULL
+            paste(tooltip_vars[[name]], " ",
+                  format_eigt_tooltip_value(
+                    row[[name]], name, concept,
+                    axis_spec = tooltip_axis_specs[[name]]
+                  ))
           }), collapse = "<br>")
         })
 
@@ -2678,7 +2936,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 apply_axis_min = TRUE
               ),
             yaxis = plotly_axis_style(list(
-              title = left_name,
+              title = y_axis_title,
               zeroline = FALSE,
               showgrid = FALSE,
               automargin = TRUE
@@ -2690,7 +2948,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 axis_info = y_axis_info
               ),
             yaxis2 = plotly_axis_style(list(
-              title = right_name,
+              title = y2_axis_title,
               overlaying = "y",
               side = "right",
               zeroline = FALSE,
@@ -2773,7 +3031,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         }
 
         y_axis_layout <- plotly_axis_style(list(
-          title = y_var_lab,
+          title = y_axis_title,
           zeroline = FALSE,
           automargin = TRUE
         )) %>%
@@ -3118,7 +3376,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 enabled = !is_year_x_axis,
                 apply_axis_min = TRUE
               ),
-            yaxis = plotly_axis_style(list(title = y_var_lab)) %>%
+            yaxis = plotly_axis_style(list(title = y_axis_title)) %>%
               plotly_number_axis_layout(
                 values = df_facet[[y_plot_var]],
                 var_name = y_var,
@@ -3221,7 +3479,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         y_tick_count <- if (n_facets > 1) 5L else NULL
         shared_y_axis_layout <- plotly_axis_style(list(
           range = y_range,
-          title = if (n_facets > 1) NULL else y_var_lab,
+          title = if (n_facets > 1) NULL else y_axis_title,
           zeroline = FALSE,
           showticklabels = TRUE
         )) %>%
@@ -3261,7 +3519,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
           list(list(
             x = -0.065,
             y = 0.5,
-            text = y_var_lab,
+            text = y_axis_title,
             showarrow = FALSE,
             xanchor = "center",
             yanchor = "middle",
@@ -3378,6 +3636,63 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
             ) %>%
             dplyr::slice(1) %>%
             dplyr::ungroup()
+        }
+
+        binary_status_map <- is_eigt_status_map(df, y_var)
+
+        if (binary_status_map) {
+          status_values <- suppressWarnings(as.numeric(as.character(df[[y_var]])))
+          status_df <- df[!is.na(status_values), , drop = FALSE]
+          if (!has_plot_rows(status_df)) {
+            return(no_data_plotly(height = plot_height))
+          }
+
+          pp <- plot_ly(height = plot_height, source = "map")
+          status_colors <- eigt_status_map_colors()
+          for (status in c(0, 1)) {
+            rows <- status_df[status_values[!is.na(status_values)] == status, , drop = FALSE]
+            if (!has_plot_rows(rows)) next
+            status_name <- if (status == 0) "No" else "Yes"
+            status_color <- unname(status_colors[[status_name]])
+            pp <- pp %>%
+              add_trace(
+                data = rows,
+                type = "choropleth",
+                locations = ~get(color_var),
+                locationmode = map_locationmode,
+                z = ~get(y_var),
+                frame = if (!is.null(frame_var)) ~get(frame_var) else NULL,
+                text = ~tooltip_text,
+                hoverinfo = "text",
+                colorscale = list(list(0, status_color), list(1, status_color)),
+                zmin = 0,
+                zmax = 1,
+                showscale = FALSE,
+                showlegend = !hide.legend,
+                legendgroup = status_name,
+                name = status_name
+              )
+          }
+
+          pp <- pp %>%
+            layout(
+              font = plotly_font(plot_text_style$legend_size),
+              hoverlabel = plotly_hoverlabel_style(),
+              legend = plotly_legend_style(list(title = list(text = "Tax Status"))),
+              geo = Filter(Negate(is.null), list(
+                scope = map_scope,
+                projection = list(type = map_projection),
+                showland = TRUE,
+                landcolor = "rgb(240,240,240)",
+                showcountries = TRUE,
+                countrycolor = "rgb(200,200,200)",
+                showsubunits = identical(map_locationmode, "USA-states"),
+                subunitcolor = "rgb(200,200,200)"
+              ))
+            ) %>%
+            plotly_modebar_config(extra_remove = "pan")
+
+          return(build_plotly_for_display(pp, show_grid = axis_show_grid))
         }
         
         zero_color <- "#F28E8E"
@@ -4060,6 +4375,18 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
         y_plot_var <- overlap_plot$y_var
         
         #define grouping variable 
+        # Keep zero-rate step paths, including their right-end extension, but
+        # do not magnify the slight overlap offsets into the entire y-axis.
+        zero_rate_step_axis <- FALSE
+        if (identical(y_var, "adjmrt") &&
+            overlap_offset_supported(gopts, overlap_offset)) {
+          rates <- suppressWarnings(as.numeric(df[[y_var]]))
+          rates <- rates[is.finite(rates)]
+          zero_rate_step_axis <- length(rates) > 0 && all(rates == 0)
+        }
+        zero_rate_range <- if (zero_rate_step_axis) c(-0.5, 10) else NULL
+        zero_rate_ticks <- if (zero_rate_step_axis) c(0, 5, 10) else NULL
+
         group_expr <- if (!is.null(groupvars) && length(groupvars) > 0) {
           expr(interaction(!!!syms(groupvars), drop = TRUE))
         } else {
@@ -4082,7 +4409,7 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 text = element_text(family = plot_text_style$family, color = plot_text_style$color),
                 axis.title.x = element_text(size = plot_text_style$axis_title_size),
                 axis.title.y = element_text(size = plot_text_style$axis_title_size),
-                axis.text.x = element_text(size = plot_text_style$axis_tick_size, angle = 40, hjust = 1),
+                axis.text.x = element_text(size = plot_text_style$axis_tick_size, angle = 0),
                 axis.text.y = element_text(size = plot_text_style$axis_tick_size),
                 legend.title = element_text(size = plot_text_style$legend_size, face = "bold"),
                 legend.text = element_text(size = plot_text_style$legend_size),
@@ -4217,12 +4544,17 @@ plotModuleServer <- function(id, filtered_data_func, x_var, x_var_lab, y_var, y_
                 enabled = !is_year_x_axis,
                 apply_axis_min = TRUE
               ),
-            yaxis = plotly_axis_style(list(zeroline = FALSE)) %>%
+            yaxis = plotly_axis_style(Filter(Negate(is.null), list(
+              title = if (!is.null(y_axis_title)) list(text = y_axis_title) else NULL,
+              zeroline = FALSE,
+              range = zero_rate_range
+            ))) %>%
               plotly_number_axis_layout(
                 values = df[[y_plot_var]],
                 var_name = y_var,
                 label = y_var_lab,
-                axis_info = y_axis_info
+                axis_info = y_axis_info,
+                tickvals = zero_rate_ticks
               ),
             legend = plotly_legend_style(list(
               title = list(text = ''),

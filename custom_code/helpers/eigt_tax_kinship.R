@@ -201,3 +201,31 @@ add_eigt_inheritance_estate_view <- function(
 
   rbind(data, combined_rows)
 }
+
+add_eigt_inheritance_estate_metric_view <- function(
+    data,
+    key_cols,
+    metric_col = "value",
+    feature_col = "d4_concept_lab") {
+  required_cols <- c(key_cols, metric_col, feature_col)
+  missing_cols <- setdiff(required_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop(
+      "Missing EIGT metric-view column(s): ",
+      paste(missing_cols, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  metric_values <- suppressWarnings(as.numeric(as.character(data[[metric_col]])))
+  data$.metric_available <- !is.na(metric_values) & metric_values > 0
+  result <- add_eigt_inheritance_estate_view(
+    data,
+    view_col = "tax_type_view",
+    key_cols = unique(c(key_cols, feature_col)),
+    active_col = ".metric_available",
+    kinship_priority = eigt_visible_kinship_choices
+  )
+  result$.metric_available <- NULL
+  result
+}

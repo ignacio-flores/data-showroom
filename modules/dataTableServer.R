@@ -13,6 +13,9 @@ dataTableServer <- function(id, filtered_data, dt.cols) {
 
         dt <- filtered_data() %>% mutate(across(where(is.numeric), ~ sprintf("%.2f", .))) %>% 
             select(names(dt.cols))
+        if ("d4_concept_lab" %in% names(dt)) {
+          dt$d4_concept_lab <- display_metric_label(dt$d4_concept_lab)
+        }
         if ("data_description" %in% names(dt)) {
           dt$data_description <- gsub("<br>", "", dt$data_description)
         }

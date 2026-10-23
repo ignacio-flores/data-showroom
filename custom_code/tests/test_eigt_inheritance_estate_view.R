@@ -178,6 +178,72 @@ expect_identical(
 
 status_unavailable <- cross_kinship
 status_unavailable$active <- NA_real_
+
+state_metrics <- data.frame(
+  GEO = rep("US-CA", 6),
+  GEO_long = rep("California", 6),
+  year = rep("2020", 6),
+  tax_type = rep(c("Inheritance tax", "Estate tax"), 3),
+  kinship = rep("Children", 6),
+  d4_concept_lab = rep(
+    c("Top Marginal Rate", "Exemption Threshold", "Tax Indicator"),
+    each = 2
+  ),
+  value = c(0, 40, 0, 12000000, 0, 0),
+  stringsAsFactors = FALSE
+)
+metric_result <- add_eigt_inheritance_estate_metric_view(
+  state_metrics[state_metrics$d4_concept_lab != "Tax Indicator", ],
+  key_cols = c("GEO", "GEO_long", "year")
+)
+metric_combined <- metric_result[
+  metric_result$tax_type_view == eigt_inheritance_estate_tax_view,
+]
+expect_identical(
+  metric_combined$tax_type,
+  c("Estate tax", "Estate tax"),
+  "Combined rate and threshold should use positive estate values despite zero own-tax status."
+)
+expect_identical(
+  metric_combined$value[
+    match(c("Top Marginal Rate", "Exemption Threshold"), metric_combined$d4_concept_lab)
+  ],
+  c(40, 12000000),
+  "Combined metric values should remain attached to their source tax."
+)
+
+both_metrics <- state_metrics[1:2, ]
+both_metrics$value <- c(20, 40)
+both_result <- add_eigt_inheritance_estate_metric_view(
+  both_metrics,
+  key_cols = c("GEO", "GEO_long", "year")
+)
+both_combined <- both_result[
+  both_result$tax_type_view == eigt_inheritance_estate_tax_view,
+]
+expect_identical(
+  both_combined$tax_type,
+  "Inheritance tax",
+  "When both source metrics are positive, the combined view should retain inheritance priority."
+)
+
+split_metrics <- state_metrics[1:4, ]
+split_metrics$value <- c(20, 0, 0, 12000000)
+split_result <- add_eigt_inheritance_estate_metric_view(
+  split_metrics,
+  key_cols = c("GEO", "GEO_long", "year")
+)
+split_combined <- split_result[
+  split_result$tax_type_view == eigt_inheritance_estate_tax_view,
+]
+expect_identical(
+  split_combined$tax_type[
+    match(c("Top Marginal Rate", "Exemption Threshold"), split_combined$d4_concept_lab)
+  ],
+  c("Inheritance tax", "Estate tax"),
+  "Combined rate and threshold should choose their sources independently."
+)
+
 status_unavailable_result <- add_eigt_inheritance_estate_view(
   status_unavailable,
   key_cols = c("GEO", "GEO_long", "year"),

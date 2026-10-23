@@ -119,9 +119,11 @@ recipes:
 runtime_dependencies:
   custom_code/dictionary_loader_ineq.R:
     - data/dictionary.xlsx
+    - custom_code/helpers/ineq_source_units.R
   custom_code/dictionary_loader_ineq_owr.R:
     - custom_code/dictionary_loader_ineq.R
     - data/dictionary.xlsx
+    - custom_code/helpers/ineq_source_units.R
   custom_code/data_prep_eigt2.R:
     - data/supplementary_var_long.csv
     - custom_code/helpers/eigt_preprocessing.R

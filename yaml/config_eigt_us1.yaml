@@ -25,18 +25,16 @@ fixed_selectors:
   state_name:
     label: "State"
     type: "checkbox"
-  year:
-    label: "Year"
-    selected: 2020
   d4_concept_lab:
     label: "Tax Feature"
     selected: "Total Revenue from Tax as % of Total Tax Revenue"
     choices:
-      - "Tax Indicator"
-      - "Top Marginal Rate"
-      - "Exemption Threshold"
-      - "Total Revenue from Tax"
-      - "Total Revenue from Tax as % of Total Tax Revenue"
+      "Tax Status": "Tax Indicator"
+      "Top Marginal Rate": "Top Marginal Rate"
+      "Exemption Threshold": "Exemption Threshold"
+      "Total Revenue from Tax": "Total Revenue from Tax"
+      "Total Revenue from Tax as % of Total Tax Revenue": "Total Revenue from Tax as % of Total Tax Revenue"
+      "Total Revenue from Tax as % of GDP": "Total Revenue from Tax as % of Gross Domestic Product"
   xrate_lab:
     label: "Currency"
     hidden: True
@@ -52,6 +50,10 @@ fixed_selectors:
       - "No"
 
 loose_selectors:
+  year:
+    label: "Year"
+    type: "reactive selector"
+    select: "latest"
   tax_category:
     label: "Tax category"
     type: "sticky selector"

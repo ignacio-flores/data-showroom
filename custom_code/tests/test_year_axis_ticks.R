@@ -77,8 +77,8 @@ wide_breaks <- year_axis_breaks(c(1990, 2023), n = 8)
 expect_integer_ticks(wide_breaks, "Wide year range breaks")
 expect_decimal_free_text(year_axis_tick_text(wide_breaks), "Wide year range labels")
 expect_true(
-  min(wide_breaks) == 1990 && max(wide_breaks) == 2023,
-  "Wide year breaks should retain the integer endpoints."
+  min(wide_breaks) == 1990 && max(wide_breaks) == 2020,
+  "Wide year breaks should follow the regular spacing without forcing the final year."
 )
 
 layout_axis <- plotly_year_xaxis_layout(
@@ -94,6 +94,10 @@ expect_equal(
 )
 expect_integer_ticks(layout_axis$tickvals, "Year Plotly x-axis tick values")
 expect_decimal_free_text(layout_axis$ticktext, "Year Plotly x-axis tick labels")
+expect_false(
+  2023 %in% layout_axis$tickvals,
+  "The Plotly year axis should not force a final-year label between regular ticks."
+)
 
 min_layout_axis <- plotly_year_xaxis_layout(
   list(title = "Year"),
@@ -191,6 +195,101 @@ expect_equal(
 expect_true(
   all(pp_min$x$layout$xaxis$tickvals >= 1900),
   "Plotly object year tick values should not include values below axis_info$min."
+)
+
+full_axis_info <- yaml::read_yaml("yaml/config_ineq_single.yaml")$axis_vars$x_axis
+full_year_plot <- plotly::layout(
+  plotly::plot_ly(
+    data = data.frame(year = 1900:2023, value = seq_along(1900:2023)),
+    x = ~year,
+    y = ~value,
+    type = "scatter",
+    mode = "lines"
+  ),
+  xaxis = list(title = "Year")
+)
+full_year_plot <- apply_plotly_year_xaxis_ticks(
+  full_year_plot,
+  values = 1900:2023,
+  n = full_axis_info$breaks,
+  axis_info = full_axis_info
+)
+full_year_plot <- build_plotly_for_display(full_year_plot)
+expect_true(
+  full_year_plot$x$layout$xaxis$tickangle == 0 &&
+    length(full_year_plot$x$layout$xaxis$tickvals) <= 5,
+  "Full-size year charts should also use horizontal labels with at most five ticks."
+)
+
+preview_paths <- c(
+  "yaml/config_ineq_prev.yaml",
+  "yaml/config_inhe_prev.yaml",
+  "yaml/config_topo_prev.yaml",
+  "yaml/config_eigt-prev.yaml"
+)
+for (path in preview_paths) {
+  preview_axis_info <- yaml::read_yaml(path)$axis_vars$x_axis
+  expect_true(
+    identical(preview_axis_info$var, "year") &&
+      preview_axis_info$breaks == 5 &&
+      preview_axis_info$max_ticks == 5 &&
+      preview_axis_info$tick_angle == 0,
+    paste(path, "should use the shared horizontal preview year-axis settings.")
+  )
+
+  preview_axis <- plotly_year_xaxis_layout(
+    list(tickangle = -40),
+    values = 1990:2023,
+    n = preview_axis_info$breaks,
+    axis_info = preview_axis_info
+  )
+  expect_true(
+    preview_axis$tickangle == 0 &&
+      length(preview_axis$tickvals) <= 5,
+    paste(path, "should override rotation and limit the visible year ticks.")
+  )
+}
+
+preview_data <- data.frame(year = 1990:2023, value = seq_along(1990:2023))
+preview_axis_info <- yaml::read_yaml(preview_paths[[1]])$axis_vars$x_axis
+preview_ggplot <- ggplot2::ggplot(preview_data, ggplot2::aes(year, value)) +
+  ggplot2::geom_line() +
+  ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 40, hjust = 1))
+preview_plotly <- apply_plotly_year_xaxis_ticks(
+  plotly::ggplotly(preview_ggplot),
+  values = preview_data$year,
+  n = preview_axis_info$breaks,
+  axis_info = preview_axis_info
+)
+preview_plotly <- plotly::plotly_build(preview_plotly)
+expect_true(
+  preview_plotly$x$layout$xaxis$tickangle == 0 &&
+    length(preview_plotly$x$layout$xaxis$tickvals) <= 5,
+  "Preview settings should override ggplotly's diagonal year labels."
+)
+
+faceted_plotly <- plotly::subplot(
+  plotly::plot_ly(preview_data, x = ~year, y = ~value,
+                  type = "scatter", mode = "lines"),
+  plotly::plot_ly(preview_data, x = ~year, y = ~value,
+                  type = "scatter", mode = "lines"),
+  nrows = 1
+)
+faceted_plotly <- apply_plotly_year_xaxis_ticks(
+  faceted_plotly,
+  values = preview_data$year,
+  n = preview_axis_info$breaks,
+  axis_info = preview_axis_info
+)
+faceted_xaxis_names <- plotly_axis_layout_names(faceted_plotly$x$layout, "x")
+expect_true(
+  length(faceted_xaxis_names) == 2 &&
+  all(vapply(
+    faceted_plotly$x$layout[faceted_xaxis_names],
+    function(axis) axis$tickangle == 0 && length(axis$tickvals) <= 5,
+    logical(1)
+  )),
+  "Preview settings should reach every faceted x-axis."
 )
 
 expect_equal(

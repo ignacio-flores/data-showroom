@@ -277,7 +277,8 @@ materialize_currency_unit <- function(data, bundle, currency_label, unit_label,
 
 materialize_currency_columns <- function(data, bundle, currency_label, columns,
                                          scale_divisor = 1,
-                                         currency_selector = "xrate_lab") {
+                                         currency_selector = "xrate_lab",
+                                         apply_when = NULL) {
   currency_specs <- currency_unit_currency_specs()
   currency_spec <- currency_specs[currency_specs$label == currency_label, , drop = FALSE]
   if (nrow(currency_spec) != 1) {
@@ -308,6 +309,18 @@ materialize_currency_columns <- function(data, bundle, currency_label, columns,
   dt <- data.table::as.data.table(data.table::copy(data))
   dt[, .currency_row_order := .I]
   dt[, .currency_year := suppressWarnings(as.numeric(year))]
+  if (is.null(apply_when)) {
+    dt[, .currency_convert := TRUE]
+  } else {
+    if (!is.list(apply_when) || is.null(apply_when$column) ||
+        is.null(apply_when$equals) ||
+        length(apply_when$column) != 1L ||
+        !apply_when$column %in% names(dt)) {
+      stop("value_transform$apply_when requires an existing column and equals value.")
+    }
+    match_values <- as.character(unlist(apply_when$equals, use.names = FALSE))
+    dt[, .currency_convert := as.character(get(apply_when$column)) %in% match_values]
+  }
   dt[, (columns) := lapply(.SD, function(x) suppressWarnings(as.numeric(x))),
      .SDcols = columns]
   dt[, (currency_selector) := currency_label]
@@ -317,7 +330,7 @@ materialize_currency_columns <- function(data, bundle, currency_label, columns,
     cpi[, .currency_year := suppressWarnings(as.numeric(year))]
     cpi <- cpi[, .(GEO, .currency_year, cpi)]
     dt <- merge(dt, cpi, by = c("GEO", ".currency_year"), all.x = TRUE, sort = FALSE)
-    dt[, (columns) := lapply(.SD, function(x) {
+    dt[.currency_convert == TRUE, (columns) := lapply(.SD, function(x) {
       data.table::fifelse(!is.na(x) & !is.na(cpi) & cpi > 0, x / cpi, NA_real_)
     }), .SDcols = columns]
     dt[, cpi := NULL]
@@ -343,19 +356,19 @@ materialize_currency_columns <- function(data, bundle, currency_label, columns,
       dt <- merge(dt, xrates, by = "GEO", all.x = TRUE, sort = FALSE)
     }
 
-    dt[, (columns) := lapply(.SD, function(x) {
+    dt[.currency_convert == TRUE, (columns) := lapply(.SD, function(x) {
       data.table::fifelse(!is.na(x) & !is.na(xrate) & xrate > 0, x / xrate, NA_real_)
     }), .SDcols = columns]
     dt[, xrate := NULL]
   }
 
   if (!identical(scale_divisor, 1)) {
-    dt[, (columns) := lapply(.SD, function(x) x / scale_divisor),
+    dt[.currency_convert == TRUE, (columns) := lapply(.SD, function(x) x / scale_divisor),
        .SDcols = columns]
   }
 
   data.table::setorderv(dt, ".currency_row_order")
-  dt[, c(".currency_row_order", ".currency_year") := NULL]
+  dt[, c(".currency_row_order", ".currency_year", ".currency_convert") := NULL]
 
   as.data.frame(dt)
 }

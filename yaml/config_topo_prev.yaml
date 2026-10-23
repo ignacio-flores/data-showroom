@@ -22,6 +22,9 @@ axis_vars:
     var: "year"
     label: "Year"
     min: 1900
+    breaks: 5
+    max_ticks: 5
+    tick_angle: 0
   y_axis:
     var: "value"
 

@@ -3,6 +3,55 @@ metaTableUI <- function(id) {
   uiOutput(ns("metadataContainer"))
 }
 
+methodological_visible_data <- function(data, graph) {
+  if (!(graph %in% c("ineq_owr1", "ineq_owr2"))) return(data)
+
+  has_content <- vapply(data, function(column) {
+    values <- trimws(as.character(column))
+    any(!is.na(values) & nzchar(values) &
+          !(tolower(values) %in% c("-", "–", "na", "n/a")))
+  }, logical(1))
+
+  data[, has_content | names(data) %in% c("Country", "Legend"), drop = FALSE]
+}
+
+methodological_column_defs <- function(data, graph, moderate_columns, extreme_columns) {
+  columns <- names(data)
+
+  if (graph %in% c("ineq_owr1", "ineq_owr2")) {
+    preferred <- c("Legend", "Link", "Ref_link")
+    long_headers <- setdiff(
+      columns[nchar(columns) > 28],
+      c(preferred, moderate_columns, extreme_columns)
+    )
+    rules <- list(
+      list(width = "360px", className = "owr-meta-legend", targets = intersect("Legend", columns)),
+      list(width = "270px", className = "owr-meta-url", targets = intersect(c("Link", "Ref_link"), columns)),
+      list(width = "440px", className = "owr-meta-long", targets = setdiff(extreme_columns, preferred)),
+      list(width = "300px", className = "owr-meta-medium", targets = setdiff(moderate_columns, preferred)),
+      list(width = "240px", className = "owr-meta-medium", targets = long_headers),
+      list(width = "180px", targets = "_all")
+    )
+    return(Filter(function(rule) length(rule$targets) > 0, rules))
+  }
+
+  moderate_targets <- which(columns %in% moderate_columns)
+  extreme_targets <- which(columns %in% extreme_columns)
+  rules <- list()
+
+  if (identical(graph, "ineq_multi") && "Legend" %in% columns) {
+    legend_target <- match("Legend", columns) - 1L
+    rules <- list(list(width = "360px", targets = "Legend"))
+    moderate_targets <- setdiff(moderate_targets, legend_target)
+    extreme_targets <- setdiff(extreme_targets, legend_target)
+  }
+
+  c(rules, list(
+    list(width = "300px", targets = moderate_targets),
+    list(width = "400px", targets = extreme_targets)
+  ))
+}
+
 metaTableServer <- function(id, filtered_data, meta, graph, meta_layout = NULL) {
   moduleServer(id, function(input, output, session) {
     `%||%` <- function(x, y) {
@@ -374,6 +423,30 @@ metaTableServer <- function(id, filtered_data, meta, graph, meta_layout = NULL) 
     output$metadataContainer <- renderUI({
       if (is_topo_bundle()) {
         uiOutput(session$ns("topoMeta"))
+      } else if (graph %in% c("ineq_owr1", "ineq_owr2")) {
+        tags$div(
+          class = "owr-methodological-table",
+          tags$style(HTML("\n            .owr-methodological-table th,
+            .owr-methodological-table td {
+              padding: 10px 12px !important;
+              line-height: 1.4;
+              vertical-align: top;
+              word-break: normal !important;
+              overflow-wrap: break-word;
+            }
+            .owr-methodological-table th {
+              white-space: normal !important;
+            }
+            .owr-methodological-table .owr-meta-legend { min-width: 340px; }
+            .owr-methodological-table .owr-meta-url {
+              min-width: 250px;
+              overflow-wrap: anywhere;
+            }
+            .owr-methodological-table .owr-meta-long { min-width: 400px; }
+            .owr-methodological-table .owr-meta-medium { min-width: 240px; }
+          ")),
+          DTOutput(session$ns("metaTable"))
+        )
       } else {
         DTOutput(session$ns("metaTable"))
       }
@@ -392,6 +465,7 @@ metaTableServer <- function(id, filtered_data, meta, graph, meta_layout = NULL) 
       } else {
         filtered_meta <- meta %>% filter(GEO %in% filtered_geo)
       }
+      filtered_meta <- methodological_visible_data(filtered_meta, graph)
 
       # Compute max length of characters per column (only for character/text columns)
       max_lengths <- sapply(filtered_meta, function(col) {
@@ -431,9 +505,11 @@ metaTableServer <- function(id, filtered_data, meta, graph, meta_layout = NULL) 
         }
       }
 
-      column_defs <- list(
-        list(width = "300px", targets = which(names(filtered_meta) %in% data$moderate_columns)),
-        list(width = "400px", targets = which(names(filtered_meta) %in% data$extreme_columns))
+      column_defs <- methodological_column_defs(
+        filtered_meta,
+        graph,
+        data$moderate_columns,
+        data$extreme_columns
       )
 
       datatable(filtered_meta,
@@ -441,7 +517,7 @@ metaTableServer <- function(id, filtered_data, meta, graph, meta_layout = NULL) 
                 escape = FALSE,
                 extensions = c('FixedHeader', 'FixedColumns'),
                 options = list(
-                  autoWidth = TRUE,
+                  autoWidth = !(graph %in% c("ineq_owr1", "ineq_owr2")),
                   scrollX = TRUE,
                   scrollY = "700px",
                   fixedHeader = TRUE,

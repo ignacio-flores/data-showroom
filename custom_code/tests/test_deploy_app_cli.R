@@ -590,6 +590,35 @@ expect_identical(
   "--source-root should override manifest source roots when loading data sources."
 )
 
+source_file <- tempfile("viz-source-", fileext = ".csv")
+cached_file <- tempfile("viz-cache-", fileext = ".csv")
+writeLines(c("complete", "source", "data"), source_file)
+writeBin(charToRaw("partial"), cached_file)
+Sys.setFileTime(source_file, Sys.time() - 3600)
+Sys.setFileTime(cached_file, Sys.time())
+copy_sources <- list(files = setNames(list(list(source = source_file)), cached_file))
+cache_status <- analyze_direct_file(cached_file, copy_sources)
+expect_identical(
+  cache_status$status,
+  "stale-cache",
+  "A truncated CSV cache should be stale even when its timestamp is newer than the source."
+)
+expect_true(
+  grepl("incomplete CSV", cache_status$action, fixed = TRUE),
+  "The preparation plan should explain the incomplete CSV."
+)
+copy_source_file(cache_status, copy_sources)
+expect_identical(
+  readLines(cached_file),
+  readLines(source_file),
+  "Refreshing a partial cache should install the complete source file."
+)
+expect_identical(
+  analyze_direct_file(cached_file, copy_sources)$status,
+  "up-to-date",
+  "A completed copy should be reusable on the next CLI run."
+)
+
 # Install/uninstall -----------------------------------------------------------
 
 install_prefix <- file.path(tempdir(), sprintf("viz-install-%s", Sys.getpid()))
